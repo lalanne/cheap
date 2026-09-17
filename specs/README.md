@@ -15,7 +15,7 @@ This project is built spec-first. Rules:
 | 000 | [Product overview & stack](000-overview.md) | approved |
 | 001 | [Authentication (Google + email/password)](001-auth.md) | approved |
 | 002 | [Transactions: data model & manual entry](002-transactions.md) | approved |
-| 003 | [Design system & visual language](003-design-system.md) | approved |
+| 003 | [Design system & visual language](003-design-system.md) | implemented |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 

@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "cheap",
+    "slug": "cheap",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lalanne.cheap"
+    },
+    "android": {
+      "package": "com.lalanne.cheap"
+    },
+    "web": {},
+    "plugins": []
+  }
+}

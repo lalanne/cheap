@@ -1,6 +1,6 @@
 # 003 — Design System & Visual Language
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000
 
 ## Decision
