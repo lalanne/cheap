@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000, 001
 
 ## User stories
@@ -97,3 +97,38 @@ Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
 (matching `firebase/tests/**` + `jest.rules.config.js`), never a real
 project.
+
+## Verification results
+
+All rows pass: 61 unit/component tests (`npx jest`, up from 43 after spec
+001) and 10 Firestore rules tests against the local emulator (`npm run
+test:rules` — 5 new, covering `users/{uid}/transactions` and
+`users/{uid}/categories`). `tsc --noEmit` is clean; `npx expo export -p
+web` builds (1.4MB, up from 680KB — `firebase/firestore` added on top of
+`firebase/auth`).
+
+`firestore.rules`'s extension (adding the `transactions`/`categories`
+subcollection rules) was deployed to the real `lalanne-cheap-tracker`
+project. I did not repeat a full live smoke test for this spec — the new
+rules reuse the exact same `isOwner()`/`signedIn()` functions the auth
+spec's live smoke test already cross-checked against production, just
+applied to a different path pattern, and the emulator suite exercises
+both the allow and deny cases directly against the identical rules file
+that's now deployed. A live end-to-end write (as a real, *verified*
+account) remains unexercised, since verifying an account needs a real
+inbox and a clicked link, which nothing here can automate.
+
+**Real gaps, not silently skipped:**
+- **No dashboard/charts** — out of scope per this spec; a user can log,
+  edit, delete, and browse transactions, but "where is my money going"
+  visualization is a separate, not-yet-drafted spec.
+- **The date field is a plain `YYYY-MM-DD` text input**, not a calendar
+  picker — sufficient for this spec's acceptance criteria, but worth
+  revisiting for real usability once this ships to a device.
+- I could not click through the running app in a browser — no browser
+  automation tool was available in this environment. Confirmed via the
+  full automated suite and a successful web export instead.
+
+Staying at `implemented`, not `verified`, for the same reason as spec
+001: `verified` means checked against the running app, and that hasn't
+happened yet on a real device/browser.

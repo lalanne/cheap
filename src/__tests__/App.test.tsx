@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
+import { useTransactionsStore } from '../transactions/store';
 import App from '../../App';
 
 jest.mock('expo-font', () => ({
@@ -10,6 +11,10 @@ jest.mock('expo-font', () => ({
 
 jest.mock('../auth/store', () => ({
   useAuthStore: jest.fn(),
+}));
+
+jest.mock('../transactions/store', () => ({
+  useTransactionsStore: jest.fn(),
 }));
 
 function mockAuthState(state: {
@@ -35,6 +40,17 @@ function mockAuthState(state: {
 describe('App', () => {
   beforeEach(() => {
     (useFonts as jest.Mock).mockReturnValue([true, null]);
+    const transactionsState = {
+      transactions: [],
+      categories: [],
+      addTransaction: jest.fn(),
+      updateTransaction: jest.fn(),
+      deleteTransaction: jest.fn(),
+      addCategory: jest.fn(),
+    };
+    (useTransactionsStore as unknown as jest.Mock).mockImplementation(
+      (selector: (s: typeof transactionsState) => unknown) => selector(transactionsState)
+    );
   });
 
   it('shows a loading state while fonts are loading (spec 003, criterion 2)', async () => {
@@ -62,11 +78,12 @@ describe('App', () => {
     expect(screen.getByTestId('verify-email-screen')).toBeTruthy();
   });
 
-  it('shows the main app once signed in and verified', async () => {
+  it('shows the main app (transactions screen) once signed in and verified', async () => {
     mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
 
     await render(<App />);
 
     expect(screen.getByTestId('main-app')).toBeTruthy();
+    expect(screen.getByTestId('transactions-screen')).toBeTruthy();
   });
 });

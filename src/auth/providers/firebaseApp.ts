@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 
 // Sourced from EXPO_PUBLIC_* env vars (Expo's convention for client-exposed
@@ -17,10 +17,12 @@ const firebaseConfig = {
 // missing, which would otherwise crash the whole app at import time before
 // a real Firebase project exists. Degrade to `null` instead — the app then
 // loads to the sign-in screen, and only errors when sign-in is attempted.
+export let app: FirebaseApp | null;
 export let auth: Auth | null;
 try {
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
 } catch {
+  app = null;
   auth = null;
 }

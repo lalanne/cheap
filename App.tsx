@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useAuthStore } from './src/auth/store';
 import { SignInScreen } from './src/screens/SignInScreen';
+import { TransactionsScreen } from './src/screens/TransactionsScreen';
 import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
 import { colors } from './src/theme/tokens';
 
@@ -47,7 +48,7 @@ export default function App() {
   return (
     <View testID="main-app" style={styles.root}>
       <StatusBar style="dark" />
-      {/* Screens land here as spec 002 (transactions) is implemented. */}
+      <TransactionsScreen />
     </View>
   );
 }
