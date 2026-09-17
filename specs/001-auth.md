@@ -1,6 +1,6 @@
 # 001 — Authentication (Google + Email/Password)
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000
 
 ## User stories
@@ -156,3 +156,50 @@ confirmed failing before the corresponding implementation code is written.
 email/password sign-up → verification email arrives → click it → "I've
 verified" → reaches main app; sign out and back in; trigger and receive a
 password reset email.
+
+## Verification results
+
+All automated rows pass: 43 unit/component tests (`npx jest`) and 5
+Firestore rules tests against the local emulator (`npm run test:rules`,
+`demo-cheap`, no real project needed). `tsc --noEmit` is clean; `npx expo
+export -p web` builds.
+
+**Real Firebase project provisioned (2026-09-17):** `lalanne-cheap-tracker`
+(project IDs are globally unique — `cheap-tracker` was already taken by
+someone else). Web app registered, config written to `.env.local`
+(gitignored, matching `da2`'s credential-file convention).
+`firestore.rules` deployed to the real project
+(`firebase deploy --only firestore:rules`). Email/Password and Google
+sign-in enabled in the console — no CLI command exists for this
+(`firebase-tools` has no `auth:providers` equivalent), so it's a genuine
+manual step, done by the user.
+
+**Live smoke test against production** (not the emulator): a throwaway
+account was created with `createUserWithEmailAndPassword` against the real
+project, `sendEmailVerification` dispatched without error, a direct
+Firestore write to `users/{uid}` while unverified was **denied by the
+deployed rules** (`permission-denied`) — the same result the emulator
+suite predicted, now confirmed against the real backend — then signed out,
+signed back in with the same credentials, and the account deleted. No
+residue left in production Auth or Firestore.
+
+**Remaining gaps — still not silently skipped:**
+- **Native Google Sign-In is not built** — `googleAuthProvider.ts` is
+  web-only (`signInWithPopup` needs a DOM). Native needs
+  `@react-native-google-signin/google-signin` +
+  `@react-native-firebase/auth`, matching `da2`, plus a dev client build —
+  out of scope until this project is ready for native builds.
+- **Criterion 1 (real Google sign-in flow) is untested** — the popup flow
+  itself needs a real browser click, which the smoke test script can't
+  drive. Only the email/password path was exercised live.
+- **Criterion 9 (session persists across app restart) is untested** — needs
+  a real device/browser restart, not a one-shot script.
+- I could not visually click through the running app — no browser
+  automation tool was available in this environment. The dev server was
+  confirmed to serve the bundle (HTTP 200) and the live smoke test proves
+  the backend logic works, but the actual UI was never eyeballed.
+
+Staying at `implemented`, not `verified`, until criteria 1 and 9 are
+actually checked on a real browser/device — per this repo's own rule that
+`verified` means checked against the running app, manual rows included,
+not just automated ones.

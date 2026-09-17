@@ -8,6 +8,9 @@ import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 
+import { useAuthStore } from './src/auth/store';
+import { SignInScreen } from './src/screens/SignInScreen';
+import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
 import { colors } from './src/theme/tokens';
 
 export default function App() {
@@ -16,15 +19,35 @@ export default function App() {
     PublicSans_400Regular,
     PublicSans_600SemiBold,
   });
+  const status = useAuthStore((s) => s.status);
+  const emailVerified = useAuthStore((s) => s.user?.emailVerified);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || status === 'initializing') {
     return <View testID="loading-screen" style={styles.root} />;
+  }
+
+  if (status === 'signedOut') {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <SignInScreen />
+      </>
+    );
+  }
+
+  if (!emailVerified) {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <VerifyEmailScreen />
+      </>
+    );
   }
 
   return (
     <View testID="main-app" style={styles.root}>
       <StatusBar style="dark" />
-      {/* Screens land here as specs 001 (auth) and 002 (transactions) are implemented. */}
+      {/* Screens land here as spec 002 (transactions) is implemented. */}
     </View>
   );
 }

@@ -39,4 +39,10 @@ describe('theme tokens', () => {
     expect(typography.body).toBe('PublicSans_400Regular');
     expect(typography.bodyBold).toBe('PublicSans_600SemiBold');
   });
+
+  it('defines a type-size scale', () => {
+    expect(typography.size.xs).toBe(12);
+    expect(typography.size.sm).toBe(13);
+    expect(typography.size.base).toBe(15);
+  });
 });

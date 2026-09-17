@@ -34,4 +34,11 @@ export const typography = {
   display: 'Fraunces_600SemiBold',
   body: 'PublicSans_400Regular',
   bodyBold: 'PublicSans_600SemiBold',
+  size: {
+    xs: 12,
+    sm: 13,
+    base: 15,
+    lg: 20,
+    xl: 27,
+  },
 } as const;

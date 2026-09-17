@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
   label: {
     color: colors.onAccent,
     fontFamily: typography.bodyBold,
-    fontSize: 15,
+    fontSize: typography.size.base,
   },
 });

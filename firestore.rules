@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Every collection gates on this — spec 001. Requires not just a
+    // signed-in client but a verified one, since email/password sign-ups
+    // start unverified.
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // spec 002's users/{uid}/transactions and users/{uid}/categories rules
+    // land here once that spec is implemented, gated the same way.
+  }
+}
