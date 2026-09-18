@@ -187,9 +187,36 @@ internalizing this time: bump the build number *before* running `eas
 build`, every single native release, no exceptions — not just something
 written down and then skipped under time pressure.
 
+**Build 2, installed on a real device, surfaced a fourth real gap:**
+tapping "Continue with Google" showed *"Sign-in isn't set up yet — check
+back soon"* — the `app/not-configured` fallback message from
+`googleAuthProvider.native.ts`. Correct behavior, wrong root cause: not a
+code bug, but `EXPO_PUBLIC_*` vars (`.env.local`, gitignored) never
+reaching EAS's remote builder — the exact same class of gap as
+`GoogleService-Info.plist` earlier, just for plaintext string vars
+instead of a file. Confirmed via the build log itself: earlier builds
+never printed a "loaded environment variables" line at all. Almost
+certainly also affected Firestore/transactions on native, since
+`firestoreDb.ts` still resolves the *web* Firebase SDK's
+`initializeApp(config)` even on native builds — spec 002 never split
+Firestore access per-platform the way spec 001 split auth, so this is a
+newly-found gap, not a previously-tracked one. Same env vars, same
+missing-config failure mode, just silent (empty transaction list)
+rather than a visible error message.
+
+Fixed with `eas env:push production --path .env.local` (and `preview`,
+for safety) — confirmed by the next build's log explicitly listing
+`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and the Firebase vars as "loaded from
+the production environment on EAS," where earlier builds showed nothing.
+**Build 3 submitted successfully** with this fix plus the build-number
+bump; verifying it resolves the Google sign-in error (and confirming
+transactions actually work) is next.
+
 **Still open:**
 - Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
-  pushed via `eas update --channel preview` after the build is installed.
+  pushed via `eas update --channel preview` after a working build is
+  installed.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
-  flow) — need the tester to actually accept the TestFlight invite,
-  install build 2, and run through spec 001's real-device checklist.
+  flow) — install build 3 and run spec 001's real-device checklist. Also
+  worth confirming transactions (spec 002) actually save/load, given the
+  shared root cause above.
