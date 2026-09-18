@@ -1,6 +1,6 @@
 # 004 — iOS Deployment (TestFlight)
 
-**Status:** approved
+**Status:** implemented (build + submit succeeded; device verification pending — see Verification results)
 **Depends on:** 001 (native Google Sign-In, criterion 12)
 
 ## Purpose
@@ -127,3 +127,51 @@ for consistency with every other spec:
 | 1 | Manual | Confirm the version stamp updates on the test iPhone after two launches following an OTA update. |
 | 2 | Manual | TestFlight install completes without error; app opens. |
 | 3, 4 | Manual | Run spec 001's real-device checklist (already written in its Verification plan) on this TestFlight build. |
+
+## Verification results
+
+**Build + submit succeeded (2026-09-18).** Build
+`abb7d7d8-18cd-4ce0-b392-6026362d9573` (`0.1.0 (1)`) completed on EAS and
+was submitted to App Store Connect. It shows up in TestFlight under an
+internal testing group ("Team (Expo)"), status "Ready to Submit" (that
+label is about *external* Beta Review, not required for internal testers)
+— criterion 2 is functionally satisfied; installing it on the actual
+tester's phone is the one step left to fully close it out.
+
+**Three real, non-obvious failures hit and fixed on the way — recorded so
+they aren't rediscovered:**
+
+1. **`pod install` worked on the first try** — reusing `da2`'s exact
+   `disableSPM: true` + `useFrameworks: "static"` recipe from its own
+   spec 006 paid off immediately; da2 itself needed three attempts to
+   find that combination.
+2. **EAS Build's project archive is git-based, not working-directory-based.**
+   Two build attempts failed identically even after local fixes, because
+   the fixes were never committed — the build's own "Git ref" field
+   matched the last commit, not the dirty working tree. Lesson: commit
+   before every `eas build`, not just before pushing.
+3. **`npm ci` on EAS failed with "Missing: typescript@5.9.3 from lock
+   file" — even after `npm install` locally and committing the result.**
+   Root cause: this machine's npm (11.19.1) resolves
+   `@expo/prebuild-config`'s nested `typescript@5.9.3` dependency
+   differently than EAS's builder npm (10.9.8) — npm 11 deduped it away
+   entirely, so it was never written to the lock file, and npm 10.9.8's
+   stricter `npm ci` sync check rejected the mismatch. Fixed by
+   regenerating `package-lock.json` with `npx -y npm@10.9.8 install`
+   instead of the system's own npm. Worth remembering for any future
+   lock-file regeneration on this project: match EAS's npm version, not
+   whatever's newest locally.
+
+**Also found:** decoding EAS's raw build-log artifacts (the signed GCS
+URLs from `eas build:view --json`'s `logFiles` field) directly wasn't
+possible — the content isn't plain text, gzip, or raw deflate; whatever
+format it is, only the expo.dev web UI renders it. The reliable path to a
+failed build's actual phase output is the web UI, not the CLI or the raw
+log artifact.
+
+**Still open:**
+- Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
+  pushed via `eas update --channel preview` after the build is installed.
+- Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
+  flow) — need the tester to actually accept the TestFlight invite,
+  install, and run through spec 001's real-device checklist.
