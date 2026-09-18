@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lalanne.cheap",
@@ -14,9 +15,15 @@
       }
     },
     "android": {
-      "package": "com.lalanne.cheap"
+      "package": "com.lalanne.cheap",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F6B5C"
+      }
     },
-    "web": {},
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
       [
         "@react-native-firebase/app",
