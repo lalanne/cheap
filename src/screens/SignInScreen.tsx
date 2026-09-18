@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '../auth/store';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { Screen } from '../components/Screen';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type Mode = 'signin' | 'signup';
@@ -65,7 +66,7 @@ export function SignInScreen() {
   }
 
   return (
-    <View style={styles.container} testID="sign-in-screen">
+    <Screen testID="sign-in-screen">
       <Text style={styles.title}>{isSignin ? 'Welcome back' : 'Create your account'}</Text>
       <Text style={styles.subtitle}>
         {isSignin
@@ -125,16 +126,11 @@ export function SignInScreen() {
         onPress={handleSubmit}
         testID="submit-button"
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-  },
   title: {
     fontFamily: typography.display,
     fontSize: typography.size.xl,

@@ -57,6 +57,16 @@ ideas, in case dark mode gets scoped later (see Out of scope).
 - Every screen is composed from a small set of shared primitives (`Button`,
   `Card`, `Input`, `StatTile`, etc.) built against these tokens — no
   one-off styles per screen.
+- **Every top-level screen renders inside a shared `Screen` primitive**,
+  not a raw `View`: it accounts for safe-area insets (so content never
+  collides with the status bar, the notch, or iOS's TestFlight banner —
+  found missing only once tested on a real device, spec 004) and wraps
+  content in a keyboard-avoiding scroll view (found missing the same way
+  — a form's later fields, and its own Save/Cancel buttons, were
+  unreachable once the keyboard covered them, with no way to dismiss it).
+  This was skipped in specs 001/002's first pass because the simulator
+  build never actually launched (spec 004's environment limitation) — the
+  gap was invisible until a real device surfaced it.
 
 ## Acceptance criteria
 
@@ -69,6 +79,13 @@ ideas, in case dark mode gets scoped later (see Out of scope).
 3. **Given** a shared primitive (e.g. `Button`, `Card`) used on two
    different screens with the same props, **then** it renders identically
    — no per-screen override of a themed property.
+4. **Given** any top-level screen, **when** it renders on a device with
+   safe-area insets (notch, status bar, TestFlight banner), **then** its
+   content starts below those insets, not underneath them.
+5. **Given** a form screen, **when** the on-screen keyboard is open over a
+   field, **then** the remaining fields and the screen's action buttons
+   stay reachable by scrolling, and the keyboard can be dismissed without
+   leaving the screen.
 
 ## Out of scope
 
@@ -88,3 +105,26 @@ E2E layer applies.
 | 1 — no raw values in screen code | Lint / review | An ESLint rule (or, failing that, manual review before merge) flags hex colors / raw px outside `src/theme/`. |
 | 2 — splash gate until fonts load | Unit/component | Test: app root renders a loading state while `useFonts` is pending, main content only once resolved. |
 | 3 — shared primitives render identically | Unit/component | Same primitive + same props on two call sites → same computed style, asserted directly rather than by eye. |
+| 4 — content respects safe-area insets | Unit/component | `Screen` test: mocked `useSafeAreaInsets` returning non-zero insets, assert the content container's padding reflects them. |
+| 5 — keyboard-avoiding scroll | Unit/component | `Screen` test: renders its children inside a `ScrollView`/`KeyboardAvoidingView` with `keyboardShouldPersistTaps="handled"` — proven by structure/props, not a real keyboard (RNTL can't drive one). Manual, real device: confirmed by the bug report that prompted this amendment; re-confirm after the fix ships. |
+
+**Amendment (2026-09-18):** added the `Screen` primitive requirement and
+criteria 4–5 after real-device testing (spec 004) surfaced both gaps —
+the status bar/TestFlight banner overlapping the "Transactions" header,
+and no way to reach a form's Save button or dismiss the keyboard once it
+was open. Every screen built so far (`SignInScreen`, `VerifyEmailScreen`,
+`TransactionsScreen`) used a raw `View` container; migrating them to
+`Screen` is part of landing this amendment, not a follow-up.
+
+**Implemented same day.** `react-native-safe-area-context` installed
+(a native module — needs a new build, not just an OTA update);
+`SafeAreaProvider` wraps `App.tsx`; all three screens migrated to
+`Screen`. All 78 tests pass (5 new: `Screen.test.tsx`), `tsc --noEmit`
+clean. One test-infra fix needed along the way: every screen test now
+renders through `Screen` → `useSafeAreaInsets`, which throws without a
+`SafeAreaProvider` in context — added `jest.setup.js` (this project's
+first) globally mocking the library via its own official
+`react-native-safe-area-context/jest/mock` (note: it's a single
+`export default {...}`, so the mock factory needs `.default`, not the
+bare `require()` result). Real-device re-verification of criteria 4–5
+pending the next TestFlight build.

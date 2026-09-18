@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { Screen } from '../components/Screen';
 import { VersionStamp } from '../components/VersionStamp';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
@@ -104,7 +105,7 @@ export function TransactionsScreen() {
   }
 
   return (
-    <View style={styles.container} testID="transactions-screen">
+    <Screen testID="transactions-screen">
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
         {!formOpen && (
@@ -219,16 +220,11 @@ export function TransactionsScreen() {
       <View style={styles.footer}>
         <VersionStamp />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

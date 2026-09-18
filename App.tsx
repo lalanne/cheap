@@ -7,6 +7,7 @@ import { PublicSans_600SemiBold } from '@expo-google-fonts/public-sans/600SemiBo
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAuthStore } from './src/auth/store';
 import { SignInScreen } from './src/screens/SignInScreen';
@@ -23,34 +24,33 @@ export default function App() {
   const status = useAuthStore((s) => s.status);
   const emailVerified = useAuthStore((s) => s.user?.emailVerified);
 
+  let content;
   if (!fontsLoaded || status === 'initializing') {
-    return <View testID="loading-screen" style={styles.root} />;
-  }
-
-  if (status === 'signedOut') {
-    return (
+    content = <View testID="loading-screen" style={styles.root} />;
+  } else if (status === 'signedOut') {
+    content = (
       <>
         <StatusBar style="dark" />
         <SignInScreen />
       </>
     );
-  }
-
-  if (!emailVerified) {
-    return (
+  } else if (!emailVerified) {
+    content = (
       <>
         <StatusBar style="dark" />
         <VerifyEmailScreen />
       </>
     );
+  } else {
+    content = (
+      <View testID="main-app" style={styles.root}>
+        <StatusBar style="dark" />
+        <TransactionsScreen />
+      </View>
+    );
   }
 
-  return (
-    <View testID="main-app" style={styles.root}>
-      <StatusBar style="dark" />
-      <TransactionsScreen />
-    </View>
-  );
+  return <SafeAreaProvider>{content}</SafeAreaProvider>;
 }
 
 const styles = StyleSheet.create({

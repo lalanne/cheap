@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../auth/store';
 import { Button } from '../components/Button';
+import { Screen } from '../components/Screen';
 import { colors, spacing, typography } from '../theme/tokens';
 
 export function VerifyEmailScreen() {
@@ -11,7 +12,7 @@ export function VerifyEmailScreen() {
   const signOut = useAuthStore((s) => s.signOut);
 
   return (
-    <View style={styles.container} testID="verify-email-screen">
+    <Screen testID="verify-email-screen">
       <Text style={styles.title}>Check your email</Text>
       <Text style={styles.body}>
         We sent a verification link to{'\n'}
@@ -23,17 +24,11 @@ export function VerifyEmailScreen() {
       <Button title="Resend email" onPress={resendVerificationEmail} testID="resend-button" />
       <View style={styles.spacer} />
       <Button title="Sign out" onPress={signOut} testID="sign-out-button" />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-    justifyContent: 'center',
-  },
   title: {
     fontFamily: typography.display,
     fontSize: typography.size.xl,
