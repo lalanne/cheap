@@ -9,7 +9,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lalanne.cheap",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
         "usesNonExemptEncryption": false
@@ -36,6 +36,7 @@
       ],
       "@react-native-firebase/auth",
       "@react-native-google-signin/google-signin",
+      "@react-native-community/datetimepicker",
       [
         "expo-build-properties",
         {

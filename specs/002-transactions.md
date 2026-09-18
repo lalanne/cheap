@@ -33,6 +33,13 @@
 - List view sorted by transaction `date` descending (not `createdAt` —
   someone logging yesterday's coffee today should see it slot into
   yesterday).
+- **The date field is a native date-picker popup** (`DateTimePicker`),
+  not a typed `YYYY-MM-DD` text field — the original text-field decision
+  was flagged in this spec's own Verification results as "worth
+  revisiting for real usability once this ships to a device," and a real
+  device user confirmed it's not usable. Platform-native picker UI
+  (wheel/calendar sheet) on iOS/Android; an HTML `<input type="date">` on
+  web.
 - Single currency in v1 (per spec 000) — no currency field needed yet.
 - Requires a signed-in `uid` (spec 001) — `users/{uid}` must already exist.
 
@@ -71,6 +78,9 @@ users/{uid}/categories/{categoryId}   // custom categories only —
 5. **Given** a user picks a date other than today, **when** they save,
    **then** the transaction is sorted into the list by that date, not by
    `createdAt`.
+8. **Given** a user opens the date field, **when** they interact with it,
+   **then** a native date-picker popup appears (not a keyboard/text
+   field), and picking a date sets the transaction's date to that value.
 6. **Given** a user wants a category outside the starter set, **when** they
    create a custom category with a name, **then** it's selectable
    immediately and persists across app restarts.
@@ -92,6 +102,7 @@ users/{uid}/categories/{categoryId}   // custom categories only —
 | 4 — delete removes the doc | Unit | Store/repository test: delete path, doc no longer in local state. |
 | 6 — custom categories persist | Component/unit | Create category → available in picker → reload → still there (mocked persistence). |
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s transactions, expect denial. |
+| 8 — native date-picker popup | Component/unit | Render form, open date field, fire the picker's `onChange`, assert the selected date is used on save. |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
@@ -122,9 +133,11 @@ inbox and a clicked link, which nothing here can automate.
 - **No dashboard/charts** — out of scope per this spec; a user can log,
   edit, delete, and browse transactions, but "where is my money going"
   visualization is a separate, not-yet-drafted spec.
-- **The date field is a plain `YYYY-MM-DD` text input**, not a calendar
-  picker — sufficient for this spec's acceptance criteria, but worth
-  revisiting for real usability once this ships to a device.
+- ~~The date field is a plain `YYYY-MM-DD` text input, not a calendar
+  picker~~ — **resolved 2026-09-18**: a real device user confirmed typing
+  a date is unusable; replaced with `@react-native-community/datetimepicker`
+  (native popup on iOS/Android, `<input type="date">` on web). See
+  criterion 8.
 - I could not click through the running app in a browser — no browser
   automation tool was available in this environment. Confirmed via the
   full automated suite and a successful web export instead.

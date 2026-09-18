@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
+import { DatePickerField } from '../components/DatePickerField';
 import { Input } from '../components/Input';
 import { Screen } from '../components/Screen';
 import { VersionStamp } from '../components/VersionStamp';
@@ -10,10 +11,6 @@ import { useTransactionsStore } from '../transactions/store';
 import type { Transaction, TransactionType } from '../transactions/types';
 import { validateAmount } from '../transactions/validateAmount';
 import { colors, radius, spacing, typography } from '../theme/tokens';
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatCLP(amount: number): string {
   return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
@@ -36,9 +33,10 @@ export function TransactionsScreen() {
   const [type, setType] = useState<TransactionType>('expense');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<string>(STARTER_CATEGORIES[0]);
-  const [dateText, setDateText] = useState(todayIso());
+  const [date, setDate] = useState<Date>(new Date());
   const [note, setNote] = useState('');
   const [amountError, setAmountError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -49,9 +47,10 @@ export function TransactionsScreen() {
     setType('expense');
     setAmountText('');
     setCategory(STARTER_CATEGORIES[0]);
-    setDateText(todayIso());
+    setDate(new Date());
     setNote('');
     setAmountError(null);
+    setSaveError(null);
     setAddingCategory(false);
     setFormOpen(true);
   }
@@ -61,9 +60,10 @@ export function TransactionsScreen() {
     setType(tx.type);
     setAmountText(String(tx.amount));
     setCategory(tx.category);
-    setDateText(formatDate(tx.date));
+    setDate(tx.date);
     setNote(tx.note ?? '');
     setAmountError(null);
+    setSaveError(null);
     setAddingCategory(false);
     setFormOpen(true);
   }
@@ -78,19 +78,24 @@ export function TransactionsScreen() {
       setAmountError(result.error);
       return;
     }
+    setSaveError(null);
     const payload = {
       type,
       amount: result.value,
       category,
-      date: new Date(dateText),
+      date,
       note: note.trim() === '' ? null : note.trim(),
     };
-    if (editingId) {
-      await updateTransaction(editingId, payload);
-    } else {
-      await addTransaction(payload);
+    try {
+      if (editingId) {
+        await updateTransaction(editingId, payload);
+      } else {
+        await addTransaction(payload);
+      }
+      closeForm();
+    } catch (e) {
+      setSaveError((e as { message?: string }).message ?? 'Something went wrong. Please try again.');
     }
-    closeForm();
   }
 
   async function handleConfirmAddCategory() {
@@ -116,10 +121,18 @@ export function TransactionsScreen() {
       {formOpen && (
         <View style={styles.form} testID="transaction-form">
           <View style={styles.tabs}>
-            <Pressable testID="type-expense" style={styles.tab} onPress={() => setType('expense')}>
+            <Pressable
+              testID="type-expense"
+              style={type === 'expense' ? styles.tabActive : styles.tab}
+              onPress={() => setType('expense')}
+            >
               <Text style={type === 'expense' ? styles.tabLabelActive : styles.tabLabel}>Expense</Text>
             </Pressable>
-            <Pressable testID="type-income" style={styles.tab} onPress={() => setType('income')}>
+            <Pressable
+              testID="type-income"
+              style={type === 'income' ? styles.tabActive : styles.tab}
+              onPress={() => setType('income')}
+            >
               <Text style={type === 'income' ? styles.tabLabelActive : styles.tabLabel}>Income</Text>
             </Pressable>
           </View>
@@ -179,9 +192,14 @@ export function TransactionsScreen() {
             </View>
           )}
 
-          <Input label="Date" value={dateText} onChangeText={setDateText} testID="date-input" />
+          <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />
           <Input label="Note (optional)" value={note} onChangeText={setNote} testID="note-input" />
 
+          {saveError && (
+            <Text style={styles.saveError} testID="save-error">
+              {saveError}
+            </Text>
+          )}
           <Button title="Save" onPress={handleSave} testID="save-transaction-button" />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForm} testID="cancel-transaction-button" />
@@ -255,6 +273,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm + 1,
     borderRadius: radius.input - 2,
+    backgroundColor: 'transparent',
+  },
+  tabActive: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 1,
+    borderRadius: radius.input - 2,
+    backgroundColor: colors.accent,
   },
   tabLabel: {
     fontFamily: typography.bodyBold,
@@ -264,7 +290,7 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.sm,
-    color: colors.ink,
+    color: colors.onAccent,
   },
   label: {
     fontFamily: typography.bodyBold,
@@ -314,6 +340,12 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: spacing.sm,
+  },
+  saveError: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.ink,
+    marginBottom: spacing.sm,
   },
   row: {
     flexDirection: 'row',

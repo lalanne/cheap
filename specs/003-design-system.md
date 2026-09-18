@@ -67,6 +67,15 @@ ideas, in case dark mode gets scoped later (see Out of scope).
   This was skipped in specs 001/002's first pass because the simulator
   build never actually launched (spec 004's environment limitation) — the
   gap was invisible until a real device surfaced it.
+- **A segmented toggle's selected state must be a background fill, not a
+  text-color change alone.** The Expense/Income toggle on the
+  transactions form originally only changed text color between selected
+  and unselected tabs — a real device user reported the highlight was
+  "too dim, I barely can see what I selected." Fixed with a solid
+  `colors.accent` fill + `colors.onAccent` text on the selected tab
+  (`onAccent`/`accent` already existed as tokens; this just applies them
+  consistently to every segmented control, not just the sign-in/sign-up
+  toggle that already did this).
 
 ## Acceptance criteria
 

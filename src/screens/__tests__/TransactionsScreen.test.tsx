@@ -1,8 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import type { Transaction } from '../../transactions/types';
 import { useTransactionsStore } from '../../transactions/store';
 import { TransactionsScreen } from '../TransactionsScreen';
+import { colors } from '../../theme/tokens';
+
+function flatten(style: unknown) {
+  return StyleSheet.flatten(style as never) as Record<string, unknown>;
+}
 
 jest.mock('../../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
@@ -93,6 +99,38 @@ describe('TransactionsScreen', () => {
     const rows = screen.getAllByTestId(/^transaction-row-/);
     expect(rows[0].props.testID).toBe('transaction-row-tx-2');
     expect(rows[1].props.testID).toBe('transaction-row-tx-1');
+  });
+
+  it('shows an error instead of failing silently when save throws (regression: native Firestore split-brain auth bug)', async () => {
+    const store = mockStore({
+      addTransaction: jest.fn().mockRejectedValue(new Error('No signed-in user — cannot access transactions.')),
+    });
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '45000');
+    await fireEvent.press(screen.getByTestId('category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalled();
+    expect(screen.getByTestId('save-error')).toBeTruthy();
+    expect(screen.getByText('No signed-in user — cannot access transactions.')).toBeTruthy();
+    expect(screen.getByTestId('transaction-form')).toBeTruthy();
+  });
+
+  it('highlights the selected Expense/Income tab with a solid accent fill (design option B)', async () => {
+    mockStore();
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+
+    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).toBe(colors.accent);
+    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).not.toBe(colors.accent);
+
+    await fireEvent.press(screen.getByTestId('type-income'));
+
+    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).toBe(colors.accent);
+    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).not.toBe(colors.accent);
   });
 
   it('creates a custom category and makes it selectable (criterion 6)', async () => {
