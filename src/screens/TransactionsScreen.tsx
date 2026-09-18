@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { VersionStamp } from '../components/VersionStamp';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
 import type { Transaction, TransactionType } from '../transactions/types';
@@ -214,6 +215,10 @@ export function TransactionsScreen() {
             </Pressable>
           </Pressable>
         ))}
+
+      <View style={styles.footer}>
+        <VersionStamp />
+      </View>
     </View>
   );
 }
@@ -352,5 +357,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: typography.size.xs,
     color: colors.inkMuted,
+  },
+  footer: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
   },
 });

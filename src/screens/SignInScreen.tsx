@@ -22,6 +22,7 @@ export function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
 
   const isSignin = mode === 'signin';
@@ -54,6 +55,15 @@ export function SignInScreen() {
     setResetSent(true);
   }
 
+  async function handleGoogleSignIn() {
+    setGoogleError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      setGoogleError((e as { message?: string }).message ?? 'Something went wrong. Please try again.');
+    }
+  }
+
   return (
     <View style={styles.container} testID="sign-in-screen">
       <Text style={styles.title}>{isSignin ? 'Welcome back' : 'Create your account'}</Text>
@@ -63,7 +73,12 @@ export function SignInScreen() {
           : 'Start tracking your expenses and income.'}
       </Text>
 
-      <Button title="Continue with Google" onPress={signInWithGoogle} testID="google-button" />
+      <Button title="Continue with Google" onPress={handleGoogleSignIn} testID="google-button" />
+      {googleError && (
+        <Text style={styles.googleError} testID="google-error">
+          {googleError}
+        </Text>
+      )}
 
       <View style={styles.tabs}>
         <Pressable testID="tab-signin" style={styles.tab} onPress={() => switchMode('signin')}>
@@ -168,5 +183,11 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.inkSecondary,
     marginBottom: spacing.sm,
+  },
+  googleError: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.ink,
+    marginTop: spacing.xs,
   },
 });

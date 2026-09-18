@@ -1,7 +1,12 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // Metro resolves per-platform (.native.ts / .web.ts) at bundle time;
+    // tsc's own resolver doesn't know that convention without this. Native
+    // first since that's this project's current build target — matters
+    // only for files that have no plain fallback (e.g. the auth providers).
+    "moduleSuffixes": [".native", ""]
   },
   "exclude": ["node_modules", "**/__tests__/**", "firebase/tests/**"]
 }

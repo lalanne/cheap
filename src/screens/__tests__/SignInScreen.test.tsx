@@ -31,6 +31,18 @@ describe('SignInScreen', () => {
     expect(store.signInWithGoogle).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the mapped error when Google sign-in fails for a real reason', async () => {
+    const store = mockStore({
+      signInWithGoogle: jest.fn().mockRejectedValue({ message: "Sign-in isn't set up yet — check back soon." }),
+    });
+    await render(<SignInScreen />);
+
+    await fireEvent.press(screen.getByTestId('google-button'));
+
+    expect(store.signInWithGoogle).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Sign-in isn't set up yet — check back soon.")).toBeTruthy();
+  });
+
   it('toggling to "Create account" reveals the name field', async () => {
     mockStore();
     await render(<SignInScreen />);

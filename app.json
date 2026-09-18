@@ -7,12 +7,47 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lalanne.cheap"
+      "bundleIdentifier": "com.lalanne.cheap",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.lalanne.cheap"
     },
     "web": {},
-    "plugins": []
+    "plugins": [
+      [
+        "@react-native-firebase/app",
+        {
+          "ios": {
+            "disableSPM": true
+          }
+        }
+      ],
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a4a76d8d-b9c6-461c-bfb2-c87ad4a79cbc"
+      }
+    },
+    "owner": "orcla",
+    "updates": {
+      "url": "https://u.expo.dev/a4a76d8d-b9c6-461c-bfb2-c87ad4a79cbc"
+    }
   }
 }

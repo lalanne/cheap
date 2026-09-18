@@ -17,6 +17,15 @@ describe('mapAuthError', () => {
     );
   });
 
+  it('collapses the newer consolidated invalid-credential codes the same way (da2 finding)', () => {
+    expect(mapAuthError({ code: 'auth/invalid-credential' }).message).toBe(
+      'Incorrect email or password.'
+    );
+    expect(mapAuthError({ code: 'auth/invalid-login-credentials' }).message).toBe(
+      'Incorrect email or password.'
+    );
+  });
+
   it('maps weak-password, invalid-email, and too-many-requests', () => {
     expect(mapAuthError({ code: 'auth/weak-password' }).message).toBe(
       'Password must be at least 8 characters.'

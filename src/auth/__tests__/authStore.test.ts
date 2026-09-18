@@ -158,6 +158,28 @@ describe('authStore', () => {
     });
   });
 
+  it('swallows a cancelled native Google sign-in without throwing (dismissing the picker is not an error)', async () => {
+    const providers = createMockProviders();
+    (providers.google.signIn as jest.Mock).mockRejectedValueOnce({
+      code: 'auth/sign-in-cancelled',
+    });
+    const useAuthStore = createAuthStore(providers);
+
+    await expect(useAuthStore.getState().signInWithGoogle()).resolves.toBeUndefined();
+  });
+
+  it('rethrows a mapped error when Google sign-in fails for a real reason', async () => {
+    const providers = createMockProviders();
+    (providers.google.signIn as jest.Mock).mockRejectedValueOnce({
+      code: 'app/not-configured',
+    });
+    const useAuthStore = createAuthStore(providers);
+
+    await expect(useAuthStore.getState().signInWithGoogle()).rejects.toMatchObject({
+      message: "Sign-in isn't set up yet — check back soon.",
+    });
+  });
+
   it('sign-out clears the user and returns to signed-out (criterion 10)', async () => {
     const providers = createMockProviders();
     const useAuthStore = createAuthStore(providers);

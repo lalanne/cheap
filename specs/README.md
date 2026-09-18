@@ -13,26 +13,32 @@ This project is built spec-first. Rules:
 | # | Spec | Status |
 |---|------|--------|
 | 000 | [Product overview & stack](000-overview.md) | approved |
-| 001 | [Authentication (Google + email/password)](001-auth.md) | implemented |
+| 001 | [Authentication (Google + email/password)](001-auth.md) | approved (amended — criterion 12 pending) |
 | 002 | [Transactions: data model & manual entry](002-transactions.md) | implemented |
 | 003 | [Design system & visual language](003-design-system.md) | implemented |
+| 004 | [iOS deployment (TestFlight)](004-ios-deployment.md) | approved |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 
 ## Build order
 
-The number is *mostly* the build order, with one deliberate exception:
+The number is *mostly* the build order, with deliberate exceptions:
 
 - **003 (design system) is built before 001's and 002's UI portions** —
   both specs' screens (sign-in, add-transaction, dashboard) are composed
   from 003's primitives and tokens. It's numbered 003 only because the
   look-and-feel decision wasn't made until after 001/002 were drafted —
   renumbering them would just be churn.
+- **004 (iOS deployment) reopened 001** — native Google Sign-In was
+  explicitly deferred at first implementation; getting to TestFlight
+  requires it, so 001 gained a new requirements section and criterion 12
+  rather than duplicating the auth spec. 004 depends on that criterion,
+  not on 002 or 003.
 
-So the working order is: **000 → 003 → 001 → 002**. Auth's and
-transactions' *data model and logic* (Firestore, rules, store) don't
-depend on 003 and can be built/tested against the emulator in parallel;
-it's specifically their screens that wait on it.
+So the working order is: **000 → 003 → 001 → 002 → (001 amended) → 004**.
+Auth's and transactions' *data model and logic* (Firestore, rules, store)
+don't depend on 003 and can be built/tested against the emulator in
+parallel; it's specifically their screens that wait on it.
 
 ## Workflow
 

@@ -1,6 +1,7 @@
 # 001 — Authentication (Google + Email/Password)
 
-**Status:** implemented
+**Status:** approved (criterion 12 added, pending native implementation —
+see Verification results)
 **Depends on:** 000
 
 ## User stories
@@ -40,6 +41,42 @@ routing to stage around, so there's no reason to sequence them.
   single `onAuthStateChanged` drives `user` state either way.
 - `AuthUser` includes `emailVerified: boolean`. Google sign-ins always come
   back `emailVerified: true`.
+
+### Native provider implementation (iOS)
+
+Deferred at first implementation (web-only), now being built ahead of a
+TestFlight deploy — see `specs/004-ios-deployment.md`.
+
+- **Both providers move to `@react-native-firebase/auth` on native, not
+  just Google.** Google Sign-In specifically cannot work via the web JS
+  SDK on native (`signInWithPopup` needs a DOM), so native needs its own
+  implementation regardless — but email/password's web-SDK calls *do*
+  technically run on React Native. The reason to move both anyway: native
+  Google Sign-In goes through `@react-native-google-signin/google-signin`
+  → `@react-native-firebase/auth`'s `signInWithCredential`, a completely
+  separate Auth instance from the JS SDK's `firebase/auth`. If email/password
+  stayed on the JS SDK while Google moved to RNFirebase, the two methods
+  would maintain independent sessions that don't see each other —
+  `authStore`'s single `onAuthStateChanged` (registered against one or the
+  other) would miss sign-ins from whichever provider it isn't watching,
+  silently breaking the "one instance, one listener" invariant this spec
+  already committed to. Splitting by platform (native vs. web), not by
+  provider (Google vs. email), is what keeps that invariant intact.
+- File layout follows Metro's platform-extension resolution, matching
+  `da2`: `emailAuthProvider.ts` (web, existing) +
+  `emailAuthProvider.native.ts`; `googleAuthProvider.ts` (web, existing) +
+  `googleAuthProvider.native.ts`; same for `firebaseApp` →
+  `firebaseApp.native.ts` initializing `@react-native-firebase/app`
+  instead of the JS SDK.
+- Requires: an iOS app registered in the `lalanne-cheap-tracker` Firebase
+  project (currently only a Web app exists) → produces
+  `GoogleService-Info.plist`, gitignored like `da2`'s. The
+  `@react-native-google-signin/google-signin` Expo config plugin handles
+  the URL scheme registration (`REVERSED_CLIENT_ID`) — no manual
+  `Info.plist` editing.
+- Requires a custom dev client (`expo-dev-client`) — these are native
+  modules, so this no longer runs in plain Expo Go. Building and running
+  it is spec 004's concern.
 
 ### Sign-up / sign-in screen
 
@@ -114,11 +151,16 @@ users/{uid}
     return to the sign-in screen and their data is no longer readable.
 11. Firestore security rules reject all reads/writes from unauthenticated
     or unverified clients.
+12. **Given** the sign-in screen on a native iOS build, **when** a user taps
+    "Continue with Google" and completes the native account picker,
+    **then** they land on the main app and a `users/{uid}` document exists
+    — the same outcome as criterion 1, on the native platform.
 
 ## Out of scope
 
 - Sign in with Apple (only required once distributing on iOS via the App
-  Store with third-party login offered — revisit at that point).
+  Store with third-party login offered — see `specs/004-ios-deployment.md`
+  for exactly when that requirement kicks in).
 - Linking an email/password credential to an existing Google account.
 - Multi-factor auth, passwordless (magic link) sign-in.
 - Changing password/email from within the app (only signed-out "forgot
@@ -151,6 +193,7 @@ confirmed failing before the corresponding implementation code is written.
 | 9 | Session persists across app restart | Manual | Real device: force-close, reopen, still signed in (native persistence is Firebase-default behavior, not app logic — not worth a mocked test). |
 | 10 | Sign-out returns to sign-in, data unreadable | Unit + integration | Store: sign-out clears state. Rules: signed-out context denied on `users/*`. |
 | 11 | Rules reject unauthenticated/unverified everywhere | Integration | Rules suite: unauthenticated and unverified-but-authed contexts denied on `users/*`; extended to `transactions/*` once spec 002 lands. |
+| 12 | Native Google sign-in creates profile, lands on main | Unit + Manual | Unit: mocked-SDK test asserting the exact call shape — `GoogleSignin.signIn()` → `auth().signInWithCredential(GoogleAuthProvider.credential(idToken))` — matching `da2`'s pattern for this exact bug class. Manual: real device/simulator, same reasoning as criterion 1 (native picker can't be automated). |
 
 **Manual, real device, before shipping:** Google sign-in end-to-end;
 email/password sign-up → verification email arrives → click it → "I've
@@ -203,3 +246,9 @@ Staying at `implemented`, not `verified`, until criteria 1 and 9 are
 actually checked on a real browser/device — per this repo's own rule that
 `verified` means checked against the running app, manual rows included,
 not just automated ones.
+
+**Amendment (2026-09-17):** added the Native provider implementation
+section and criterion 12 ahead of a TestFlight deploy (spec 004). Status
+reverted to `approved` — the web-only work above still stands, but the
+spec as a whole isn't `implemented` again until criterion 12's unit test
+passes too.

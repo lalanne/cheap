@@ -33,7 +33,16 @@ export function createAuthStore(providers: AuthProviders) {
     status: 'initializing',
 
     signInWithGoogle: async () => {
-      await providers.google.signIn();
+      try {
+        await providers.google.signIn();
+      } catch (error) {
+        // Dismissing the native picker (or the web popup) isn't an error a
+        // user should see — same as closing any other cancelable dialog.
+        if ((error as AuthErrorLike)?.code === 'auth/sign-in-cancelled') {
+          return;
+        }
+        throw mapAuthError(error as AuthErrorLike);
+      }
     },
 
     signUpWithEmail: async (name, email, password) => {
