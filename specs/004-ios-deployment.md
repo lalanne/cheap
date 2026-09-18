@@ -167,11 +167,29 @@ URLs from `eas build:view --json`'s `logFiles` field) directly wasn't
 possible — the content isn't plain text, gzip, or raw deflate; whatever
 format it is, only the expo.dev web UI renders it. The reliable path to a
 failed build's actual phase output is the web UI, not the CLI or the raw
-log artifact.
+log artifact. Same story for *submissions* specifically: `--verbose-fastlane`
+only affects local submits (`eas submit` has no `--local` flag at all,
+unlike `build`), so a cloud submission's actual Apple/ITMS error is only
+visible on the web UI's submission detail page — the CLI's own
+`submit:view`/`submit:list --json` carry no error text for an `ERRORED`
+submission, just the terminal status.
+
+**Second app icon build (2026-09-18) hit exactly the mistake this spec's
+own Requirements section already warned about** — proof the warning alone
+isn't enough, only doing the thing is: rebuilt for the app icon without
+bumping `ios.buildNumber`, so the second binary was still stamped `1`.
+Apple's submission rejected it outright: `"Build number 1 for app version
+0.1.0 has already been used. App Store Connect requires unique build
+numbers within each app version."` Fixed by setting `ios.buildNumber: "2"`
+in `app.json`, rebuilding, and resubmitting — **build 2 uploaded
+successfully** and is now in Apple's processing queue. Worth genuinely
+internalizing this time: bump the build number *before* running `eas
+build`, every single native release, no exceptions — not just something
+written down and then skipped under time pressure.
 
 **Still open:**
 - Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
   pushed via `eas update --channel preview` after the build is installed.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
   flow) — need the tester to actually accept the TestFlight invite,
-  install, and run through spec 001's real-device checklist.
+  install build 2, and run through spec 001's real-device checklist.
