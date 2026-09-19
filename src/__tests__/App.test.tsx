@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
-import { useTransactionsStore } from '../transactions/store';
+import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
 import App from '../../App';
 
 jest.mock('expo-font', () => ({
@@ -15,6 +15,7 @@ jest.mock('../auth/store', () => ({
 
 jest.mock('../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
+  startTransactionsSync: jest.fn(() => () => {}),
 }));
 
 function mockAuthState(state: {
@@ -85,5 +86,13 @@ describe('App', () => {
 
     expect(screen.getByTestId('main-app')).toBeTruthy();
     expect(screen.getByTestId('transactions-screen')).toBeTruthy();
+  });
+
+  it('starts transactions sync after mount, not at module load (regression: TestFlight launch crash)', async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    expect(startTransactionsSync).toHaveBeenCalled();
   });
 });

@@ -53,14 +53,35 @@ export function createTransactionsStore(repos: TransactionsRepositories) {
     addCategory: async (name, type) => repos.categories.create(name, type),
   }));
 
-  // Registered after the store is fully created — see authStore.ts for why
-  // a synchronous listener callback during the initializer would be lost.
-  repos.transactions.subscribe((transactions) => {
-    useTransactionsStore.setState({ transactions: sortByDateDescending(transactions) });
-  });
-  repos.categories.subscribe((categories) => {
-    useTransactionsStore.setState({ categories });
-  });
+  // NOT called here, deliberately. Wiring up the repositories touches the
+  // native Firebase Auth/Firestore bridge (getAuth/onAuthStateChanged/
+  // getFirestore/onSnapshot on native) — doing that eagerly at module-load
+  // time, before the app has ever rendered a frame, is suspected to be the
+  // cause of a real TestFlight launch crash (uncaught NSException on
+  // Expo's own error-recovery queue, first appearing in the build this
+  // store first shipped with native Firestore support — see spec 002's
+  // verification notes). startSync() is called explicitly by the caller
+  // (App.tsx, inside a useEffect) instead, so it only ever runs after
+  // first mount, and any native throw is caught here rather than left to
+  // crash the whole app.
+  function startSync(): () => void {
+    let unsubscribeTransactions = () => {};
+    let unsubscribeCategories = () => {};
+    try {
+      unsubscribeTransactions = repos.transactions.subscribe((transactions) => {
+        useTransactionsStore.setState({ transactions: sortByDateDescending(transactions) });
+      });
+      unsubscribeCategories = repos.categories.subscribe((categories) => {
+        useTransactionsStore.setState({ categories });
+      });
+    } catch (e) {
+      console.warn('[transactionsStore] failed to start sync', e);
+    }
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeCategories();
+    };
+  }
 
-  return useTransactionsStore;
+  return { useTransactionsStore, startSync };
 }

@@ -6,6 +6,7 @@ import { PublicSans_400Regular } from '@expo-google-fonts/public-sans/400Regular
 import { PublicSans_600SemiBold } from '@expo-google-fonts/public-sans/600SemiBold';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -13,6 +14,7 @@ import { useAuthStore } from './src/auth/store';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { TransactionsScreen } from './src/screens/TransactionsScreen';
 import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
+import { startTransactionsSync } from './src/transactions/store';
 import { colors } from './src/theme/tokens';
 
 export default function App() {
@@ -23,6 +25,9 @@ export default function App() {
   });
   const status = useAuthStore((s) => s.status);
   const emailVerified = useAuthStore((s) => s.user?.emailVerified);
+
+  // Deferred to after first mount, deliberately — see transactionsStore.ts.
+  useEffect(() => startTransactionsSync(), []);
 
   let content;
   if (!fontsLoaded || status === 'initializing') {

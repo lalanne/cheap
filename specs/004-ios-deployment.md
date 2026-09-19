@@ -212,11 +212,65 @@ the production environment on EAS," where earlier builds showed nothing.
 bump; verifying it resolves the Google sign-in error (and confirming
 transactions actually work) is next.
 
+**Build 5 (2026-09-18) crashed immediately on open — a fifth real gap,**
+the first ever full launch crash on a real device. Build itself succeeded
+and submitted cleanly; the crash only showed up once installed via
+TestFlight. Diagnosed from the device's own crash log (Settings → Privacy
+& Security → Analytics & Improvements → Analytics Data on the iPhone
+itself — no Mac needed to pull it, though symbolicating it further did
+need one): an uncaught `NSException` → `abort()`, triggered on Expo's own
+internal `expo.controller.errorRecoveryQueue`, not through any
+React/JSI/Hermes frame. Both the raw on-device export and Xcode's own
+"Translated Report" left the crashing `cheap` binary frames unsymbolicated
+(no dSYM was available either locally or through Xcode's automatic
+App-Store-Connect lookup — nothing showed up under a "Crashes" tab there
+either), and downloading the build's own `.ipa` and resolving its `atos`
+UUID confirmed the binary itself is fully stripped, so the actual
+exception reason/name was never recoverable. Root cause is therefore
+*inferred*, not confirmed:
+
+- This build was the first to ship `src/transactions/store.ts` calling
+  `createTransactionsStore(...)` — which used to eagerly call
+  `repos.transactions.subscribe(...)` / `repos.categories.subscribe(...)`
+  — at **module-load time**, i.e. the instant the JS bundle evaluates,
+  before the app has rendered a single frame. On native those calls touch
+  `@react-native-firebase/firestore`'s and `/auth`'s native bridge
+  (`getAuth`, `onAuthStateChanged`, `getFirestore`, `onSnapshot`)
+  directly. `src/auth/store.ts` does the same eager-module-load pattern
+  for Auth alone, and that's been proven safe across four earlier
+  builds — but Firestore's native init is heavier (opens a local
+  persistence cache, starts its own gRPC thread) and had never actually
+  run on a real device before this build. A native throw at that point,
+  before Expo's own launch sequence has a previously-known-good bundle to
+  recover to, is consistent with its own recovery path then failing too
+  (an `abort()` on Expo's own `errorRecoveryQueue`, exactly as observed).
+
+**Fixed defensively, without full confirmation** (ship first, since ASC
+had no crash report to confirm against yet): `transactionsStore.ts`'s
+`createTransactionsStore` no longer subscribes eagerly — it returns a
+`startSync()` function instead, called explicitly from `App.tsx` inside a
+`useEffect` (after first mount, not at bundle-load time), and any
+exception thrown while starting sync is now caught and logged rather than
+left to propagate uncaught. This directly targets the theorized root
+cause and, independently of whether that theory is exactly right, closes
+off the whole *class* of "an uncaught native throw during startup crashes
+the entire app" failure — the same defensive posture already used for
+`handleSave` in spec 002. Ships as build 6; next device install is what
+actually confirms or refutes the theory.
+
+**Lesson for future native-module additions:** don't call
+`@react-native-firebase/*` (or any other native-bridge-touching) code at
+JS module-load time, even if an existing eager call to the same family of
+module already works — defer to a `useEffect` after first mount instead,
+and wrap the call in a try/catch. A working eager call for one module
+(Auth) doesn't prove the pattern is safe for a different, heavier module
+(Firestore) that's never actually executed on-device before.
+
 **Still open:**
 - Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
   pushed via `eas update --channel preview` after a working build is
   installed.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
-  flow) — install build 3 and run spec 001's real-device checklist. Also
-  worth confirming transactions (spec 002) actually save/load, given the
-  shared root cause above.
+  flow) — install build 6 and run spec 001's real-device checklist,
+  including whether the launch crash is actually resolved and whether
+  transactions (spec 002) save/load correctly.

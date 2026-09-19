@@ -71,10 +71,34 @@ function createMockRepos() {
   return { transactions: transactionsRepo, categories: categoriesRepo };
 }
 
+function createStartedStore(repos: ReturnType<typeof createMockRepos>) {
+  const { useTransactionsStore, startSync } = createTransactionsStore(repos);
+  startSync();
+  return useTransactionsStore;
+}
+
 describe('transactionsStore', () => {
+  it('does not touch the repositories until startSync is called', () => {
+    const repos = createMockRepos();
+    createTransactionsStore(repos);
+
+    expect(repos.transactions.subscribe).not.toHaveBeenCalled();
+    expect(repos.categories.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('swallows a repository that throws when starting sync, instead of crashing', () => {
+    const repos = createMockRepos();
+    (repos.transactions.subscribe as jest.Mock).mockImplementation(() => {
+      throw new Error('native bridge not ready');
+    });
+    const { startSync } = createTransactionsStore(repos);
+
+    expect(() => startSync()).not.toThrow();
+  });
+
   it('creates a transaction and reflects it in the list (criterion 1)', async () => {
     const repos = createMockRepos();
-    const useStore = createTransactionsStore(repos);
+    const useStore = createStartedStore(repos);
 
     await useStore.getState().addTransaction({
       type: 'expense',
@@ -101,7 +125,7 @@ describe('transactionsStore', () => {
 
   it('sorts by transaction date descending, not creation order (criterion 5)', async () => {
     const repos = createMockRepos();
-    const useStore = createTransactionsStore(repos);
+    const useStore = createStartedStore(repos);
 
     // Logged today, dated yesterday.
     await useStore.getState().addTransaction({
@@ -126,7 +150,7 @@ describe('transactionsStore', () => {
 
   it('edits a transaction in place, not as a duplicate (criterion 3)', async () => {
     const repos = createMockRepos();
-    const useStore = createTransactionsStore(repos);
+    const useStore = createStartedStore(repos);
     await useStore.getState().addTransaction({
       type: 'expense',
       amount: 1000,
@@ -148,7 +172,7 @@ describe('transactionsStore', () => {
 
   it('deletes a transaction (criterion 4)', async () => {
     const repos = createMockRepos();
-    const useStore = createTransactionsStore(repos);
+    const useStore = createStartedStore(repos);
     await useStore.getState().addTransaction({
       type: 'expense',
       amount: 1000,
@@ -165,7 +189,7 @@ describe('transactionsStore', () => {
 
   it('custom categories are selectable immediately and persist across a reload (criterion 6)', async () => {
     const repos = createMockRepos();
-    const useStore = createTransactionsStore(repos);
+    const useStore = createStartedStore(repos);
 
     const created = await useStore.getState().addCategory('Pets', 'expense');
 
@@ -174,7 +198,7 @@ describe('transactionsStore', () => {
     // Simulate an app restart: a fresh store subscribing to the same
     // backing data should see the category was actually persisted, not
     // just held in the first store's memory.
-    const reloadedStore = createTransactionsStore(repos);
+    const reloadedStore = createStartedStore(repos);
     expect(reloadedStore.getState().categories).toContainEqual(created);
   });
 });
