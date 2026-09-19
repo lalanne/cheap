@@ -266,11 +266,60 @@ and wrap the call in a try/catch. A working eager call for one module
 (Auth) doesn't prove the pattern is safe for a different, heavier module
 (Firestore) that's never actually executed on-device before.
 
+**Build 6 crashed identically — same theory, disproven.** Installed with
+the deferred-init fix from build 5's investigation; crashed on launch
+again, and the on-device crash log's unsymbolicated `cheap` binary frames
+were at the *exact same byte offsets* as build 5's, even though the two
+builds have different binary UUIDs. Since the frames are identical and
+`transactionsStore.ts`/`App.tsx` were the only files that changed between
+builds 5 and 6, this is strong evidence the crash is in code that *didn't*
+change — i.e. not the eager-Firestore-init theory after all. Reading
+`expo-updates`' own source
+(`node_modules/expo-updates/ios/EXUpdates/ErrorRecovery.swift`) confirmed
+what `expo.controller.errorRecoveryQueue` actually is: expo-updates'
+**intentional** fallback pipeline for a fatal error during startup — try a
+remote update, try a cached update, and if both fail, deliberately
+`crash()`. That's *by design*, documented in the file's own comments — it
+means some fatal error is being caught upstream of this, and this queue's
+own abort is just the designed last resort, not a bug in Expo itself.
+Also checked: the `package-lock.json` regeneration between build 4 (last
+known-good) and build 5 was purely additive (46 insertions, 0 deletions)
+— it didn't silently bump any unrelated package version, so that's ruled
+out as a contributing factor too.
+
+Tried a live-debugging shortcut next — an `eas build --profile
+development` (internal distribution, skips Apple's review queue, and
+would show a full JS red-screen with the real error instead of a silent
+abort if the cause is a catchable JS error). It failed outright in
+non-interactive mode: `"EAS CLI couldn't find any credentials suitable
+for internal distribution"` — ad-hoc/internal iOS distribution needs the
+test device's UDID registered first (`eas device:create`, which needs the
+user to open a link on the device), an extra interactive step not worth
+the detour mid-incident. Abandoned in favor of a direct bisection using
+the already-proven `preview` pipeline instead.
+
+**Build 7: diagnostic bisection, not a real feature change.**
+`TransactionsScreen.tsx`'s date field was temporarily reverted from
+`DatePickerField` (native `@react-native-community/datetimepicker`) back
+to a plain text `Input`, with nothing else changed, specifically to test
+whether the date picker's native module — the one remaining new
+dependency in builds 5/6 untouched by the build-6 fix — is the actual
+cause. New Architecture/Fabric native-component registration mismatches
+are a well-documented source of exactly this failure shape (uncaught
+native exception very early in startup, no JS/Hermes frames), which made
+it the strongest remaining candidate once Firestore's eager-init theory
+was ruled out. Result: **[fill in after build 7 is tested]**.
+
 **Still open:**
 - Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
   pushed via `eas update --channel preview` after a working build is
   installed.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
-  flow) — install build 6 and run spec 001's real-device checklist,
-  including whether the launch crash is actually resolved and whether
-  transactions (spec 002) save/load correctly.
+  flow) — blocked on resolving the launch crash first.
+- The launch crash itself — build 7's result determines the next step:
+  if it fixes it, dig into *why* datetimepicker's native registration
+  fails and fix it properly rather than leaving the field reverted; if
+  build 7 still crashes, the date picker is cleared too and the
+  remaining suspect is something native-level in the Firestore path that
+  a JS `try/catch` can't intercept, or something unrelated to both of
+  this investigation's leading theories entirely.
