@@ -227,7 +227,7 @@ export function TransactionsScreen() {
   ));
 
   return (
-    <Screen testID="transactions-screen">
+    <Screen testID="transactions-screen" wide={isWideWeb}>
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
         {(!formOpen || isWideWeb) && (

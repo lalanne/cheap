@@ -141,4 +141,35 @@ Deployed 2026-09-21.
 - `TransactionsScreen.tsx` — restructured into shared pieces (`typeToggle`, `amountField`, `dateField`, `categorySection`, `noteAndActions`, `rows`) assembled two ways: the untouched narrow/native JSX, and a new `isWideWeb` branch rendering a persistent `wideListColumn` + `wideFormColumn` (with an `amountDateRow` two-column cell inside the form) instead of the list/form replacing each other.
 - No store, repository, or Firestore rules changes.
 
-**Still open:** the manual browser resize pass (crossing 900px live, confirming the "Add"/row-click transitions look right at the actual deployed URL) hasn't been done yet — same "no browser-automation tool available" limitation as specs 001/005. Staying at `implemented`, not `verified`, until that's checked against the running app.
+**Real bug found on first screenshot (2026-09-21), fixed same day:** the
+master-detail layout was crushed to roughly 130px wide — the list column
+invisible, the form's fields wrapping one character per line, the
+Expense/Income toggle's labels overlapping each other. Root cause: this
+spec's own universal `Screen` width cap (560px, meant for narrow
+single-column content like the sign-in form) was applying unconditionally,
+including to the wide master-detail layout, which needs far more than
+560px for a 400px list column + a form column side by side. The 560px cap
+and the ≥900px breakpoint were never reconciled — a screen wide enough to
+trigger the master-detail layout was still being squeezed into the narrow
+cap designed for a completely different case. Fixed by giving `Screen` a
+`wide` prop (`TransactionsScreen` passes `wide={isWideWeb}`) that swaps in
+a 1280px cap instead of 560px, still bounded so it doesn't regress back to
+the original edge-to-edge stretching complaint on a very wide monitor.
+Added a regression test (`Screen.test.tsx`) asserting the wide cap is
+strictly greater than the narrow one. Redeployed; screenshot-confirmed
+fixed the same day.
+
+**Lesson:** a "universal" fix applied via one shared component (`Screen`)
+needs to actually account for every mode that component's callers use,
+not just the one being tested at the time — the width cap was verified
+against `SignInScreen` (narrow, correct) and against the automated
+component tests (which check the *value* of `maxWidth`, not how it reads
+visually at that width in a browser), but the interaction between two
+requirements landing in the same file/spec wasn't verified against a real
+screenshot until the user caught it.
+
+**Still open:** the manual browser resize pass (crossing 900px live,
+confirming the "Add"/row-click transitions look right at the actual
+deployed URL) hasn't been done yet — same "no browser-automation tool
+available" limitation as specs 001/005. Staying at `implemented`, not
+`verified`, until that's checked against the running app.

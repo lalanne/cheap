@@ -7,6 +7,12 @@ import { colors, spacing } from '../theme/tokens';
 type ScreenProps = {
   children: ReactNode;
   testID?: string;
+  // Spec 006: the default 560px cap is for narrow, single-column content
+  // (sign-in, a form). A screen using the wide-web master-detail layout
+  // (see useWideWeb) needs real room for two columns — pass wide to get a
+  // much larger cap instead of the narrow one, still bounded so it doesn't
+  // regress back to edge-to-edge stretching on a very wide monitor.
+  wide?: boolean;
 };
 
 // Every top-level screen renders through here, not a raw View — spec 003's
@@ -14,7 +20,7 @@ type ScreenProps = {
 // caught (the sim build never actually launched, spec 004): content
 // colliding with the status bar/notch/TestFlight banner, and a keyboard
 // with no way to dismiss it or reach fields/buttons underneath.
-export function Screen({ children, testID }: ScreenProps) {
+export function Screen({ children, testID, wide }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -28,7 +34,7 @@ export function Screen({ children, testID }: ScreenProps) {
         style={styles.flex}
         contentContainerStyle={[
           styles.content,
-          Platform.OS === 'web' && styles.webContent,
+          Platform.OS === 'web' && (wide ? styles.webContentWide : styles.webContent),
           {
             paddingTop: insets.top + spacing.lg,
             paddingBottom: insets.bottom + spacing.lg,
@@ -57,6 +63,11 @@ const styles = StyleSheet.create({
   // applies at every width on web, including a phone's browser.
   webContent: {
     maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  webContentWide: {
+    maxWidth: 1280,
     width: '100%',
     alignSelf: 'center',
   },

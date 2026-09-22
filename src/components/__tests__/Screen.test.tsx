@@ -84,4 +84,23 @@ describe('Screen', () => {
       Platform.OS = originalOS;
     }
   });
+
+  it('uses a wider cap on web when wide is set (regression: master-detail crushed to ~130px inside the 560px cap)', async () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      await render(
+        <Screen wide>
+          <Text>Transactions</Text>
+        </Screen>
+      );
+
+      const scrollView = screen.getByTestId('screen-scroll-view');
+      const contentStyle = [].concat(scrollView.props.contentContainerStyle);
+      const flat = Object.assign({}, ...contentStyle);
+      expect(flat.maxWidth).toBeGreaterThan(560);
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
 });
