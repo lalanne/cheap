@@ -19,6 +19,8 @@ This project is built spec-first. Rules:
 | 004 | [iOS deployment (TestFlight)](004-ios-deployment.md) | implemented |
 | 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
 | 006 | [Responsive web layout](006-responsive-web-layout.md) | implemented |
+| 007 | [Category budgets](007-budgets.md) | approved |
+| 008 | [Debt tracking](008-debt-tracking.md) | draft |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 
