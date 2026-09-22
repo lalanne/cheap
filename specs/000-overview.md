@@ -4,10 +4,23 @@
 
 ## Vision
 
-A personal expense/income tracker. The goal isn't just logging transactions —
-it's understanding where money goes clearly enough to make real financial
-decisions: what to cut, what's creeping up, whether this month is better or
-worse than last, and what to change to save more.
+A personal finance tool focused on **saving money** — not just logging
+transactions. Four things it's specifically for:
+
+1. **Tracking** expenses and income clearly enough to see where money
+   actually goes.
+2. **Budgets** — set a spending limit per category, see actual spend
+   against it, know before the month gets away from you.
+3. **Debt** — track what's owed (loans, credit cards), minimum payments,
+   and payoff progress, not just treat debt payments as another expense
+   line with no larger context.
+4. **Suggestions** — turn 1–3 into concrete calls: which category is over
+   budget, which debt to prioritize paying down, what's creeping up
+   month over month, what to cut.
+
+Everything else (categories, charts, the dashboard) exists in service of
+these four — a feature that doesn't help someone save money, pay down
+debt, or make a better financial decision is out of scope until it does.
 
 ## Target users
 
@@ -44,11 +57,15 @@ revisit with scheduled Cloud Functions rollups only if that gets slow.
 |----|-------------|
 | Manual entry of expenses and income (amount, category, date, note) | Bank/card sync (Plaid or similar) |
 | Predefined + custom categories | Receipt OCR / auto-extraction |
-| Dashboard: spend by category, spend over time, income vs. expense | Multi-currency (see below — CLP only in v1) |
-| Basic savings insight (top categories, month-over-month change, simple "where to cut" callouts) | Shared/family budgets, multi-user households |
-| Auth (Google + email/password, spec 001) + cross-device sync (phone + web) | Recurring-transaction automation/reminders |
-| | Budgeting goals / envelope budgeting |
-| | Export (CSV/PDF) |
+| **Category budgets** — a monthly limit per category, tracked against actual spend, with an over-budget state | Multi-currency (CLP only in v1) |
+| **Debt tracking** — a debt/loan entity (balance, minimum payment, interest rate optional) with payoff progress, separate from a regular expense category | Shared/family budgets, multi-user households |
+| Dashboard: spend by category, spend over time, income vs. expense, budget-vs-actual, debt payoff progress | Recurring-transaction automation/reminders |
+| **Savings & debt suggestions** — top categories, month-over-month change, budget overruns, which debt to prioritize, simple "where to cut" callouts | Full envelope budgeting (rollover between periods, sub-envelopes) |
+| Auth (Google + email/password, spec 001) + cross-device sync (phone + web) | Export (CSV/PDF) |
+
+Budgets and debt tracking are new structural scope beyond what's
+implemented so far (spec 002 only models `expense`/`income` transactions)
+— each gets its own spec before any code, same as everything else here.
 
 ## Cross-cutting constraints
 
@@ -67,7 +84,9 @@ revisit with scheduled Cloud Functions rollups only if that gets slow.
   spacing, or type values in screen code. Built before 001/002's screens
   (see `specs/README.md`'s Build order).
 - **Visualization:** charts are core to the product's value (not a
-  nice-to-have add-on). The charting library must work acceptably on both
-  React Native and web from one implementation (no maintaining two); spec
-  003 fixes the chart color palette, the library choice itself is decided
-  when dashboard work starts.
+  nice-to-have add-on) — and specifically in service of the vision above:
+  "where does my money go" charts are a means to budgets/debt/savings
+  decisions, not the end goal by themselves. The charting library must
+  work acceptably on both React Native and web from one implementation
+  (no maintaining two); spec 003 fixes the chart color palette, the
+  library choice itself is decided when dashboard work starts.
