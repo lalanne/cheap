@@ -27,26 +27,30 @@ same pill-toggle pattern already established (`SignInScreen`'s
 sign-in/create-account tabs, `TransactionsScreen`'s Expense/Income
 toggle) — local component state in `App.tsx`, no new dependency.
 
-### Charts: plain `View`/`StyleSheet`, no charting library
+### Charts: plain `View`/`StyleSheet`, except the donut
 
-Every chart in the approved mockup is achievable with plain flexbox
-Views, which already render identically on native and web (spec 000's
-"one implementation" requirement, trivially satisfied):
+Most of the approved mockup is achievable with plain flexbox Views,
+which already render identically on native and web (spec 000's "one
+implementation" requirement, trivially satisfied):
 - Progress bars (budgets, debt payoff): a track `View` + a fill `View`
   sized by `width: '<percent>%'`.
 - The 6-month trend: vertical bars sized by `height`.
 - KPI tiles, suggestion cards: plain `Text`/`View`, matching every other
   screen in the app.
 
-**One exception, one decision:** the mockup's "Where it went" chart was a
-donut, and CSS `conic-gradient` (how the mockup drew it) isn't available
-in React Native's style system — it's web-only. Rather than add a new
-dependency (`react-native-svg` + drawing arc paths, or a full charting
-library) for one chart, **"Where it went" ships as a segmented horizontal
-bar instead of a donut** — same information (each category's share of
-this month's spend, same category color order from spec 003), same
-zero-new-dependency approach as everything else. Revisit only if a real
-donut turns out to matter more than this spec currently expects.
+**"Where it went" keeps its real donut** (decided over the
+zero-dependency segmented-bar alternative). CSS `conic-gradient` (how the
+mockup drew it) is web-only, no React Native equivalent, so this needs
+`react-native-svg` — one new dependency, already a well-established
+cross-platform choice (native + web via `react-native-web`'s SVG
+support; the same library most React Native charting libraries build on
+top of). Implementation: a ring built from stacked `<Circle>` elements
+(one per category) using the standard `strokeDasharray`/
+`strokeDashoffset` technique — each segment's dash length is its share
+of the total, offset by the cumulative share of segments before it,
+rotated so the first segment starts at 12 o'clock. No arc-path trig
+needed. The dash-length/offset math per segment is a small pure function,
+independently unit-testable from the actual SVG rendering.
 
 ### Suggestions: the 3 rules from the earlier design discussion
 
@@ -90,9 +94,9 @@ dividing by zero.
   stack (spent / saved / total debt remaining this month), side by side
   at `≥` the spec 006 breakpoint, stacked as two full-width sections in
   order on narrow/native.
-- Category breakdown (segmented bar), 6-month trend, debt payoff list —
-  three columns at `≥` the breakpoint, stacked full-width in the same
-  order below it on narrow/native.
+- Category breakdown (donut), 6-month trend, debt payoff list — three
+  columns at `≥` the breakpoint, stacked full-width in the same order
+  below it on narrow/native.
 - Empty states: no budgets set → the budget section says so instead of
   rendering nothing; no debts → same for the debt section; a category
   with spend but no budget doesn't appear in the budget list at all
@@ -119,11 +123,15 @@ dividing by zero.
 6. **Given** no budgets, no debts, or neither, **then** the dashboard
    still renders correctly with the appropriate empty states — never a
    crash or a blank section with no explanation.
-7. **Given** `npx tsc --noEmit` and `npx jest`, **then** both stay green.
+7. **Given** this month's per-category expense totals, **then** the
+   donut's segments are proportional to each category's share of total
+   spend (each segment's `strokeDasharray`/`strokeDashoffset` computed
+   correctly, cumulative offsets summing to a full circle) — using spec
+   003's fixed chart color order, not reassigned per render.
+8. **Given** `npx tsc --noEmit` and `npx jest`, **then** both stay green.
 
 ## Out of scope
 
-- A real donut/pie chart (SVG-based) — see Decisions above.
 - Multi-debt payoff *strategy* (avalanche/snowball ordering) — per spec
   008's own out-of-scope line.
 - A savings-rate lookback longer than one prior month — see Decisions.
@@ -142,7 +150,8 @@ dividing by zero.
 | 4 — savings-rate suggestion, zero-income edge case | Unit | Pure function tests: normal comparison, and the zero-income skip case. |
 | 5 — narrow/native single-column stacking | Component | `useWideWeb` mocked `false`, assert single-column order (same pattern as spec 006's tests). |
 | 6 — empty states | Component | Render with empty budgets/debts arrays, assert the empty-state copy renders, not a blank or crashed section. |
-| 7 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
+| 7 — donut segment math | Unit | Pure function test: given category totals, assert each segment's dash length/offset and that offsets sum to the full circumference. |
+| 8 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
