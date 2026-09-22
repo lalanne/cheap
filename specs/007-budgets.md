@@ -1,6 +1,6 @@
 # 007 — Category Budgets
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000 (v1 scope — budgets moved in-scope), 001, 002 (transactions/categories this measures against)
 
 ## User stories
@@ -96,3 +96,44 @@ users/{uid}/budgets/{budgetId}
 
 Unit/component tests against mocked Firebase (matching spec 002's
 pattern); rules tests against the local emulator, never a real project.
+
+## Verification results
+
+Implemented 2026-09-22.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1, 2 — create / update-in-place | ✅ | `budgetsStore.test.ts`: `setBudget` looks up the existing budget by category and calls `update`, not `create`, when one already exists. |
+| 3 — actual-spend computation | ✅ | `computeCategorySpend.test.ts` — a pure function, category + current-month + `expense`-type filter, summed. Caught a real timezone bug writing this test: `new Date('2026-09-01')` (UTC midnight) shifted to the wrong local month on this machine — fixed by constructing local-midnight dates in the fixture, matching `DatePickerField.web.tsx`'s existing convention. |
+| 4 — validation | ✅ | `BudgetsScreen.test.tsx`: an invalid amount is rejected inline, reusing `validateAmount` directly. |
+| 5 — delete removes, doesn't zero | ✅ | `budgetsStore.test.ts` + `BudgetsScreen.test.tsx`. |
+| 6 — cross-user isolation | ✅ | `firebase/tests/budgets.rules.test.ts`, run against the local emulator (`npm run test:rules`) — 13/13 rules tests pass across transactions/categories/budgets. |
+
+**What shipped:**
+- `src/budgets/types.ts`, `budgetsStore.ts` (deferred `startSync()`, same
+  crash-safety pattern as `transactionsStore.ts` — see spec 004), `store.ts`.
+- `src/budgets/providers/firestoreBudgetRepository.{native,web}.ts` —
+  same native/web Firestore split as every other repo in this app.
+- `src/budgets/computeCategorySpend.ts` — the pure aggregation function
+  criterion 3 needs, ready for spec 009 to call.
+- `firestore.rules` gained `users/{uid}/budgets/{budgetId}`.
+- `src/screens/BudgetsScreen.tsx` — list + add/edit form, reusing
+  `Input`/`Button`/`Screen` and the same chip-picker pattern
+  `TransactionsScreen` already uses for categories.
+- `App.tsx` now also calls `startBudgetsSync()` in the same deferred
+  `useEffect` as transactions.
+
+**Not yet reachable from the app:** `BudgetsScreen` has no nav entry yet
+— per spec 009's own Decisions section, the tab switcher that makes both
+Transactions and Dashboard (and implicitly Budgets/Debts) reachable is
+that spec's job, not this one's. The screen and its data layer are fully
+built and tested in isolation; wiring it into the UI happens once
+navigation exists.
+
+117 unit/component tests pass plus 13 Firestore rules tests (both
+suites green, `npm run test:rules` run against the local emulator);
+`tsc --noEmit` clean.
+
+Staying at `implemented`, not `verified` — no manual device/browser pass
+yet (the screen isn't reachable in the running app until spec 009 wires
+up navigation, so there's nothing to click through yet).

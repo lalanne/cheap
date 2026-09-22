@@ -23,5 +23,9 @@ service cloud.firestore {
     match /users/{uid}/categories/{categoryId} {
       allow read, write: if isOwner(uid);
     }
+
+    match /users/{uid}/budgets/{budgetId} {
+      allow read, write: if isOwner(uid);
+    }
   }
 }

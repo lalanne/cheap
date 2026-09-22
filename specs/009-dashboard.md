@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** draft
+**Status:** approved
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 

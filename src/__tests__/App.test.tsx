@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
+import { startBudgetsSync } from '../budgets/store';
 import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
 import App from '../../App';
 
@@ -16,6 +17,10 @@ jest.mock('../auth/store', () => ({
 jest.mock('../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
   startTransactionsSync: jest.fn(() => () => {}),
+}));
+
+jest.mock('../budgets/store', () => ({
+  startBudgetsSync: jest.fn(() => () => {}),
 }));
 
 function mockAuthState(state: {
@@ -94,5 +99,13 @@ describe('App', () => {
     await render(<App />);
 
     expect(startTransactionsSync).toHaveBeenCalled();
+  });
+
+  it('starts budgets sync after mount too', async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    expect(startBudgetsSync).toHaveBeenCalled();
   });
 });
