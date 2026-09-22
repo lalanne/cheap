@@ -252,3 +252,37 @@ section and criterion 12 ahead of a TestFlight deploy (spec 004). Status
 reverted to `approved` — the web-only work above still stands, but the
 spec as a whole isn't `implemented` again until criterion 12's unit test
 passes too.
+
+**Amendment (2026-09-21): Google sign-in on web switched from
+`signInWithPopup` to `signInWithRedirect`.** Real bug hit on the first
+actual browser sign-in after spec 005's web deploy went live: in Safari,
+Google sign-in via the popup flow let the user reach the signed-in
+transactions screen normally, but every subsequent Firestore
+read/write was rejected with `"Missing or insufficient permissions"` —
+even though the account was confirmed genuinely email-verified
+server-side (`firebase auth:export`) and the deployed
+`firestore.rules` were confirmed correct and current (redeployed,
+compiled clean). Root cause, by elimination rather than a captured
+error message (no browser-automation tool was available to inspect
+Safari's console directly): Safari's storage-partitioning restrictions
+on third-party popup origins (`accounts.google.com`) are a documented
+cause of exactly this shape of failure — the popup's own sign-in
+handshake completes, but the resulting session/token doesn't reliably
+carry over to the main app's origin for later authenticated requests.
+Fixed by switching `googleAuthProvider.web.ts` to
+`signInWithRedirect` — Firebase's own documented recommendation for
+Safari compatibility — which avoids the popup/third-party-origin
+problem entirely. `AuthProvider.signIn()`'s resolved value was already
+unused by every caller (`authStore.signInWithGoogle` only awaits it for
+its side effect / thrown errors), so the interface didn't need to
+change; the redirect flow's actual sign-in completion happens through
+the same `onAuthStateChanged` listener the app already relies on, once
+the browser navigates back after the Google account picker.
+
+**Known gap, not yet addressed:** no explicit `getRedirectResult(auth)`
+call exists to surface a redirect-specific error (e.g. the user closing
+the Google account picker, or an OAuth error) — `onAuthStateChanged`
+fires correctly on the happy path without it, but a failed redirect
+currently fails silently back to the sign-in screen with no error
+message, unlike the popup flow's `auth/sign-in-cancelled` handling.
+Worth adding if this turns out to matter in practice.
