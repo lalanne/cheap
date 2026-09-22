@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
+import { DatePickerField } from '../components/DatePickerField';
 import { Input } from '../components/Input';
 import { Screen } from '../components/Screen';
 import { VersionStamp } from '../components/VersionStamp';
@@ -32,10 +33,7 @@ export function TransactionsScreen() {
   const [type, setType] = useState<TransactionType>('expense');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<string>(STARTER_CATEGORIES[0]);
-  // DIAGNOSTIC: plain text field instead of DatePickerField, to bisect the
-  // TestFlight launch crash — see spec 004's verification notes. Revert
-  // once confirmed either way.
-  const [dateText, setDateText] = useState(formatDate(new Date()));
+  const [date, setDate] = useState<Date>(new Date());
   const [note, setNote] = useState('');
   const [amountError, setAmountError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -49,7 +47,7 @@ export function TransactionsScreen() {
     setType('expense');
     setAmountText('');
     setCategory(STARTER_CATEGORIES[0]);
-    setDateText(formatDate(new Date()));
+    setDate(new Date());
     setNote('');
     setAmountError(null);
     setSaveError(null);
@@ -62,7 +60,7 @@ export function TransactionsScreen() {
     setType(tx.type);
     setAmountText(String(tx.amount));
     setCategory(tx.category);
-    setDateText(formatDate(tx.date));
+    setDate(tx.date);
     setNote(tx.note ?? '');
     setAmountError(null);
     setSaveError(null);
@@ -85,7 +83,7 @@ export function TransactionsScreen() {
       type,
       amount: result.value,
       category,
-      date: new Date(dateText),
+      date,
       note: note.trim() === '' ? null : note.trim(),
     };
     try {
@@ -194,7 +192,7 @@ export function TransactionsScreen() {
             </View>
           )}
 
-          <Input label="Date" value={dateText} onChangeText={setDateText} testID="date-input" />
+          <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />
           <Input label="Note (optional)" value={note} onChangeText={setNote} testID="note-input" />
 
           {saveError && (

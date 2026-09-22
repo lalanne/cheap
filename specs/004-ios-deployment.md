@@ -298,17 +298,23 @@ user to open a link on the device), an extra interactive step not worth
 the detour mid-incident. Abandoned in favor of a direct bisection using
 the already-proven `preview` pipeline instead.
 
-**Build 7: diagnostic bisection, not a real feature change.**
-`TransactionsScreen.tsx`'s date field was temporarily reverted from
-`DatePickerField` (native `@react-native-community/datetimepicker`) back
-to a plain text `Input`, with nothing else changed, specifically to test
-whether the date picker's native module — the one remaining new
-dependency in builds 5/6 untouched by the build-6 fix — is the actual
-cause. New Architecture/Fabric native-component registration mismatches
-are a well-documented source of exactly this failure shape (uncaught
-native exception very early in startup, no JS/Hermes frames), which made
-it the strongest remaining candidate once Firestore's eager-init theory
-was ruled out. Result: **[fill in after build 7 is tested]**.
+**Build 7 (diagnostic bisection) was queued but never actually built.**
+`eas build` failed outright: `"This account has used its iOS builds from
+the Free plan this month"` — the EAS free tier's monthly iOS build quota
+was exhausted (6 builds this session alone), resetting 2026-10-01 unless
+upgraded to a paid plan. That's a real money decision, not something to
+make unilaterally, so the crash investigation is **paused here, not
+resolved** — reverted the diagnostic date-field change back to
+`DatePickerField` (commit after `6fbc239`) since it wasn't a real fix,
+just a bisection step that never got to run. The still-live suspects
+remain exactly as recorded above: the native Firestore path (ruled out at
+the JS-catchable-error level by the build-6 fix, but not at the native
+level) and the date picker's native module (never actually tested — the
+bisection build that would have tested it is what hit the quota wall).
+
+Work paused here to focus on the web target instead (no iOS build quota
+involved, and the crash is iOS/native-specific — the web build uses
+entirely separate code paths, per spec 001/002's platform-split files).
 
 **Still open:**
 - Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
@@ -316,10 +322,8 @@ was ruled out. Result: **[fill in after build 7 is tested]**.
   installed.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
   flow) — blocked on resolving the launch crash first.
-- The launch crash itself — build 7's result determines the next step:
-  if it fixes it, dig into *why* datetimepicker's native registration
-  fails and fix it properly rather than leaving the field reverted; if
-  build 7 still crashes, the date picker is cleared too and the
-  remaining suspect is something native-level in the Firestore path that
-  a JS `try/catch` can't intercept, or something unrelated to both of
-  this investigation's leading theories entirely.
+- The launch crash itself — next step when work resumes is deciding
+  whether to upgrade the EAS plan (to keep using cloud builds) or
+  register the test device for a local/ad-hoc build (`eas device:create`,
+  interactive), then actually run the build-7 bisection that never got
+  to execute.
