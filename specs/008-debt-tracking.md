@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** draft
+**Status:** approved
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
