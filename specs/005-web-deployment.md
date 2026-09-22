@@ -119,3 +119,32 @@ Deployed 2026-09-21. Live at <https://lalanne-cheap-tracker.web.app>.
 
 Staying at `implemented`, not `verified`, until criteria 1–2 get a real
 manual sign-in pass in a browser.
+
+**Amendment (2026-09-21): `index.html` was being cached for an hour,
+masking every subsequent deploy.** Real bug: after spec 006 shipped a
+visible layout fix and the user reloaded to check it, "looks exactly the
+same" — the fix was genuinely live on the server (confirmed: the deployed
+bundle's content hash matched the local build exactly), but Firebase
+Hosting's default `Cache-Control: max-age=3600` applies to *every* file,
+including `index.html` itself. Since `index.html` is the entry point that
+names which hashed JS bundle to load, a browser (or the CDN edge) holding
+a cached copy from *before* a deploy keeps pointing at the *old* bundle
+for up to an hour, even though the new one is already live and reachable
+directly by URL. Fixed with an explicit `headers` block in `firebase.json`:
+`/` and `/index.html` get `no-cache, no-store, must-revalidate` (always
+revalidate, since this file's whole job is to point at whatever's
+currently deployed); `**/*.@(js|css)` get
+`public, max-age=31536000, immutable` (safe to cache forever — Expo's
+export gives every JS/CSS file a content hash in its filename, so a
+changed file is always a new URL, never a stale one reused). Confirmed via
+`curl -I`: needed **both** `/` and `/index.html` as separate `source`
+patterns — `/` alone didn't take effect for the literal `/index.html`
+path and vice versa, they're matched as distinct request paths despite
+serving the same rewritten content.
+
+**Lesson:** an SPA's entry-point HTML should essentially never be
+cacheable — it's the one file whose whole job is to always reflect
+whatever was deployed *most recently*; only content-hashed assets are
+safe to cache aggressively. Worth setting this up front for any future
+Firebase Hosting deploy, not discovering it retroactively after a "why
+doesn't my fix show up" report.
