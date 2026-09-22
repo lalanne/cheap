@@ -17,6 +17,7 @@ This project is built spec-first. Rules:
 | 002 | [Transactions: data model & manual entry](002-transactions.md) | implemented |
 | 003 | [Design system & visual language](003-design-system.md) | implemented |
 | 004 | [iOS deployment (TestFlight)](004-ios-deployment.md) | implemented |
+| 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 
