@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
 import { startBudgetsSync } from '../budgets/store';
+import { startDebtsSync } from '../debts/store';
 import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
 import App from '../../App';
 
@@ -21,6 +22,10 @@ jest.mock('../transactions/store', () => ({
 
 jest.mock('../budgets/store', () => ({
   startBudgetsSync: jest.fn(() => () => {}),
+}));
+
+jest.mock('../debts/store', () => ({
+  startDebtsSync: jest.fn(() => () => {}),
 }));
 
 function mockAuthState(state: {
@@ -107,5 +112,13 @@ describe('App', () => {
     await render(<App />);
 
     expect(startBudgetsSync).toHaveBeenCalled();
+  });
+
+  it('starts debts sync after mount too', async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    expect(startDebtsSync).toHaveBeenCalled();
   });
 });

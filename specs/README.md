@@ -20,7 +20,7 @@ This project is built spec-first. Rules:
 | 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
 | 006 | [Responsive web layout](006-responsive-web-layout.md) | implemented |
 | 007 | [Category budgets](007-budgets.md) | implemented |
-| 008 | [Debt tracking](008-debt-tracking.md) | approved |
+| 008 | [Debt tracking](008-debt-tracking.md) | implemented |
 | 009 | [Dashboard](009-dashboard.md) | approved |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.

@@ -27,5 +27,9 @@ service cloud.firestore {
     match /users/{uid}/budgets/{budgetId} {
       allow read, write: if isOwner(uid);
     }
+
+    match /users/{uid}/debts/{debtId} {
+      allow read, write: if isOwner(uid);
+    }
   }
 }

@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
+import { startDebtsSync } from './src/debts/store';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { TransactionsScreen } from './src/screens/TransactionsScreen';
 import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
@@ -30,6 +31,7 @@ export default function App() {
   // Deferred to after first mount, deliberately — see transactionsStore.ts.
   useEffect(() => startTransactionsSync(), []);
   useEffect(() => startBudgetsSync(), []);
+  useEffect(() => startDebtsSync(), []);
 
   let content;
   if (!fontsLoaded || status === 'initializing') {

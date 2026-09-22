@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
@@ -123,3 +123,42 @@ users/{uid}/debts/{debtId}
 
 Unit/component tests against mocked Firebase (matching specs 002/007's
 pattern); rules tests against the local emulator, never a real project.
+
+## Verification results
+
+Implemented 2026-09-22.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1 — create a debt | ✅ | `debtsStore.test.ts` + `DebtsScreen.test.tsx`. |
+| 2 — logging a payment: transaction + balance together | ✅ | `firestoreDebtRepository.native.test.ts` — `logPayment` runs inside a single `runTransaction`: reads the debt's current balance *from inside* the transaction (not cached state, avoiding a race between concurrent payments), writes the linked expense doc and the decreased balance together; a "debt not found" rejection leaves neither write applied. |
+| 3 — direct balance edit creates no transaction | ✅ | `debtsStore.test.ts` + `DebtsScreen.test.tsx`: `editBalance` calls only `repo.updateBalance`, never `repo.logPayment`. |
+| 4 — payoff math, zero-balance edge case | ✅ | `payoffMath.test.ts` — `monthsToPayoff`/`percentPaid`, including `currentBalance === 0` and `minimumPayment === 0`. |
+| 5 — payment validation | ✅ | `validatePaymentAmount.test.ts` — wraps `validateAmount`, adds the over-balance check. |
+| 6 — paid-off debt stays visible | ✅ | `debtsStore.test.ts` + `DebtsScreen.test.tsx`: balance reaching 0 keeps the debt in state/list (shown "Paid off"), removed only on explicit delete. |
+| 7 — cross-user isolation | ✅ | `firebase/tests/debts.rules.test.ts`, 16/16 rules tests passing against the local emulator (transactions + categories + budgets + debts). |
+
+**What shipped:**
+- `src/debts/types.ts`, `payoffMath.ts`, `validatePaymentAmount.ts`,
+  `debtsStore.ts` (deferred `startSync()`, same pattern as every other
+  store in this app), `store.ts`.
+- `src/debts/providers/firestoreDebtRepository.{native,web}.ts` — plain
+  `addDoc`/`updateDoc`/`deleteDoc` for `create`/`updateBalance`/`delete`
+  (no atomicity needed there, so no reason to pay for it); `logPayment`
+  is the one method using `runTransaction`, since it's the one place two
+  collections must change together.
+- `firestore.rules` gained `users/{uid}/debts/{debtId}`.
+- `src/screens/DebtsScreen.tsx` — add-debt form, and per-debt
+  Log Payment / Edit Balance / Delete actions, reusing existing
+  primitives.
+- `App.tsx` now also calls `startDebtsSync()` in the same deferred
+  `useEffect` as transactions/budgets.
+
+**Not yet reachable from the app** — same reason as spec 007's
+`BudgetsScreen`: navigation is spec 009's job.
+
+148 unit/component tests pass, 16 Firestore rules tests pass
+(`npm run test:rules`); `tsc --noEmit` clean.
+
+Staying at `implemented`, not `verified` — nothing to click through in
+the running app until spec 009 wires up navigation.
