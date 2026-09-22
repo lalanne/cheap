@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 
 import { Screen } from '../Screen';
 
@@ -62,5 +62,26 @@ describe('Screen', () => {
     const scrollView = screen.getByTestId('screen-scroll-view');
     expect(scrollView.props.keyboardShouldPersistTaps).toBe('handled');
     expect(scrollView.props.keyboardDismissMode).toBe('on-drag');
+  });
+
+  it('caps and centers content width on web (spec 006 criterion 5)', async () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      await render(
+        <Screen>
+          <Text>Transactions</Text>
+        </Screen>
+      );
+
+      const scrollView = screen.getByTestId('screen-scroll-view');
+      const contentStyle = [].concat(scrollView.props.contentContainerStyle);
+      const flat = Object.assign({}, ...contentStyle);
+      expect(flat.maxWidth).toBe(560);
+      expect(flat.alignSelf).toBe('center');
+      expect(flat.width).toBe('100%');
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 });

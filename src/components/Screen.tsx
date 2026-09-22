@@ -28,6 +28,7 @@ export function Screen({ children, testID }: ScreenProps) {
         style={styles.flex}
         contentContainerStyle={[
           styles.content,
+          Platform.OS === 'web' && styles.webContent,
           {
             paddingTop: insets.top + spacing.lg,
             paddingBottom: insets.bottom + spacing.lg,
@@ -49,5 +50,14 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
+  },
+  // Spec 006: without this, content stretches edge-to-edge across a wide
+  // browser window — the same mobile layout, just scaled up, not designed
+  // for the space. Independent of the wide-web breakpoint (useWideWeb) —
+  // applies at every width on web, including a phone's browser.
+  webContent: {
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
   },
 });

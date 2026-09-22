@@ -11,6 +11,7 @@ import { useTransactionsStore } from '../transactions/store';
 import type { Transaction, TransactionType } from '../transactions/types';
 import { validateAmount } from '../transactions/validateAmount';
 import { colors, radius, spacing, typography } from '../theme/tokens';
+import { useWideWeb } from '../theme/useWideWeb';
 
 function formatCLP(amount: number): string {
   return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
@@ -21,6 +22,7 @@ function formatDate(date: Date): string {
 }
 
 export function TransactionsScreen() {
+  const isWideWeb = useWideWeb();
   const transactions = useTransactionsStore((s) => s.transactions);
   const categories = useTransactionsStore((s) => s.categories);
   const addTransaction = useTransactionsStore((s) => s.addTransaction);
@@ -109,131 +111,165 @@ export function TransactionsScreen() {
     setAddingCategory(false);
   }
 
+  const typeToggle = (
+    <View style={styles.tabs}>
+      <Pressable
+        testID="type-expense"
+        style={type === 'expense' ? styles.tabActive : styles.tab}
+        onPress={() => setType('expense')}
+      >
+        <Text style={type === 'expense' ? styles.tabLabelActive : styles.tabLabel}>Expense</Text>
+      </Pressable>
+      <Pressable
+        testID="type-income"
+        style={type === 'income' ? styles.tabActive : styles.tab}
+        onPress={() => setType('income')}
+      >
+        <Text style={type === 'income' ? styles.tabLabelActive : styles.tabLabel}>Income</Text>
+      </Pressable>
+    </View>
+  );
+
+  const amountField = (
+    <Input
+      label="Amount (CLP)"
+      value={amountText}
+      onChangeText={(text) => {
+        setAmountText(text);
+        setAmountError(null);
+      }}
+      testID="amount-input"
+      keyboardType="number-pad"
+      error={amountError}
+    />
+  );
+
+  const dateField = <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />;
+
+  const categorySection = (
+    <>
+      <Text style={styles.label}>Category</Text>
+      <View style={styles.chipRow}>
+        {allCategoryNames.map((name) => (
+          <Pressable
+            key={name}
+            testID={`category-chip-${name}`}
+            style={category === name ? styles.chipActive : styles.chip}
+            onPress={() => setCategory(name)}
+          >
+            <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>{name}</Text>
+          </Pressable>
+        ))}
+        {!addingCategory && (
+          <Pressable testID="add-category-button" style={styles.chip} onPress={() => setAddingCategory(true)}>
+            <Text style={styles.chipLabel}>+ New</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {addingCategory && (
+        <View style={styles.newCategoryRow}>
+          <View style={styles.newCategoryInput}>
+            <Input
+              label="New category name"
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              testID="new-category-input"
+            />
+          </View>
+          <Button title="Add" onPress={handleConfirmAddCategory} testID="confirm-add-category-button" />
+        </View>
+      )}
+    </>
+  );
+
+  const noteAndActions = (
+    <>
+      <Input label="Note (optional)" value={note} onChangeText={setNote} testID="note-input" />
+
+      {saveError && (
+        <Text style={styles.saveError} testID="save-error">
+          {saveError}
+        </Text>
+      )}
+      <Button title="Save" onPress={handleSave} testID="save-transaction-button" />
+      <View style={styles.spacer} />
+      <Button title="Cancel" onPress={closeForm} testID="cancel-transaction-button" />
+    </>
+  );
+
+  const rows = transactions.map((tx) => (
+    <Pressable
+      key={tx.id}
+      testID={`transaction-row-${tx.id}`}
+      style={styles.row}
+      onPress={() => openEditForm(tx)}
+    >
+      <View style={styles.rowMain}>
+        <Text style={styles.rowCategory}>{tx.category}</Text>
+        <Text style={styles.rowDate}>
+          {formatDate(tx.date)}
+          {tx.note ? ` · ${tx.note}` : ''}
+        </Text>
+      </View>
+      <Text style={tx.type === 'income' ? styles.rowAmountIncome : styles.rowAmountExpense}>
+        {tx.type === 'income' ? '+' : '−'}
+        {formatCLP(tx.amount)}
+      </Text>
+      <Pressable
+        testID={`delete-transaction-${tx.id}`}
+        onPress={() => deleteTransaction(tx.id)}
+        style={styles.deleteButton}
+      >
+        <Text style={styles.deleteLabel}>Delete</Text>
+      </Pressable>
+    </Pressable>
+  ));
+
   return (
     <Screen testID="transactions-screen">
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
-        {!formOpen && (
+        {(!formOpen || isWideWeb) && (
           <Button title="Add" onPress={openAddForm} testID="add-transaction-button" />
         )}
       </View>
 
-      {formOpen && (
-        <View style={styles.form} testID="transaction-form">
-          <View style={styles.tabs}>
-            <Pressable
-              testID="type-expense"
-              style={type === 'expense' ? styles.tabActive : styles.tab}
-              onPress={() => setType('expense')}
-            >
-              <Text style={type === 'expense' ? styles.tabLabelActive : styles.tabLabel}>Expense</Text>
-            </Pressable>
-            <Pressable
-              testID="type-income"
-              style={type === 'income' ? styles.tabActive : styles.tab}
-              onPress={() => setType('income')}
-            >
-              <Text style={type === 'income' ? styles.tabLabelActive : styles.tabLabel}>Income</Text>
-            </Pressable>
-          </View>
-
-          <Input
-            label="Amount (CLP)"
-            value={amountText}
-            onChangeText={(text) => {
-              setAmountText(text);
-              setAmountError(null);
-            }}
-            testID="amount-input"
-            keyboardType="number-pad"
-            error={amountError}
-          />
-
-          <Text style={styles.label}>Category</Text>
-          <View style={styles.chipRow}>
-            {allCategoryNames.map((name) => (
-              <Pressable
-                key={name}
-                testID={`category-chip-${name}`}
-                style={category === name ? styles.chipActive : styles.chip}
-                onPress={() => setCategory(name)}
-              >
-                <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>
-                  {name}
-                </Text>
-              </Pressable>
-            ))}
-            {!addingCategory && (
-              <Pressable
-                testID="add-category-button"
-                style={styles.chip}
-                onPress={() => setAddingCategory(true)}
-              >
-                <Text style={styles.chipLabel}>+ New</Text>
-              </Pressable>
+      {isWideWeb ? (
+        <View style={styles.wideLayout} testID="wide-layout">
+          <View style={styles.wideListColumn}>{rows}</View>
+          <View style={styles.wideFormColumn}>
+            {formOpen ? (
+              <View style={styles.form} testID="transaction-form">
+                {typeToggle}
+                <View style={styles.amountDateRow} testID="amount-date-row">
+                  <View style={styles.amountDateCell}>{amountField}</View>
+                  <View style={styles.amountDateCell}>{dateField}</View>
+                </View>
+                {categorySection}
+                {noteAndActions}
+              </View>
+            ) : (
+              <View style={styles.wideEmptyState} testID="wide-empty-state">
+                <Text style={styles.wideEmptyStateText}>Select Add, or a transaction, to see it here.</Text>
+              </View>
             )}
           </View>
-
-          {addingCategory && (
-            <View style={styles.newCategoryRow}>
-              <View style={styles.newCategoryInput}>
-                <Input
-                  label="New category name"
-                  value={newCategoryName}
-                  onChangeText={setNewCategoryName}
-                  testID="new-category-input"
-                />
-              </View>
-              <Button
-                title="Add"
-                onPress={handleConfirmAddCategory}
-                testID="confirm-add-category-button"
-              />
-            </View>
-          )}
-
-          <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />
-          <Input label="Note (optional)" value={note} onChangeText={setNote} testID="note-input" />
-
-          {saveError && (
-            <Text style={styles.saveError} testID="save-error">
-              {saveError}
-            </Text>
-          )}
-          <Button title="Save" onPress={handleSave} testID="save-transaction-button" />
-          <View style={styles.spacer} />
-          <Button title="Cancel" onPress={closeForm} testID="cancel-transaction-button" />
         </View>
-      )}
-
-      {!formOpen &&
-        transactions.map((tx) => (
-          <Pressable
-            key={tx.id}
-            testID={`transaction-row-${tx.id}`}
-            style={styles.row}
-            onPress={() => openEditForm(tx)}
-          >
-            <View style={styles.rowMain}>
-              <Text style={styles.rowCategory}>{tx.category}</Text>
-              <Text style={styles.rowDate}>
-                {formatDate(tx.date)}
-                {tx.note ? ` · ${tx.note}` : ''}
-              </Text>
+      ) : (
+        <>
+          {formOpen && (
+            <View style={styles.form} testID="transaction-form">
+              {typeToggle}
+              {amountField}
+              {categorySection}
+              {dateField}
+              {noteAndActions}
             </View>
-            <Text style={tx.type === 'income' ? styles.rowAmountIncome : styles.rowAmountExpense}>
-              {tx.type === 'income' ? '+' : '−'}
-              {formatCLP(tx.amount)}
-            </Text>
-            <Pressable
-              testID={`delete-transaction-${tx.id}`}
-              onPress={() => deleteTransaction(tx.id)}
-              style={styles.deleteButton}
-            >
-              <Text style={styles.deleteLabel}>Delete</Text>
-            </Pressable>
-          </Pressable>
-        ))}
+          )}
+          {!formOpen && rows}
+        </>
+      )}
 
       <View style={styles.footer}>
         <VersionStamp />
@@ -260,6 +296,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
+  },
+  // Spec 006 — master-detail split, ≥900px only (see useWideWeb).
+  wideLayout: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    alignItems: 'flex-start',
+  },
+  wideListColumn: {
+    width: 400,
+    flexShrink: 0,
+  },
+  wideFormColumn: {
+    flex: 1,
+  },
+  wideEmptyState: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wideEmptyStateText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.sm,
+    color: colors.inkMuted,
+  },
+  amountDateRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  amountDateCell: {
+    flex: 1,
   },
   tabs: {
     flexDirection: 'row',
