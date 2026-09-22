@@ -1,9 +1,9 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
-import { startBudgetsSync } from '../budgets/store';
-import { startDebtsSync } from '../debts/store';
+import { startBudgetsSync, useBudgetsStore } from '../budgets/store';
+import { startDebtsSync, useDebtsStore } from '../debts/store';
 import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
 import App from '../../App';
 
@@ -21,10 +21,12 @@ jest.mock('../transactions/store', () => ({
 }));
 
 jest.mock('../budgets/store', () => ({
+  useBudgetsStore: jest.fn(),
   startBudgetsSync: jest.fn(() => () => {}),
 }));
 
 jest.mock('../debts/store', () => ({
+  useDebtsStore: jest.fn(),
   startDebtsSync: jest.fn(() => () => {}),
 }));
 
@@ -61,6 +63,14 @@ describe('App', () => {
     };
     (useTransactionsStore as unknown as jest.Mock).mockImplementation(
       (selector: (s: typeof transactionsState) => unknown) => selector(transactionsState)
+    );
+    const budgetsState = { budgets: [], setBudget: jest.fn(), deleteBudget: jest.fn() };
+    (useBudgetsStore as unknown as jest.Mock).mockImplementation(
+      (selector: (s: typeof budgetsState) => unknown) => selector(budgetsState)
+    );
+    const debtsState = { debts: [], addDebt: jest.fn(), logPayment: jest.fn(), editBalance: jest.fn(), deleteDebt: jest.fn() };
+    (useDebtsStore as unknown as jest.Mock).mockImplementation(
+      (selector: (s: typeof debtsState) => unknown) => selector(debtsState)
     );
   });
 
@@ -120,5 +130,27 @@ describe('App', () => {
     await render(<App />);
 
     expect(startDebtsSync).toHaveBeenCalled();
+  });
+
+  it('shows all four tabs and switches screens when one is pressed (spec 009)', async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    expect(screen.getByTestId('tab-transactions')).toBeTruthy();
+    expect(screen.getByTestId('tab-budgets')).toBeTruthy();
+    expect(screen.getByTestId('tab-debts')).toBeTruthy();
+    expect(screen.getByTestId('tab-dashboard')).toBeTruthy();
+    expect(screen.getByTestId('transactions-screen')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('tab-budgets'));
+    expect(screen.getByTestId('budgets-screen')).toBeTruthy();
+    expect(screen.queryByTestId('transactions-screen')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('tab-debts'));
+    expect(screen.getByTestId('debts-screen')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('tab-dashboard'));
+    expect(screen.getByTestId('dashboard-screen')).toBeTruthy();
   });
 });

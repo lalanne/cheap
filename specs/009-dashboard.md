@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -16,16 +16,22 @@ budgets + debt into concrete "what to do" suggestions, on one screen.
 
 ## Decisions
 
-### Navigation: a two-tab switcher, not a router
+### Navigation: a four-tab switcher, not a router
 
 `cheap` has had exactly one screen after sign-in until now (spec 006
 explicitly called this out as *why* it needed no sidebar). Adding a real
 second screen needs *some* way to reach it — a full navigation library
-(React Navigation etc.) is more than two screens justify. Instead: a
-small top-level tab switcher (`Transactions` / `Dashboard`) using the
-same pill-toggle pattern already established (`SignInScreen`'s
-sign-in/create-account tabs, `TransactionsScreen`'s Expense/Income
-toggle) — local component state in `App.tsx`, no new dependency.
+(React Navigation etc.) is more than a handful of screens justify.
+**Revised from this spec's original draft** (which named only
+`Transactions`/`Dashboard`): specs 007 and 008 also shipped
+`BudgetsScreen`/`DebtsScreen` with no way to reach them, explicitly
+deferring that to this spec. A user can't set a budget or track a debt
+— the data this dashboard exists to visualize — without reaching those
+screens too, so the switcher covers all four: `Transactions` /
+`Budgets` / `Debts` / `Dashboard`. Same pill-toggle pattern already
+established (`SignInScreen`'s sign-in/create-account tabs,
+`TransactionsScreen`'s Expense/Income toggle) — local component state in
+`App.tsx`, no new dependency, barely more code than a two-tab version.
 
 ### Charts: plain `View`/`StyleSheet`, except the donut
 
@@ -156,3 +162,43 @@ dividing by zero.
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
 005/006.
+
+## Verification results
+
+Implemented 2026-09-22.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1 — renders from real data | ✅ | `DashboardScreen.test.tsx` — mounted with mocked stores, assert suggestion/budget/debt content matches the input data. |
+| 2 — budget-overrun suggestion + bar color | ✅ | `suggestions.test.ts` (rule math) + `DashboardScreen.test.tsx` (a 158%-over category produces both `suggestion-budget-*` and the matching progress-bar text). |
+| 3 — debt-pace suggestion math | ✅ | `suggestions.test.ts` + `DashboardScreen.test.tsx`: current-pace and doubled-pace months both shown, reusing spec 008's `monthsToPayoff`. |
+| 4 — savings-rate suggestion, zero-income edge case | ✅ | `suggestions.test.ts`: normal comparison and the zero-income skip. |
+| 5 — narrow/native single-column stacking | ✅ | `DashboardScreen.test.tsx` (no wide-row wrappers under default test `Platform.OS`) + `DashboardScreen.wideWeb.test.tsx` (wide rows present with `useWideWeb` mocked `true`) — same split-file pattern as spec 006. |
+| 6 — empty states | ✅ | `DashboardScreen.test.tsx`: empty budgets/debts render explanatory text, not a blank/crashed section. |
+| 7 — donut segment math | ✅ | `donutSegments.test.ts` — dash length proportional to share, cumulative negative offset, lengths sum to the full circumference, spec 003's chart color order (cycling past 5 categories). |
+| 8 — no regressions | ✅ | 168 tests pass, `tsc --noEmit` clean, `npx expo export -p web` builds (324 modules, 1.5MB). |
+
+**What shipped:**
+- `src/dashboard/{aggregation,suggestions,donutSegments}.ts` — pure
+  functions, no new Firestore queries (spec 000's accepted client-side
+  aggregation tradeoff): per-category/per-month expense sums, 6-month
+  trend, the 3 suggestion rules, and the donut's
+  `strokeDasharray`/`strokeDashoffset` math.
+- `react-native-svg` — the one new dependency, for the real donut kept
+  per feedback over the zero-dependency segmented-bar alternative.
+- `src/screens/DashboardScreen.tsx` — Option D's layout: suggestions
+  feed, then a wide-row (budgets list + KPI stack) or stacked
+  full-width pair on narrow/native, then a second wide-row (donut,
+  trend, debt payoff) or stacked full-width trio.
+- **Navigation, revised from this spec's original two-tab draft**: `App.tsx`
+  gained a 4-tab switcher (Transactions/Budgets/Debts/Dashboard), not
+  just Transactions/Dashboard — `BudgetsScreen`/`DebtsScreen` (specs
+  007/008) had no way to reach them otherwise, and a dashboard
+  visualizing budgets/debts is only useful once a user can actually set
+  some. See this spec's Decisions section for the full rationale.
+
+168 unit/component tests pass (up from 148), `tsc --noEmit` clean,
+`npx expo export -p web` builds successfully.
+
+Staying at `implemented`, not `verified` — the manual browser resize
+pass (specs 005/006's established process) hasn't been done yet.

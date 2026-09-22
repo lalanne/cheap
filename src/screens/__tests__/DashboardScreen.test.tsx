@@ -1,0 +1,123 @@
+import { render, screen, within } from '@testing-library/react-native';
+
+import { useBudgetsStore } from '../../budgets/store';
+import { useDebtsStore } from '../../debts/store';
+import { useTransactionsStore } from '../../transactions/store';
+import { DashboardScreen } from '../DashboardScreen';
+import type { Budget } from '../../budgets/types';
+import type { Debt } from '../../debts/types';
+import type { Transaction } from '../../transactions/types';
+
+jest.mock('../../transactions/store', () => ({
+  useTransactionsStore: jest.fn(),
+}));
+jest.mock('../../budgets/store', () => ({
+  useBudgetsStore: jest.fn(),
+}));
+jest.mock('../../debts/store', () => ({
+  useDebtsStore: jest.fn(),
+}));
+
+function localDate(year: number, month: number, day: number): Date {
+  return new Date(year, month - 1, day);
+}
+
+function tx(overrides: Partial<Transaction>): Transaction {
+  return {
+    id: 'tx-1',
+    type: 'expense',
+    amount: 10000,
+    category: 'Food',
+    date: new Date(),
+    note: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+function mockStores({
+  transactions = [],
+  budgets = [],
+  debts = [],
+}: {
+  transactions?: Transaction[];
+  budgets?: Budget[];
+  debts?: Debt[];
+}) {
+  (useTransactionsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { transactions: Transaction[] }) => unknown) => selector({ transactions })
+  );
+  (useBudgetsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { budgets: Budget[] }) => unknown) => selector({ budgets })
+  );
+  (useDebtsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { debts: Debt[] }) => unknown) => selector({ debts })
+  );
+}
+
+describe('DashboardScreen (narrow/native — useWideWeb false by default under test)', () => {
+  it('renders empty states when there is no data (criterion 6)', async () => {
+    mockStores({});
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('dashboard-budgets-empty')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-debts-empty')).toBeTruthy();
+  });
+
+  it('flags an over-budget category in the suggestions feed and its progress bar (criterion 2)', async () => {
+    const now = new Date();
+    mockStores({
+      transactions: [tx({ category: 'Entertainment', amount: 95000, date: now })],
+      budgets: [
+        {
+          id: 'b-1',
+          category: 'Entertainment',
+          monthlyLimit: 60000,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
+    const bar = screen.getByTestId('dashboard-budget-Entertainment');
+    expect(within(bar).getByText(/158%/)).toBeTruthy();
+  });
+
+  it('shows a debt-pace suggestion with both estimates (criterion 3)', async () => {
+    const now = new Date();
+    mockStores({
+      debts: [
+        {
+          id: 'd-1',
+          name: 'Credit Card',
+          originalAmount: 2000000,
+          currentBalance: 1400000,
+          minimumPayment: 100000,
+          interestRate: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    const suggestion = screen.getByTestId('suggestion-debt-d-1');
+    expect(within(suggestion).getByText(/14 months/)).toBeTruthy();
+    expect(within(suggestion).getByText(/7 months/)).toBeTruthy();
+  });
+
+  it('stacks sections in a single column (no wide-row wrappers) when useWideWeb is false', async () => {
+    mockStores({});
+    await render(<DashboardScreen />);
+
+    expect(screen.queryByTestId('dashboard-wide-row-1')).toBeNull();
+    expect(screen.queryByTestId('dashboard-wide-row-2')).toBeNull();
+    expect(screen.getByTestId('dashboard-budgets')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-donut')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-trend')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-debts')).toBeTruthy();
+  });
+});
