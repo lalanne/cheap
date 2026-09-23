@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** implemented
+**Status:** approved (amended — criterion 9 pending, see Verification results)
 **Depends on:** 000, 001
 
 ## User stories
@@ -43,6 +43,36 @@
 - Single currency in v1 (per spec 000) — no currency field needed yet.
 - Requires a signed-in `uid` (spec 001) — `users/{uid}` must already exist.
 
+### Amendment (2026-09-22): a dedicated Categories screen, with delete
+
+Real gap found using the app: categories were only manageable inline
+from the transaction form's "+ New" chip — no way to see the full
+custom-category list at a glance, and no way to delete one. Categories
+matter enough (they're the thing both transactions *and* budgets, spec
+007, key off) to get their own screen, not stay buried inside another
+one.
+
+- New `CategoriesScreen` — reachable from its own tab, list of custom
+  categories with add/delete, same list+form pattern as
+  `BudgetsScreen`/`DebtsScreen`. The existing inline "+ New" chip in
+  `TransactionsScreen`'s category picker stays too — this is additive,
+  not a replacement for the quick-add-while-logging flow.
+- `CategoryRepository` gains `delete(id): Promise<void>` — no Firestore
+  rules change needed (`users/{uid}/categories/{categoryId}`'s existing
+  `allow read, write: if isOwner(uid)` already covers delete).
+- **Starter categories (Food, Transport, …) are not deletable** — they're
+  a static app constant, not a Firestore document (see Data model), so
+  there's nothing to delete; `CategoriesScreen` only lists and offers
+  deletion for custom (stored) categories.
+- Deleting a category does **not** touch transactions or budgets that
+  already reference its name by string — spec 002's data model was
+  never a foreign-key relationship (category is a plain `string` on both
+  `Transaction` and `Budget`), so a deleted category simply stops being
+  offered as a picker option going forward; existing records keep
+  showing their category name as plain text, same as if a starter
+  category were renamed in spirit only. No cascade, no orphan cleanup
+  needed.
+
 ## Data model
 
 ```
@@ -60,6 +90,10 @@ users/{uid}/categories/{categoryId}   // custom categories only —
   type: "expense" | "income" | "both"
   createdAt: timestamp
 ```
+
+`CategoryRepository`: `subscribe`, `create(name, type)`, and (added
+2026-09-22) `delete(id)`. Deleting is only ever offered for a document
+in this collection — the starter set has no `id` to delete.
 
 ## Acceptance criteria
 
@@ -86,6 +120,12 @@ users/{uid}/categories/{categoryId}   // custom categories only —
    immediately and persists across app restarts.
 7. Firestore security rules reject any read/write to
    `users/{uidA}/transactions/*` from a client authenticated as `uidB`.
+9. **Given** a custom category with no budget/transaction dependency
+   enforced, **when** the user deletes it from `CategoriesScreen`,
+   **then** the document is removed and it no longer appears as a picker
+   option in the transaction form, the budget form, or `CategoriesScreen`
+   itself — while any transaction/budget that already used its name is
+   untouched.
 
 ## Out of scope
 
@@ -103,6 +143,7 @@ users/{uid}/categories/{categoryId}   // custom categories only —
 | 6 — custom categories persist | Component/unit | Create category → available in picker → reload → still there (mocked persistence). |
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s transactions, expect denial. |
 | 8 — native date-picker popup | Component/unit | Render form, open date field, fire the picker's `onChange`, assert the selected date is used on save. |
+| 9 — delete a custom category | Unit + component | Store/repository test: delete path, doc no longer in local state; `CategoriesScreen` test: deleted category disappears from its own list; existing transactions/budgets referencing it are unaffected (they store a plain string, not a reference). |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
