@@ -66,6 +66,10 @@ function createMockRepos() {
       catListener?.(categories);
       return cat;
     }),
+    delete: jest.fn(async (id: string) => {
+      categories = categories.filter((c) => c.id !== id);
+      catListener?.(categories);
+    }),
   };
 
   return { transactions: transactionsRepo, categories: categoriesRepo };
@@ -200,5 +204,16 @@ describe('transactionsStore', () => {
     // just held in the first store's memory.
     const reloadedStore = createStartedStore(repos);
     expect(reloadedStore.getState().categories).toContainEqual(created);
+  });
+
+  it('deletes a custom category (spec 002 criterion 9)', async () => {
+    const repos = createMockRepos();
+    const useStore = createStartedStore(repos);
+    const created = await useStore.getState().addCategory('Pets', 'expense');
+
+    await useStore.getState().deleteCategory(created.id);
+
+    expect(repos.categories.delete).toHaveBeenCalledWith(created.id);
+    expect(useStore.getState().categories).not.toContainEqual(created);
   });
 });

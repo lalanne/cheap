@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { addDoc, collection, onSnapshot, type DocumentData } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, type DocumentData } from 'firebase/firestore';
 
 import { auth } from '../../auth/providers/firebaseApp';
 import type { Category, CategoryRepository } from '../types';
@@ -42,5 +42,13 @@ export const firestoreCategoryRepository: CategoryRepository = {
     const uid = requireUid();
     const ref = await addDoc(collection(db, `users/${uid}/categories`), { name, type });
     return { id: ref.id, name, type };
+  },
+
+  async delete(id) {
+    if (!db) {
+      throw new Error('Firestore is not configured.');
+    }
+    const uid = requireUid();
+    await deleteDoc(doc(db, `users/${uid}/categories/${id}`));
   },
 };

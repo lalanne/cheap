@@ -1,12 +1,16 @@
 const mockGetFirestore = jest.fn(() => ({}));
 const mockCollection = jest.fn((...args: unknown[]) => ({ __collection: args }));
+const mockDoc = jest.fn((...args: unknown[]) => ({ __doc: args }));
 const mockAddDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
 const mockOnSnapshot = jest.fn();
 
 jest.mock('@react-native-firebase/firestore', () => ({
   getFirestore: (...args: unknown[]) => mockGetFirestore(...args),
   collection: (...args: unknown[]) => mockCollection(...args),
+  doc: (...args: unknown[]) => mockDoc(...args),
   addDoc: (...args: unknown[]) => mockAddDoc(...args),
+  deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
 }));
 
@@ -42,5 +46,14 @@ describe('firestoreCategoryRepository (native)', () => {
       'No signed-in user'
     );
     expect(mockAddDoc).not.toHaveBeenCalled();
+  });
+
+  it('deletes at the signed-in uid-scoped path (spec 002 criterion 9)', async () => {
+    mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
+
+    await firestoreCategoryRepository.delete('cat-1');
+
+    expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories/cat-1');
+    expect(mockDeleteDoc).toHaveBeenCalled();
   });
 });

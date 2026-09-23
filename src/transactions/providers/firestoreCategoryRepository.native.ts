@@ -1,5 +1,13 @@
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
-import { addDoc, collection, getFirestore, onSnapshot, type DocumentData } from '@react-native-firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getFirestore,
+  onSnapshot,
+  type DocumentData,
+} from '@react-native-firebase/firestore';
 
 import type { Category, CategoryRepository } from '../types';
 
@@ -44,5 +52,10 @@ export const firestoreCategoryRepository: CategoryRepository = {
     const uid = requireUid();
     const ref = await addDoc(collection(getFirestore(), `users/${uid}/categories`), { name, type });
     return { id: ref.id, name, type };
+  },
+
+  async delete(id) {
+    const uid = requireUid();
+    await deleteDoc(doc(getFirestore(), `users/${uid}/categories/${id}`));
   },
 };

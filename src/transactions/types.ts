@@ -39,8 +39,10 @@ export interface TransactionRepository {
 }
 
 /** users/{uid}/categories — custom categories only; the starter set is a
- * static app constant, not stored. */
+ * static app constant, not stored, so there's never an id to delete for
+ * one of those (spec 002's 2026-09-22 amendment). */
 export interface CategoryRepository {
   subscribe(callback: (categories: Category[]) => void): () => void;
   create(name: string, type: CategoryType): Promise<Category>;
+  delete(id: string): Promise<void>;
 }

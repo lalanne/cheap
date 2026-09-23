@@ -20,6 +20,7 @@ type TransactionsActions = {
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   addCategory: (name: string, type: CategoryType) => Promise<Category>;
+  deleteCategory: (id: string) => Promise<void>;
 };
 
 export type TransactionsStore = TransactionsState & TransactionsActions;
@@ -51,6 +52,10 @@ export function createTransactionsStore(repos: TransactionsRepositories) {
     },
 
     addCategory: async (name, type) => repos.categories.create(name, type),
+
+    deleteCategory: async (id) => {
+      await repos.categories.delete(id);
+    },
   }));
 
   // NOT called here, deliberately. Wiring up the repositories touches the

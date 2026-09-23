@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** approved (amended — criterion 9 pending, see Verification results)
+**Status:** implemented
 **Depends on:** 000, 001
 
 ## User stories
@@ -171,9 +171,7 @@ account) remains unexercised, since verifying an account needs a real
 inbox and a clicked link, which nothing here can automate.
 
 **Real gaps, not silently skipped:**
-- **No dashboard/charts** — out of scope per this spec; a user can log,
-  edit, delete, and browse transactions, but "where is my money going"
-  visualization is a separate, not-yet-drafted spec.
+- ~~No dashboard/charts~~ — **resolved**: spec 009 shipped the dashboard.
 - ~~The date field is a plain `YYYY-MM-DD` text input, not a calendar
   picker~~ — **resolved 2026-09-18**: a real device user confirmed typing
   a date is unusable; replaced with `@react-native-community/datetimepicker`
@@ -182,6 +180,21 @@ inbox and a clicked link, which nothing here can automate.
 - I could not click through the running app in a browser — no browser
   automation tool was available in this environment. Confirmed via the
   full automated suite and a successful web export instead.
+
+**Amendment (2026-09-23) — criterion 9, dedicated Categories screen with
+delete:** real gap found using the app: categories were only manageable
+inline from the transaction form's "+ New" chip, no way to see the full
+list or delete one. Added `CategoryRepository.delete(id)` (native + web,
+no Firestore rules change needed — the existing
+`users/{uid}/categories/{categoryId}` rule already covers delete) and a
+new `CategoriesScreen`: lists starter categories (no delete — they're a
+static constant, not a stored document) and custom categories (with
+delete), plus the same add-a-category form the inline flow already had.
+Reachable from a new `Categories` tab in `App.tsx` (now 5 tabs:
+Transactions/Categories/Budgets/Debts/Dashboard). 174 tests pass (up
+from 168), 16 rules tests pass, `tsc --noEmit` clean, web export builds.
+The inline "+ New" chip in `TransactionsScreen` stays too — additive,
+not a replacement for quick-add-while-logging.
 
 Staying at `implemented`, not `verified`, for the same reason as spec
 001: `verified` means checked against the running app, and that hasn't

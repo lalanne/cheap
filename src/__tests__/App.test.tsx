@@ -60,6 +60,7 @@ describe('App', () => {
       updateTransaction: jest.fn(),
       deleteTransaction: jest.fn(),
       addCategory: jest.fn(),
+      deleteCategory: jest.fn(),
     };
     (useTransactionsStore as unknown as jest.Mock).mockImplementation(
       (selector: (s: typeof transactionsState) => unknown) => selector(transactionsState)
@@ -132,20 +133,24 @@ describe('App', () => {
     expect(startDebtsSync).toHaveBeenCalled();
   });
 
-  it('shows all four tabs and switches screens when one is pressed (spec 009)', async () => {
+  it('shows all five tabs and switches screens when one is pressed (specs 002/009)', async () => {
     mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
 
     await render(<App />);
 
     expect(screen.getByTestId('tab-transactions')).toBeTruthy();
+    expect(screen.getByTestId('tab-categories')).toBeTruthy();
     expect(screen.getByTestId('tab-budgets')).toBeTruthy();
     expect(screen.getByTestId('tab-debts')).toBeTruthy();
     expect(screen.getByTestId('tab-dashboard')).toBeTruthy();
     expect(screen.getByTestId('transactions-screen')).toBeTruthy();
 
+    await fireEvent.press(screen.getByTestId('tab-categories'));
+    expect(screen.getByTestId('categories-screen')).toBeTruthy();
+    expect(screen.queryByTestId('transactions-screen')).toBeNull();
+
     await fireEvent.press(screen.getByTestId('tab-budgets'));
     expect(screen.getByTestId('budgets-screen')).toBeTruthy();
-    expect(screen.queryByTestId('transactions-screen')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('tab-debts'));
     expect(screen.getByTestId('debts-screen')).toBeTruthy();

@@ -14,6 +14,7 @@ import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
 import { startDebtsSync } from './src/debts/store';
 import { BudgetsScreen } from './src/screens/BudgetsScreen';
+import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { DebtsScreen } from './src/screens/DebtsScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
@@ -22,10 +23,11 @@ import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
 import { startTransactionsSync } from './src/transactions/store';
 import { colors, spacing, typography } from './src/theme/tokens';
 
-type Tab = 'transactions' | 'budgets' | 'debts' | 'dashboard';
+type Tab = 'transactions' | 'categories' | 'budgets' | 'debts' | 'dashboard';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'transactions', label: 'Transactions' },
+  { key: 'categories', label: 'Categories' },
   { key: 'budgets', label: 'Budgets' },
   { key: 'debts', label: 'Debts' },
   { key: 'dashboard', label: 'Dashboard' },
@@ -65,7 +67,9 @@ export default function App() {
     );
   } else {
     let activeScreen;
-    if (activeTab === 'budgets') {
+    if (activeTab === 'categories') {
+      activeScreen = <CategoriesScreen />;
+    } else if (activeTab === 'budgets') {
       activeScreen = <BudgetsScreen />;
     } else if (activeTab === 'debts') {
       activeScreen = <DebtsScreen />;
