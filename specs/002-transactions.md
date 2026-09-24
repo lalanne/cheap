@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** implemented
+**Status:** approved (amended — criterion 12/13 pending)
 **Depends on:** 000, 001
 
 ## User stories
@@ -144,6 +144,18 @@ starter set has no `id` to act on.
     **Given** a subcategory, **then** it can always change parent
     (including back to top-level), since it can never itself have
     children.
+12. **Given** the transaction list, **when** it renders, **then**
+    transactions are grouped into sections by calendar month (most
+    recent month first), each headed by its month name + year and that
+    month's total spend (expense transactions only, matching the
+    Dashboard's "Spend" language) — transactions within a month keep
+    their existing date-descending order (criterion 5) beneath it
+    (amendment 2026-09-25).
+13. **Given** the app on web, **when** the user scrolls past a month's
+    transactions, **then** that month's header stays pinned at the top
+    until the next month's header reaches it. **Given** native, **then**
+    headers are not pinned (React Native's style system has no `sticky`
+    position) but remain grouped and labeled identically.
 
 ## Out of scope
 
@@ -164,6 +176,8 @@ starter set has no `id` to act on.
 | 9 — delete a custom category | Unit + component | Store/repository test: delete path, doc no longer in local state; `CategoriesScreen` test: deleted category disappears from its own list; existing transactions/budgets referencing it are unaffected (they store a plain string, not a reference). |
 | 10 — rename cascades to transactions/budgets | Unit | Repository tests: `renameCategoryInTransactions`/`renameCategoryInBudgets` query-and-batch-update the matching docs. Store/component test: `CategoriesPanel` edit → rename calls both cascades when the name changed, neither when only the parent changed. |
 | 11 — re-parent blocked for a category with children | Component | `CategoriesPanel` test: editing a top-level category with subcategories renders no parent picker; editing a subcategory always shows one, including a "None" option. |
+| 12 — grouped by month, most recent first | Unit + component | `groupByMonth.test.ts`: transactions across several months split into the right groups, in the right order, each with the correct expense-only total. `TransactionsScreen` test: month header text and per-month row order rendered from real store data. |
+| 13 — sticky on web, plain grouping on native | Component | `TransactionsScreen` test: the month header's style includes `position: 'sticky'` when `Platform.OS` is `'web'`, and does not on the native default — actual pinned-while-scrolling behavior needs a manual browser pass (no browser automation available), same caveat as every other visual-only behavior in this app. |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
@@ -288,3 +302,51 @@ from 207), `tsc --noEmit` clean, `npx expo export -p web` builds.
 Staying at `implemented`, not `verified`, for the same reason as spec
 001: `verified` means checked against the running app, and that hasn't
 happened yet on a real device/browser.
+
+### Amendment (2026-09-25): group the transaction list by month
+
+New requirement: the flat, ungrouped transaction list gets hard to scan
+once there's more than a month or two of history. Explored three
+groupings on a design canvas (a plain divider; a header with a monthly
+spend total, meant to stay pinned while scrolling; a header with a full
+income/expense/net recap card) — picked the middle one.
+
+- **Grouping is a pure function, `groupTransactionsByMonth`**
+  (`src/transactions/groupByMonth.ts`) — takes the already
+  date-descending-sorted `transactions` array (criterion 5) and buckets
+  it into `{ year, month, totalSpent, transactions }[]`, most recent
+  month first. It does **not** sort internally — it relies on the
+  caller's precondition that the input is already sorted, same
+  assumption `last6MonthsExpense`/`categoryTotalsForMonth` (spec 009)
+  already make about their inputs. `totalSpent` sums only `expense`
+  transactions, matching the Dashboard's "Spend" language (spec 009) —
+  not net, so it lines up with what "Spend, last 6 months" already
+  means elsewhere in the app.
+- **Per-row dates drop from a full ISO string to "Mon D"** (e.g. "Sep
+  22") — once the month is already named once in the section header,
+  repeating the full year/month on every single row is redundant and
+  noisier to scan. A direct consequence of adding the header, not a
+  separate, unrelated tweak.
+- **Sticky is web-only, by design — not a compromise nobody agreed to.**
+  True cross-platform "pinned while scrolling" needs either React
+  Native's `SectionList` (its `stickySectionHeadersEnabled`) or a
+  restructure of the shared `Screen` component (every screen in the app
+  wraps its content in `Screen`'s own `ScrollView`; nesting a
+  `SectionList` inside that ScrollView is the exact
+  "VirtualizedLists should never be nested inside plain ScrollViews"
+  anti-pattern React Native warns about). CSS `position: sticky` on the
+  month header `View`, applied only when `Platform.OS === 'web'`
+  (react-native-web forwards it straight through to real CSS; React
+  Native's native style system has no `sticky` value for `position` at
+  all — it would silently do nothing there even if set), gets the exact
+  same visual result on web with none of that restructuring, at the cost
+  of no pinning on native. Same shape of platform tradeoff as spec 009's
+  hover-to-reveal amendment (web-only, because native has no hover
+  either) — flagged here for the same reason, not slipped in quietly.
+  Every month's transactions are still grouped and labeled identically
+  on native, just without the pin.
+- **Applies to both the narrow and wide-web layouts unchanged** — the
+  wide layout's list column (spec 006) renders the same grouped sections,
+  just narrower; no separate wide-specific version needed.
+
+**Result:** Not yet implemented.
