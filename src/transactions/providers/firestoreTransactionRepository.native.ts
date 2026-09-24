@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   getFirestore,
   onSnapshot,
   orderBy,
@@ -11,6 +12,8 @@ import {
   serverTimestamp,
   Timestamp,
   updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
 } from '@react-native-firebase/firestore';
 
@@ -106,5 +109,24 @@ export const firestoreTransactionRepository: TransactionRepository = {
   async delete(id) {
     const uid = requireUid();
     await deleteDoc(doc(getFirestore(), `users/${uid}/transactions/${id}`));
+  },
+
+  // Spec 002's 2026-09-24 amendment — the cascade a category rename
+  // needs so it doesn't silently orphan every transaction using the
+  // old name.
+  async renameCategoryInTransactions(oldName, newName) {
+    const uid = requireUid();
+    const firestore = getFirestore();
+    const matching = await getDocs(
+      query(collection(firestore, `users/${uid}/transactions`), where('category', '==', oldName))
+    );
+    if (matching.empty) {
+      return;
+    }
+    const batch = writeBatch(firestore);
+    matching.docs.forEach((d) => {
+      batch.update(d.ref, { category: newName, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
   },
 };

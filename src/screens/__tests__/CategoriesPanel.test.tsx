@@ -2,10 +2,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 
 import type { Category } from '../../transactions/types';
 import { useTransactionsStore } from '../../transactions/store';
+import { useBudgetsStore } from '../../budgets/store';
 import { CategoriesPanel } from '../CategoriesPanel';
 
 jest.mock('../../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
+}));
+jest.mock('../../budgets/store', () => ({
+  useBudgetsStore: jest.fn(),
 }));
 
 function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
@@ -13,9 +17,21 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     categories: [] as Category[],
     addCategory: jest.fn(),
     deleteCategory: jest.fn(),
+    updateCategory: jest.fn(),
     ...overrides,
   };
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state)
+  );
+  return state;
+}
+
+function mockBudgetsStore(overrides: Partial<Record<string, unknown>> = {}) {
+  const state = {
+    renameCategoryInBudgets: jest.fn(),
+    ...overrides,
+  };
+  (useBudgetsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: typeof state) => unknown) => selector(state)
   );
   return state;
@@ -126,5 +142,96 @@ describe('CategoriesPanel (spec 011 — subcategories)', () => {
     expect(screen.getByTestId('parent-category-chip-Food')).toBeTruthy();
     expect(screen.getByTestId('parent-category-chip-Gym')).toBeTruthy();
     expect(screen.queryByTestId('parent-category-chip-Yoga Classes')).toBeNull();
+  });
+});
+
+describe('CategoriesPanel — editing (spec 002 2026-09-24 amendment, criteria 10/11)', () => {
+  it('opens an edit form pre-filled when tapping a custom category row, and saves a rename', async () => {
+    const store = mockStore({ categories: [CUSTOM] });
+    mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-cat-1'));
+
+    expect(screen.getByTestId('new-category-name-input').props.value).toBe('Pets');
+
+    await fireEvent.changeText(screen.getByTestId('new-category-name-input'), 'Dogs');
+    await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
+
+    expect(store.updateCategory).toHaveBeenCalledWith('cat-1', 'Dogs', null, 'Pets');
+  });
+
+  it('cascades the rename to budgets when the name changed', async () => {
+    mockStore({ categories: [CUSTOM] });
+    const budgetsStore = mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-cat-1'));
+    await fireEvent.changeText(screen.getByTestId('new-category-name-input'), 'Dogs');
+    await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
+
+    expect(budgetsStore.renameCategoryInBudgets).toHaveBeenCalledWith('Pets', 'Dogs');
+  });
+
+  it('does not cascade a rename when only the parent changed', async () => {
+    const parent: Category = { id: 'p1', name: 'Gym', type: 'both', parentCategory: null };
+    mockStore({ categories: [parent] });
+    const budgetsStore = mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-p1'));
+    await fireEvent.press(screen.getByTestId('parent-category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
+
+    expect(budgetsStore.renameCategoryInBudgets).not.toHaveBeenCalled();
+  });
+
+  it('re-parents a top-level category with no children from the edit form', async () => {
+    const groceries: Category = { id: 'g1', name: 'Groceries', type: 'both', parentCategory: null };
+    const store = mockStore({ categories: [groceries] });
+    mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-g1'));
+    await fireEvent.press(screen.getByTestId('parent-category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
+
+    expect(store.updateCategory).toHaveBeenCalledWith('g1', 'Groceries', 'Food', 'Groceries');
+  });
+
+  it('offers no parent picker when editing a top-level category that has subcategories', async () => {
+    const parent: Category = { id: 'p1', name: 'Gym', type: 'both', parentCategory: null };
+    const child: Category = { id: 'c2', name: 'Yoga Classes', type: 'both', parentCategory: 'Gym' };
+    mockStore({ categories: [parent, child] });
+    mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-p1'));
+
+    expect(screen.queryByTestId('parent-picker-section')).toBeNull();
+  });
+
+  it('always offers a parent picker (including None) when editing a subcategory', async () => {
+    const parent: Category = { id: 'p1', name: 'Gym', type: 'both', parentCategory: null };
+    const child: Category = { id: 'c2', name: 'Yoga Classes', type: 'both', parentCategory: 'Gym' };
+    mockStore({ categories: [parent, child] });
+    mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-c2'));
+
+    expect(screen.getByTestId('parent-picker-section')).toBeTruthy();
+    expect(screen.getByTestId('parent-category-chip-None')).toBeTruthy();
+  });
+
+  it('starter categories stay non-editable (no row press handler)', async () => {
+    const store = mockStore();
+    mockBudgetsStore();
+    await render(<CategoriesPanel />);
+
+    await fireEvent.press(screen.getByTestId('category-row-starter-Food'));
+
+    expect(screen.queryByTestId('category-form')).toBeNull();
+    expect(store.updateCategory).not.toHaveBeenCalled();
   });
 });

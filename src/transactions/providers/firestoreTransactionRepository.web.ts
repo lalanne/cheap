@@ -4,12 +4,15 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   Timestamp,
   updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
 } from 'firebase/firestore';
 
@@ -107,5 +110,24 @@ export const firestoreTransactionRepository: TransactionRepository = {
     }
     const uid = requireUid();
     await deleteDoc(doc(db, `users/${uid}/transactions/${id}`));
+  },
+
+  // Spec 002's 2026-09-24 amendment — the cascade a category rename
+  // needs so it doesn't silently orphan every transaction using the
+  // old name.
+  async renameCategoryInTransactions(oldName, newName) {
+    if (!db) {
+      throw new Error('Firestore is not configured.');
+    }
+    const uid = requireUid();
+    const matching = await getDocs(query(collection(db, `users/${uid}/transactions`), where('category', '==', oldName)));
+    if (matching.empty) {
+      return;
+    }
+    const batch = writeBatch(db);
+    matching.docs.forEach((d) => {
+      batch.update(d.ref, { category: newName, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
   },
 };

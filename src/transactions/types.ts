@@ -40,6 +40,10 @@ export interface TransactionRepository {
   create(input: NewTransactionInput): Promise<Transaction>;
   update(id: string, input: UpdateTransactionInput): Promise<void>;
   delete(id: string): Promise<void>;
+  // Spec 002's 2026-09-24 amendment — the one cascade a plain-string
+  // category needs: a rename must not silently orphan every transaction
+  // that already used the old name.
+  renameCategoryInTransactions(oldName: string, newName: string): Promise<void>;
 }
 
 /** users/{uid}/categories — custom categories only; the starter set is a
@@ -51,4 +55,6 @@ export interface CategoryRepository {
   // 011: every call site has to make the choice, not silently default.
   create(name: string, type: CategoryType, parentCategory: string | null): Promise<Category>;
   delete(id: string): Promise<void>;
+  // Spec 002's 2026-09-24 amendment.
+  update(id: string, name: string, parentCategory: string | null): Promise<void>;
 }

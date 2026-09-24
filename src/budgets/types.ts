@@ -15,4 +15,7 @@ export interface BudgetRepository {
   create(category: string, monthlyLimit: number): Promise<Budget>;
   update(id: string, monthlyLimit: number): Promise<void>;
   delete(id: string): Promise<void>;
+  // Spec 002's 2026-09-24 amendment — a category rename cascades here
+  // too (at most one matching doc: one budget per category).
+  renameCategoryInBudgets(oldName: string, newName: string): Promise<void>;
 }

@@ -4,11 +4,15 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   getFirestore,
   onSnapshot,
+  query,
   serverTimestamp,
   Timestamp,
   updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
 } from '@react-native-firebase/firestore';
 
@@ -80,5 +84,23 @@ export const firestoreBudgetRepository: BudgetRepository = {
   async delete(id) {
     const uid = requireUid();
     await deleteDoc(doc(getFirestore(), `users/${uid}/budgets/${id}`));
+  },
+
+  // Spec 002's 2026-09-24 amendment — same cascade as transactions; at
+  // most one matching doc (spec 007: one budget per category).
+  async renameCategoryInBudgets(oldName, newName) {
+    const uid = requireUid();
+    const firestore = getFirestore();
+    const matching = await getDocs(
+      query(collection(firestore, `users/${uid}/budgets`), where('category', '==', oldName))
+    );
+    if (matching.empty) {
+      return;
+    }
+    const batch = writeBatch(firestore);
+    matching.docs.forEach((d) => {
+      batch.update(d.ref, { category: newName, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
   },
 };

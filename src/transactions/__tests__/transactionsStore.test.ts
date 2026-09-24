@@ -50,6 +50,10 @@ function createMockRepos() {
       transactions = transactions.filter((t) => t.id !== id);
       txListener?.(transactions);
     }),
+    renameCategoryInTransactions: jest.fn(async (oldName: string, newName: string) => {
+      transactions = transactions.map((t) => (t.category === oldName ? { ...t, category: newName } : t));
+      txListener?.(transactions);
+    }),
   };
 
   const categoriesRepo: CategoryRepository = {
@@ -68,6 +72,10 @@ function createMockRepos() {
     }),
     delete: jest.fn(async (id: string) => {
       categories = categories.filter((c) => c.id !== id);
+      catListener?.(categories);
+    }),
+    update: jest.fn(async (id: string, name: string, parentCategory: string | null) => {
+      categories = categories.map((c) => (c.id === id ? { ...c, name, parentCategory } : c));
       catListener?.(categories);
     }),
   };
@@ -225,5 +233,34 @@ describe('transactionsStore', () => {
 
     expect(repos.categories.delete).toHaveBeenCalledWith(created.id);
     expect(useStore.getState().categories).not.toContainEqual(created);
+  });
+
+  it('renames a category and cascades to matching transactions when the name changed (spec 002 2026-09-24 amendment, criterion 10)', async () => {
+    const repos = createMockRepos();
+    const useStore = createStartedStore(repos);
+    const created = await useStore.getState().addCategory('Uber Eats', 'expense', 'Food');
+    await useStore.getState().addTransaction({
+      type: 'expense',
+      amount: 5000,
+      category: 'Uber Eats',
+      date: new Date(),
+    });
+
+    await useStore.getState().updateCategory(created.id, 'Food Delivery', 'Food', 'Uber Eats');
+
+    expect(repos.categories.update).toHaveBeenCalledWith(created.id, 'Food Delivery', 'Food');
+    expect(repos.transactions.renameCategoryInTransactions).toHaveBeenCalledWith('Uber Eats', 'Food Delivery');
+    expect(useStore.getState().transactions[0].category).toBe('Food Delivery');
+  });
+
+  it('does not cascade a rename when only the parent changed, not the name', async () => {
+    const repos = createMockRepos();
+    const useStore = createStartedStore(repos);
+    const created = await useStore.getState().addCategory('Yoga Classes', 'expense', 'Gym');
+
+    await useStore.getState().updateCategory(created.id, 'Yoga Classes', null, 'Yoga Classes');
+
+    expect(repos.categories.update).toHaveBeenCalledWith(created.id, 'Yoga Classes', null);
+    expect(repos.transactions.renameCategoryInTransactions).not.toHaveBeenCalled();
   });
 });

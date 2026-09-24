@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useBudgetsStore } from '../budgets/store';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import type { Category } from '../transactions/types';
@@ -15,8 +16,12 @@ export function CategoriesPanel() {
   const categories = useTransactionsStore((s) => s.categories);
   const addCategory = useTransactionsStore((s) => s.addCategory);
   const deleteCategory = useTransactionsStore((s) => s.deleteCategory);
+  const updateCategory = useTransactionsStore((s) => s.updateCategory);
+  const renameCategoryInBudgets = useBudgetsStore((s) => s.renameCategoryInBudgets);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginalName, setEditingOriginalName] = useState('');
   const [name, setName] = useState('');
   const [parentCategory, setParentCategory] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +31,34 @@ export function CategoriesPanel() {
   // be a parent (one level of nesting only), so this list structurally
   // excludes them rather than needing extra validation.
   const topLevelCustom = categories.filter((c) => c.parentCategory === null);
-  const parentOptions = [...STARTER_CATEGORIES, ...topLevelCustom.map((c) => c.name)];
+  // A category currently being edited is never offered as its own parent.
+  const parentOptions = [...STARTER_CATEGORIES, ...topLevelCustom.map((c) => c.name)].filter(
+    (option) => option !== editingOriginalName
+  );
 
-  function openForm() {
+  function hasChildren(categoryName: string): boolean {
+    return categories.some((c) => c.parentCategory === categoryName);
+  }
+
+  // Spec 002's 2026-09-24 amendment, criterion 11 — a top-level category
+  // that already has subcategories can't be given a parent (would put
+  // its children two levels deep); everything else can.
+  const canEditParent = editingId === null || !hasChildren(editingOriginalName);
+
+  function openAddForm() {
+    setEditingId(null);
+    setEditingOriginalName('');
     setName('');
     setParentCategory(null);
+    setError(null);
+    setFormOpen(true);
+  }
+
+  function openEditForm(category: Category) {
+    setEditingId(category.id);
+    setEditingOriginalName(category.name);
+    setName(category.name);
+    setParentCategory(category.parentCategory);
     setError(null);
     setFormOpen(true);
   }
@@ -39,13 +67,20 @@ export function CategoriesPanel() {
     setFormOpen(false);
   }
 
-  async function handleConfirmAdd() {
+  async function handleConfirmSave() {
     const trimmed = name.trim();
     if (trimmed === '') {
       setError('Enter a name.');
       return;
     }
-    await addCategory(trimmed, 'both', parentCategory);
+    if (editingId) {
+      await updateCategory(editingId, trimmed, parentCategory, editingOriginalName);
+      if (trimmed !== editingOriginalName) {
+        await renameCategoryInBudgets(editingOriginalName, trimmed);
+      }
+    } else {
+      await addCategory(trimmed, 'both', parentCategory);
+    }
     closeForm();
   }
 
@@ -55,7 +90,12 @@ export function CategoriesPanel() {
 
   function renderSubcategoryRow(category: Category) {
     return (
-      <View key={category.id} testID={`category-row-${category.id}`} style={styles.subRow}>
+      <Pressable
+        key={category.id}
+        testID={`category-row-${category.id}`}
+        style={styles.subRow}
+        onPress={() => openEditForm(category)}
+      >
         <Text style={styles.rowNameSub}>{category.name}</Text>
         <Pressable
           testID={`delete-category-${category.id}`}
@@ -64,7 +104,7 @@ export function CategoriesPanel() {
         >
           <Text style={styles.deleteLabel}>Delete</Text>
         </Pressable>
-      </View>
+      </Pressable>
     );
   }
 
@@ -72,13 +112,13 @@ export function CategoriesPanel() {
     <View testID="categories-panel">
       <View style={styles.header}>
         <Text style={styles.title}>Categories</Text>
-        {!formOpen && <Button title="Add" onPress={openForm} testID="add-category-button" />}
+        {!formOpen && <Button title="Add" onPress={openAddForm} testID="add-category-button" />}
       </View>
 
       {formOpen && (
         <View style={styles.form} testID="category-form">
           <Input
-            label="New category name"
+            label="Category name"
             value={name}
             onChangeText={(text) => {
               setName(text);
@@ -88,28 +128,34 @@ export function CategoriesPanel() {
             error={error}
           />
 
-          <Text style={styles.label}>Parent category (optional)</Text>
-          <View style={styles.chipRow}>
-            <Pressable
-              testID="parent-category-chip-None"
-              style={parentCategory === null ? styles.chipActive : styles.chip}
-              onPress={() => setParentCategory(null)}
-            >
-              <Text style={parentCategory === null ? styles.chipLabelActive : styles.chipLabel}>None</Text>
-            </Pressable>
-            {parentOptions.map((option) => (
-              <Pressable
-                key={option}
-                testID={`parent-category-chip-${option}`}
-                style={parentCategory === option ? styles.chipActive : styles.chip}
-                onPress={() => setParentCategory(option)}
-              >
-                <Text style={parentCategory === option ? styles.chipLabelActive : styles.chipLabel}>{option}</Text>
-              </Pressable>
-            ))}
-          </View>
+          {canEditParent && (
+            <View testID="parent-picker-section">
+              <Text style={styles.label}>Parent category (optional)</Text>
+              <View style={styles.chipRow}>
+                <Pressable
+                  testID="parent-category-chip-None"
+                  style={parentCategory === null ? styles.chipActive : styles.chip}
+                  onPress={() => setParentCategory(null)}
+                >
+                  <Text style={parentCategory === null ? styles.chipLabelActive : styles.chipLabel}>None</Text>
+                </Pressable>
+                {parentOptions.map((option) => (
+                  <Pressable
+                    key={option}
+                    testID={`parent-category-chip-${option}`}
+                    style={parentCategory === option ? styles.chipActive : styles.chip}
+                    onPress={() => setParentCategory(option)}
+                  >
+                    <Text style={parentCategory === option ? styles.chipLabelActive : styles.chipLabel}>
+                      {option}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
 
-          <Button title="Save" onPress={handleConfirmAdd} testID="confirm-add-category-button" />
+          <Button title="Save" onPress={handleConfirmSave} testID="confirm-add-category-button" />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForm} testID="cancel-add-category-button" />
         </View>
@@ -135,7 +181,7 @@ export function CategoriesPanel() {
           )}
           {topLevelCustom.map((category) => (
             <View key={category.id} testID={`category-group-${category.name}`}>
-              <View testID={`category-row-${category.id}`} style={styles.row}>
+              <Pressable testID={`category-row-${category.id}`} style={styles.row} onPress={() => openEditForm(category)}>
                 <Text style={styles.rowName}>{category.name}</Text>
                 <Pressable
                   testID={`delete-category-${category.id}`}
@@ -144,7 +190,7 @@ export function CategoriesPanel() {
                 >
                   <Text style={styles.deleteLabel}>Delete</Text>
                 </Pressable>
-              </View>
+              </Pressable>
               {subcategoriesOf(category.name).map(renderSubcategoryRow)}
             </View>
           ))}

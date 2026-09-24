@@ -9,6 +9,8 @@ type BudgetsState = {
 type BudgetsActions = {
   setBudget: (category: string, monthlyLimit: number) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
+  // Spec 002's 2026-09-24 amendment — a category rename cascades here too.
+  renameCategoryInBudgets: (oldName: string, newName: string) => Promise<void>;
 };
 
 export type BudgetsStore = BudgetsState & BudgetsActions;
@@ -31,6 +33,10 @@ export function createBudgetsStore(repo: BudgetRepository) {
 
     deleteBudget: async (id) => {
       await repo.delete(id);
+    },
+
+    renameCategoryInBudgets: async (oldName, newName) => {
+      await repo.renameCategoryInBudgets(oldName, newName);
     },
   }));
 

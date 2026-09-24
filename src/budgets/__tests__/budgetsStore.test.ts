@@ -29,6 +29,10 @@ function createMockRepo() {
       budgets = budgets.filter((b) => b.id !== id);
       listener?.(budgets);
     }),
+    renameCategoryInBudgets: jest.fn(async (oldName: string, newName: string) => {
+      budgets = budgets.map((b) => (b.category === oldName ? { ...b, category: newName } : b));
+      listener?.(budgets);
+    }),
   };
 
   return repo;
@@ -94,5 +98,16 @@ describe('budgetsStore', () => {
     await useStore.getState().deleteBudget(id);
 
     expect(useStore.getState().budgets).toHaveLength(0);
+  });
+
+  it('renames a category across the matching budget (spec 002 2026-09-24 amendment)', async () => {
+    const repo = createMockRepo();
+    const useStore = createStartedStore(repo);
+    await useStore.getState().setBudget('Uber Eats', 100000);
+
+    await useStore.getState().renameCategoryInBudgets('Uber Eats', 'Food Delivery');
+
+    expect(repo.renameCategoryInBudgets).toHaveBeenCalledWith('Uber Eats', 'Food Delivery');
+    expect(useStore.getState().budgets[0].category).toBe('Food Delivery');
   });
 });

@@ -6,6 +6,7 @@ import {
   doc,
   getFirestore,
   onSnapshot,
+  updateDoc,
   type DocumentData,
 } from '@react-native-firebase/firestore';
 
@@ -61,5 +62,10 @@ export const firestoreCategoryRepository: CategoryRepository = {
   async delete(id) {
     const uid = requireUid();
     await deleteDoc(doc(getFirestore(), `users/${uid}/categories/${id}`));
+  },
+
+  async update(id, name, parentCategory) {
+    const uid = requireUid();
+    await updateDoc(doc(getFirestore(), `users/${uid}/categories/${id}`), { name, parentCategory });
   },
 };

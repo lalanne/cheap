@@ -7,6 +7,11 @@ const mockDeleteDoc = jest.fn();
 const mockOnSnapshot = jest.fn();
 const mockQuery = jest.fn((...args: unknown[]) => ({ __query: args }));
 const mockOrderBy = jest.fn((...args: unknown[]) => ({ __orderBy: args }));
+const mockWhere = jest.fn((...args: unknown[]) => ({ __where: args }));
+const mockGetDocs = jest.fn();
+const mockBatchUpdate = jest.fn();
+const mockBatchCommit = jest.fn();
+const mockWriteBatch = jest.fn(() => ({ update: mockBatchUpdate, commit: mockBatchCommit }));
 const mockServerTimestamp = jest.fn(() => 'server-timestamp');
 
 // jest.mock() factories are hoisted above other module-level code, so a
@@ -23,6 +28,9 @@ jest.mock('@react-native-firebase/firestore', () => ({
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
   orderBy: (...args: unknown[]) => mockOrderBy(...args),
+  where: (...args: unknown[]) => mockWhere(...args),
+  getDocs: (...args: unknown[]) => mockGetDocs(...args),
+  writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
   serverTimestamp: () => mockServerTimestamp(),
   Timestamp: class {
     date: Date;
@@ -95,5 +103,28 @@ describe('firestoreTransactionRepository (native)', () => {
 
     await firestoreTransactionRepository.delete('tx-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
+  });
+
+  it('renames a category across every matching transaction (spec 002 2026-09-24 amendment)', async () => {
+    mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
+    const doc1 = { id: 'tx-1', ref: { __ref: 'tx-1' } };
+    const doc2 = { id: 'tx-2', ref: { __ref: 'tx-2' } };
+    mockGetDocs.mockResolvedValue({ empty: false, docs: [doc1, doc2] });
+
+    await firestoreTransactionRepository.renameCategoryInTransactions('Uber Eats', 'Food Delivery');
+
+    expect(mockWhere).toHaveBeenCalledWith('category', '==', 'Uber Eats');
+    expect(mockBatchUpdate).toHaveBeenCalledWith(doc1.ref, expect.objectContaining({ category: 'Food Delivery' }));
+    expect(mockBatchUpdate).toHaveBeenCalledWith(doc2.ref, expect.objectContaining({ category: 'Food Delivery' }));
+    expect(mockBatchCommit).toHaveBeenCalled();
+  });
+
+  it('does nothing when no transactions use the old category name', async () => {
+    mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
+    mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
+
+    await firestoreTransactionRepository.renameCategoryInTransactions('Nonexistent', 'New Name');
+
+    expect(mockWriteBatch).not.toHaveBeenCalled();
   });
 });

@@ -4,10 +4,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
+  query,
   serverTimestamp,
   Timestamp,
   updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
 } from 'firebase/firestore';
 
@@ -97,5 +101,23 @@ export const firestoreBudgetRepository: BudgetRepository = {
     }
     const uid = requireUid();
     await deleteDoc(doc(db, `users/${uid}/budgets/${id}`));
+  },
+
+  // Spec 002's 2026-09-24 amendment — same cascade as transactions; at
+  // most one matching doc (spec 007: one budget per category).
+  async renameCategoryInBudgets(oldName, newName) {
+    if (!db) {
+      throw new Error('Firestore is not configured.');
+    }
+    const uid = requireUid();
+    const matching = await getDocs(query(collection(db, `users/${uid}/budgets`), where('category', '==', oldName)));
+    if (matching.empty) {
+      return;
+    }
+    const batch = writeBatch(db);
+    matching.docs.forEach((d) => {
+      batch.update(d.ref, { category: newName, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
   },
 };

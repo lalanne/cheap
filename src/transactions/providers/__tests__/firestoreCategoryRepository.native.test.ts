@@ -2,6 +2,7 @@ const mockGetFirestore = jest.fn(() => ({}));
 const mockCollection = jest.fn((...args: unknown[]) => ({ __collection: args }));
 const mockDoc = jest.fn((...args: unknown[]) => ({ __doc: args }));
 const mockAddDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockOnSnapshot = jest.fn();
 
@@ -10,6 +11,7 @@ jest.mock('@react-native-firebase/firestore', () => ({
   collection: (...args: unknown[]) => mockCollection(...args),
   doc: (...args: unknown[]) => mockDoc(...args),
   addDoc: (...args: unknown[]) => mockAddDoc(...args),
+  updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
 }));
@@ -68,5 +70,14 @@ describe('firestoreCategoryRepository (native)', () => {
 
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories/cat-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
+  });
+
+  it('updates the name and parent at the signed-in uid-scoped path (spec 002 2026-09-24 amendment)', async () => {
+    mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
+
+    await firestoreCategoryRepository.update('cat-1', 'Food Delivery', 'Food');
+
+    expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories/cat-1');
+    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), { name: 'Food Delivery', parentCategory: 'Food' });
   });
 });

@@ -97,9 +97,11 @@ users/{uid}/categories/{categoryId}   // custom categories only —
   createdAt: timestamp
 ```
 
-`CategoryRepository`: `subscribe`, `create(name, type)`, and (added
-2026-09-22) `delete(id)`. Deleting is only ever offered for a document
-in this collection — the starter set has no `id` to delete.
+`CategoryRepository`: `subscribe`, `create(name, type, parentCategory)`
+(gained `parentCategory` — spec 011), (added 2026-09-22) `delete(id)`,
+and (added 2026-09-24) `update(id, name, parentCategory)`. Deleting and
+editing are only ever offered for a document in this collection — the
+starter set has no `id` to act on.
 
 ## Acceptance criteria
 
@@ -132,6 +134,16 @@ in this collection — the starter set has no `id` to delete.
    option in the transaction form, the budget form, or `CategoriesScreen`
    itself — while any transaction/budget that already used its name is
    untouched.
+10. **Given** a custom category, **when** the user taps its row and
+    renames it, **then** the category document's name changes and every
+    transaction/budget that referenced the old name now references the
+    new one — not left stale (amendment 2026-09-24).
+11. **Given** a top-level custom category with subcategories, **when**
+    editing it, **then** no parent picker is offered — it can't be
+    re-parented while it still has children (spec 011's one-level cap).
+    **Given** a subcategory, **then** it can always change parent
+    (including back to top-level), since it can never itself have
+    children.
 
 ## Out of scope
 
@@ -150,6 +162,8 @@ in this collection — the starter set has no `id` to delete.
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s transactions, expect denial. |
 | 8 — native date-picker popup | Component/unit | Render form, open date field, fire the picker's `onChange`, assert the selected date is used on save. |
 | 9 — delete a custom category | Unit + component | Store/repository test: delete path, doc no longer in local state; `CategoriesScreen` test: deleted category disappears from its own list; existing transactions/budgets referencing it are unaffected (they store a plain string, not a reference). |
+| 10 — rename cascades to transactions/budgets | Unit | Repository tests: `renameCategoryInTransactions`/`renameCategoryInBudgets` query-and-batch-update the matching docs. Store/component test: `CategoriesPanel` edit → rename calls both cascades when the name changed, neither when only the parent changed. |
+| 11 — re-parent blocked for a category with children | Component | `CategoriesPanel` test: editing a top-level category with subcategories renders no parent picker; editing a subcategory always shows one, including a "None" option. |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
@@ -201,6 +215,75 @@ Transactions/Categories/Budgets/Debts/Dashboard). 174 tests pass (up
 from 168), 16 rules tests pass, `tsc --noEmit` clean, web export builds.
 The inline "+ New" chip in `TransactionsScreen` stays too — additive,
 not a replacement for quick-add-while-logging.
+
+### Amendment (2026-09-24): edit an existing category (rename + re-parent)
+
+Real gap: a custom category could be created and deleted, but never
+edited — a typo in a category name, or deciding after the fact that
+"Groceries" should nest under "Food" (spec 011), meant delete-and-recreate,
+which loses the connection to every transaction/budget that already used
+the old name (spec 002's data model is a plain string, not a foreign key
+— deleting and recreating gets a *different* string in every sense that
+matters here).
+
+- **New `CategoryRepository.update(id, name, parentCategory)`** — updates
+  the category doc's `name` and `parentCategory` fields.
+- **Renaming cascades to every transaction and budget currently using the
+  old name — the one deliberate exception to "plain string, no cascade."**
+  Spec 002's original decision (category as a plain string) was about not
+  maintaining referential integrity on *delete* — cheap, because a
+  deleted category's old transactions/budgets keep meaning what they always
+  meant (the string is stable). A *rename* is different: leaving old
+  transactions/budgets on the stale name after a rename doesn't preserve
+  meaning, it silently orphans them — a budget on the old name would
+  start tracking nothing, and the category picker would offer only the
+  new name going forward. Renaming without the cascade would make "edit"
+  actively misleading rather than merely limited, so this is the one
+  place a plain-string design needs an explicit bulk update instead of
+  none at all.
+  - `TransactionRepository` gains `renameCategoryInTransactions(oldName,
+    newName)` — query `users/{uid}/transactions` where `category ==
+    oldName`, batch-update matching docs.
+  - `BudgetRepository` gains `renameCategoryInBudgets(oldName, newName)`
+    — same shape, at most one matching doc (spec 007: one budget per
+    category).
+  - Orchestrated from `CategoriesPanel` (already the one place composing
+    both `useTransactionsStore` and `useBudgetsStore`, via `ManageScreen`
+    — spec 009's amendment): on save, `transactionsStore.updateCategory`
+    (doc rename + transactions cascade) runs first, then
+    `budgetsStore.renameCategoryInBudgets` if the name actually changed.
+    Not touched: debts — a debt's auto-created transactions use the
+    debt's own name (spec 008), never a picked category, so category
+    renames have no bearing there.
+- **Re-parenting a top-level category that currently has subcategories is
+  blocked** — giving it a parent while it still has children would put
+  those children two levels deep, violating spec 011's one-level cap. The
+  edit form simply doesn't offer a parent picker for a category with
+  children (must stay top-level); a subcategory (which can never have
+  children, by construction — see spec 011) can always freely change
+  parent, including back to "None" to become top-level.
+- **Starter categories remain not editable** — still a static app
+  constant, not a stored document, unchanged from criterion 9's
+  amendment.
+- **UI**: tapping a custom category's row (not its delete button) opens
+  the same add/edit form pre-filled with its current name and parent —
+  same single-form-two-modes pattern `BudgetsPanel` already established
+  for budgets.
+- No Firestore rules change — same collection, same `isOwner` rule; the
+  cascade writes are plain authenticated writes to the user's own
+  `transactions`/`budgets` subcollections, already covered.
+
+**Result:** ✅ criteria 10/11. `firestoreCategoryRepository.native.test.ts`
+(`update`), `firestoreTransactionRepository.native.test.ts` and
+`firestoreBudgetRepository.native.test.ts` (`renameCategoryIn*`, both the
+matching-docs and no-match-no-op cases), `transactionsStore.test.ts`
+(`updateCategory` cascades to transactions only when the name changed),
+`budgetsStore.test.ts` (`renameCategoryInBudgets`), and
+`CategoriesPanel.test.tsx` (edit form pre-fill, rename + re-parent save
+paths, the budgets cascade firing only on a real name change, the parent
+picker hidden for a category with children and always present for a
+subcategory, starter categories still not editable). 214 tests pass (up
+from 207), `tsc --noEmit` clean, `npx expo export -p web` builds.
 
 Staying at `implemented`, not `verified`, for the same reason as spec
 001: `verified` means checked against the running app, and that hasn't
