@@ -229,3 +229,51 @@ describe('TransactionsScreen — grouped by month (spec 002 2026-09-25 amendment
     expect(flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position).not.toBe('sticky');
   });
 });
+
+describe('TransactionsScreen — Add moves beside each month (spec 002 2026-09-25 amendment, narrow/native)', () => {
+  const septTx: Transaction = {
+    id: 'tx-sep',
+    type: 'expense',
+    amount: 4500,
+    category: 'Food',
+    date: new Date(2026, 8, 22),
+    note: null,
+    createdAt: new Date(2026, 8, 22),
+    updatedAt: new Date(2026, 8, 22),
+  };
+  const augTx: Transaction = { ...septTx, id: 'tx-aug', date: new Date(2026, 7, 30) };
+
+  it('shows no page-level Add button once there is at least one transaction (criterion 14)', async () => {
+    mockStore({ transactions: [septTx] });
+    await render(<TransactionsScreen />);
+
+    expect(screen.queryByTestId('add-transaction-button')).toBeNull();
+  });
+
+  it("opens the form from a month's own Add button, same defaults as before (criterion 14)", async () => {
+    mockStore({ transactions: [septTx, augTx] });
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button-2026-8'));
+
+    expect(screen.getByTestId('transaction-form')).toBeTruthy();
+    expect(screen.getByTestId('type-expense')).toBeTruthy();
+  });
+
+  it('shows an empty-state message with its own Add button when there are no transactions (criterion 15)', async () => {
+    const store = mockStore();
+    await render(<TransactionsScreen />);
+
+    expect(screen.getByText(/no transactions yet/i)).toBeTruthy();
+    const addButton = screen.getByTestId('add-transaction-button');
+
+    await fireEvent.press(addButton);
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '45000');
+    await fireEvent.press(screen.getByTestId('category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+    );
+  });
+});

@@ -53,6 +53,9 @@ export function TransactionsScreen() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Spec 006's 2026-09-25 amendment — which month the wide-web rail has
+  // selected; null means "default to the most recent month with data."
+  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const [type, setType] = useState<TransactionType>('expense');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<string>(STARTER_CATEGORIES[0]);
@@ -253,37 +256,101 @@ export function TransactionsScreen() {
 
   // Spec 002's 2026-09-25 amendment — grouped by calendar month, most
   // recent first (groupTransactionsByMonth relies on `transactions`
-  // already being date-descending, criterion 5). Sticky header is
-  // web-only: React Native's style system has no `position: 'sticky'`,
-  // so it's a no-op there rather than a crash, and the month still
-  // renders grouped/labeled identically on native.
-  const rows = groupTransactionsByMonth(transactions).map((group) => (
+  // already being date-descending, criterion 5). Shared by both the
+  // narrow sticky list and the wide-web rail (spec 006's 2026-09-25
+  // amendment) — one grouping implementation, two renderings.
+  const monthGroups = groupTransactionsByMonth(transactions);
+
+  // Narrow/native: each month's own sticky header carries its own Add
+  // button now (criterion 14) — no page-level button. Empty state below
+  // covers the zero-transactions case, the one place a page-level Add
+  // still exists (criterion 15).
+  const narrowRows = monthGroups.map((group) => (
     <View key={`${group.year}-${group.month}`}>
       <View
         testID={`transaction-month-header-${group.year}-${group.month}`}
         style={[styles.monthHeader, Platform.OS === 'web' && styles.monthHeaderSticky]}
       >
-        <Text style={styles.monthHeaderName}>
-          {FULL_MONTH_NAMES[group.month - 1]} {group.year}
-        </Text>
-        <Text style={styles.monthHeaderSpent}>Spent {formatCLP(group.totalSpent)}</Text>
+        <View>
+          <Text style={styles.monthHeaderName}>
+            {FULL_MONTH_NAMES[group.month - 1]} {group.year}
+          </Text>
+          <Text style={styles.monthHeaderSpent}>Spent {formatCLP(group.totalSpent)}</Text>
+        </View>
+        <Pressable
+          testID={`add-transaction-button-${group.year}-${group.month}`}
+          onPress={openAddForm}
+          style={styles.monthAddButton}
+        >
+          <Text style={styles.monthAddButtonLabel}>+</Text>
+        </Pressable>
       </View>
       {group.transactions.map(renderTransactionRow)}
     </View>
   ));
 
+  // Wide web: a month rail (spec 006's 2026-09-25 amendment) selects
+  // which month's rows the middle column shows, defaulting to the most
+  // recent when nothing's been clicked.
+  const selectedGroup =
+    monthGroups.find((g) => selectedMonth && g.year === selectedMonth.year && g.month === selectedMonth.month) ??
+    monthGroups[0] ??
+    null;
+
+  const monthRail = (
+    <View style={styles.monthRail} testID="month-rail">
+      {monthGroups.map((group) => {
+        const isSelected = selectedGroup?.year === group.year && selectedGroup?.month === group.month;
+        return (
+          <Pressable
+            key={`${group.year}-${group.month}`}
+            testID={`month-rail-item-${group.year}-${group.month}`}
+            style={isSelected ? styles.monthRailItemActive : styles.monthRailItem}
+            onPress={() => setSelectedMonth({ year: group.year, month: group.month })}
+          >
+            <Text style={isSelected ? styles.monthRailNameActive : styles.monthRailName}>
+              {FULL_MONTH_NAMES[group.month - 1]} {group.year}
+            </Text>
+            <Text style={isSelected ? styles.monthRailSpentActive : styles.monthRailSpent}>
+              {formatCLP(group.totalSpent)} spent
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  const monthColumn = (
+    <View style={styles.wideListColumn} testID="month-column">
+      {selectedGroup ? (
+        <>
+          <View style={styles.wideMonthHeader}>
+            <Text style={styles.monthHeaderName}>
+              {FULL_MONTH_NAMES[selectedGroup.month - 1]} {selectedGroup.year}
+            </Text>
+            <Button title="Add transaction" onPress={openAddForm} testID="add-transaction-button" />
+          </View>
+          {selectedGroup.transactions.map(renderTransactionRow)}
+        </>
+      ) : (
+        <View style={styles.wideMonthHeader}>
+          <Text style={styles.wideEmptyStateText}>No transactions yet.</Text>
+          <Button title="Add transaction" onPress={openAddForm} testID="add-transaction-button" />
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <Screen testID="transactions-screen" wide={isWideWeb}>
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
-        {(!formOpen || isWideWeb) && (
-          <Button title="Add" onPress={openAddForm} testID="add-transaction-button" />
-        )}
       </View>
 
       {isWideWeb ? (
         <View style={styles.wideLayout} testID="wide-layout">
-          <View style={styles.wideListColumn}>{rows}</View>
+          {monthRail}
+          {monthColumn}
           <View style={styles.wideFormColumn}>
             {formOpen ? (
               <View style={styles.form} testID="transaction-form">
@@ -313,7 +380,13 @@ export function TransactionsScreen() {
               {noteAndActions}
             </View>
           )}
-          {!formOpen && rows}
+          {!formOpen && monthGroups.length > 0 && narrowRows}
+          {!formOpen && monthGroups.length === 0 && (
+            <View style={styles.narrowEmptyState} testID="narrow-empty-state">
+              <Text style={styles.wideEmptyStateText}>No transactions yet.</Text>
+              <Button title="Add" onPress={openAddForm} testID="add-transaction-button" />
+            </View>
+          )}
         </>
       )}
 
@@ -344,14 +417,59 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   // Spec 006 — master-detail split, ≥900px only (see useWideWeb).
+  // 2026-09-25 amendment: a third, narrower rail column joins the list
+  // and form columns.
   wideLayout: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.lg,
     alignItems: 'flex-start',
   },
-  wideListColumn: {
-    width: 400,
+  monthRail: {
+    width: 160,
     flexShrink: 0,
+    gap: spacing.xs,
+  },
+  monthRailItem: {
+    borderRadius: radius.card,
+    padding: spacing.sm + 2,
+  },
+  monthRailItemActive: {
+    borderRadius: radius.card,
+    padding: spacing.sm + 2,
+    backgroundColor: colors.accent,
+  },
+  monthRailName: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm,
+    color: colors.ink,
+  },
+  monthRailNameActive: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm,
+    color: colors.onAccent,
+  },
+  monthRailSpent: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.inkMuted,
+    marginTop: 2,
+  },
+  monthRailSpentActive: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.onAccent,
+    marginTop: 2,
+  },
+  wideListColumn: {
+    width: 340,
+    flexShrink: 0,
+  },
+  wideMonthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm + 2,
+    gap: spacing.sm,
   },
   wideFormColumn: {
     flex: 1,
@@ -369,6 +487,15 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: typography.size.sm,
     color: colors.inkMuted,
+  },
+  narrowEmptyState: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
   },
   amountDateRow: {
     flexDirection: 'row',
@@ -490,6 +617,20 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.xs,
     color: colors.inkSecondary,
+  },
+  monthAddButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthAddButtonLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.lg,
+    color: colors.onAccent,
+    lineHeight: typography.size.lg,
   },
   row: {
     flexDirection: 'row',

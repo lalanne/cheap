@@ -1,6 +1,6 @@
 # 006 — Responsive Web Layout
 
-**Status:** approved (amended — criterion 8/9 pending)
+**Status:** implemented
 **Depends on:** 002 (transactions), 003 (design system), 005 (web deployment — the deploy this styles)
 
 Direction chosen from the canvas (2026-09-21): **"B — Master-detail
@@ -229,4 +229,14 @@ the rail for wide web specifically.
   an unsaved edit) — matches this spec's existing "no change to
   `handleSave`, validation, the store" boundary.
 
-**Result:** Not yet implemented.
+**Result:** ✅ criteria 8/9. `TransactionsScreen.wideWeb.test.tsx` gained
+five tests: the rail lists every month (most recent first) with correct
+per-item spend totals; the middle column defaults to the most recent
+month with `add-transaction-button` beside its name; clicking a rail
+item switches the middle column's header/rows and doesn't disturb an
+already-open form; zero transactions shows an empty rail and a "no
+transactions yet" prompt with its own Add button. All 4 pre-existing
+criterion 2/3/4 tests pass unchanged — the `add-transaction-button`
+testID's new home (the month column's header) happens to satisfy every
+existing test's expectations in both the empty and non-empty cases.
+235 tests pass (up from 227), `tsc --noEmit` clean, web export builds.

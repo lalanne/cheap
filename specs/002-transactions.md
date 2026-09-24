@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** approved (amended — criterion 14/15 pending)
+**Status:** implemented
 **Depends on:** 000, 001
 
 ## User stories
@@ -402,4 +402,13 @@ month header for narrow/native.
   (`mockStore()` with no transactions) — those tests keep passing
   unchanged.
 
-**Result:** Not yet implemented.
+**Result:** ✅ criteria 14/15. `TransactionsScreen.test.tsx` gained three
+tests: no `add-transaction-button` once at least one transaction exists;
+a month's own `add-transaction-button-${year}-${month}` opens the form
+with the same defaults as before; zero transactions shows a "no
+transactions yet" message with its own `add-transaction-button`, which
+opens the form and saves correctly. All 8 pre-existing tests pass
+unchanged — every one of them exercises the empty-transactions case to
+open the add form, which is exactly where `add-transaction-button` still
+lives. 235 tests pass (up from 227), `tsc --noEmit` clean, web export
+builds.
