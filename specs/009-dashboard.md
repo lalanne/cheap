@@ -273,3 +273,36 @@ is down to `transactions` (labeled "Log") / `manage` / `dashboard`.
 `DebtsScreen` test files replaced 1:1 by the panel equivalents, plus new
 `ManageScreen`/`ManageScreen.wideWeb`/`App.test.tsx` coverage), `tsc
 --noEmit` clean, `npx expo export -p web` builds (325 modules, 1.5MB).
+
+**Bug found live (2026-09-24), criterion 7 — donut segments weren't
+actually proportional.** Real gap: `DashboardScreen.tsx`'s `<Circle>`
+rendering hardcoded `strokeDasharray` to the full circumference for
+*every* segment (`` `${2 * Math.PI * DONUT_RADIUS}` ``), completely
+ignoring `seg.dashLength` — `computeDonutSegments`'s math was correct
+and unit-tested (criterion 7's original test), but nothing checked that
+the *component* actually applied it. Every circle drew as a complete
+ring, stacked on top of each other; only the last one or two painted on
+top ended up visible at all, so a user with 13 categories saw two solid
+color blocks with no relation to actual spend, instead of up to 13
+proportional arcs (colors cycling per spec 003's fixed order, so some
+adjacent-by-index categories do share a color — expected — but the
+*sizes* were never right).
+
+Fixed: `strokeDasharray={`${seg.dashLength} ${2 * Math.PI *
+DONUT_RADIUS}`}` — dash length is the segment's own share, gap is the
+full circumference (more than enough to prevent the pattern repeating
+before the arc completes). Regression test added to
+`DashboardScreen.test.tsx`: renders two known-amount categories, reads
+each arc's `strokeDasharray` off its `dashboard-donut-arc-${category}`
+testID (new — one per arc, needed to query react-native-svg's `<Circle>`
+directly since this RNTL version has no `UNSAFE_getByType`), and asserts
+it matches `[dashLength, circumference]` (react-native-svg normalizes
+the dasharray string into an array of numeric strings). 180 tests pass,
+`tsc --noEmit` clean, web export builds.
+
+**Lesson:** a pure function's math being unit-tested doesn't prove the
+component wired it up — this needed a component-level assertion on the
+actual rendered prop, not just on `computeDonutSegments`'s output in
+isolation. Same class of gap CLAUDE.md's TDD rule exists to catch;
+worth remembering for any other spot where a pure function's result
+gets passed into a visual prop rather than displayed as text.

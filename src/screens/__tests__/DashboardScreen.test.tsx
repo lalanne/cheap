@@ -120,4 +120,35 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
     expect(screen.getByTestId('dashboard-trend')).toBeTruthy();
     expect(screen.getByTestId('dashboard-debts')).toBeTruthy();
   });
+
+  it('draws each donut segment as an arc proportional to its spend, not a full circle for every segment (criterion 7 regression)', async () => {
+    const now = new Date();
+    mockStores({
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 300, date: now }),
+        tx({ id: 't2', category: 'Transport', amount: 100, date: now }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    const DONUT_RADIUS = 60;
+    const circumference = 2 * Math.PI * DONUT_RADIUS;
+    const foodDashLength = (300 / 400) * circumference;
+    const transportDashLength = (100 / 400) * circumference;
+
+    // Bug (real, seen live): strokeDasharray was hardcoded to the full
+    // circumference for every segment, so every circle drew as a
+    // complete ring and only the last one or two painted on top were
+    // visible at all — the proportions never showed up.
+    // react-native-svg normalizes the "<dash> <gap>" string into an
+    // array of numeric strings before it reaches props.
+    expect(screen.getByTestId('dashboard-donut-arc-Food').props.strokeDasharray).toEqual([
+      `${foodDashLength}`,
+      `${circumference}`,
+    ]);
+    expect(screen.getByTestId('dashboard-donut-arc-Transport').props.strokeDasharray).toEqual([
+      `${transportDashLength}`,
+      `${circumference}`,
+    ]);
+  });
 });

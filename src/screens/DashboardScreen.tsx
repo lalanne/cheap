@@ -151,12 +151,13 @@ export function DashboardScreen() {
               {donutSegments.map((seg) => (
                 <Circle
                   key={seg.category}
+                  testID={`dashboard-donut-arc-${seg.category}`}
                   cx={DONUT_SIZE / 2}
                   cy={DONUT_SIZE / 2}
                   r={DONUT_RADIUS}
                   stroke={seg.color}
                   strokeWidth={DONUT_STROKE}
-                  strokeDasharray={`${2 * Math.PI * DONUT_RADIUS}`}
+                  strokeDasharray={`${seg.dashLength} ${2 * Math.PI * DONUT_RADIUS}`}
                   strokeDashoffset={seg.dashOffset}
                   fill="transparent"
                   rotation="-90"
