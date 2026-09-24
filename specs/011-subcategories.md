@@ -1,8 +1,9 @@
 # 011 — Subcategories
 
 **Status:** implemented
-**Depends on:** 002 (transactions/categories), 007 (budgets — unaffected,
-see Decisions), 009 (dashboard — the donut this spec changes)
+**Depends on:** 002 (transactions/categories), 007 (budgets — spend now
+rolls up subcategories too, 2026-09-25 amendment), 009 (dashboard — the
+donut this spec changes)
 
 ## User stories
 
@@ -34,16 +35,12 @@ see Decisions), 009 (dashboard — the donut this spec changes)
   never `"Food"` and never both. Roll-up into the parent's total happens
   at read time (a new pure function), not at write time — so nothing
   about `Transaction`'s shape or spec 002's data model changes.
-- **Budgets do NOT roll up subcategory spend (v1) — a real, explicit
-  gap.** A budget set on "Food" tracks only transactions logged
-  literally as `"Food"`, not `"Groceries"`/`"Uber Eats"`/`"Restaurants"`
-  spend. This will likely be a real surprise once someone actually has
-  a Food budget *and* Food subcategories — flagged here on purpose,
-  not silently skipped. Rolling budgets up too is a bigger change
-  (touches spec 007's `computeCategorySpend`, its tests, its screen) for
-  a request that was specifically about the dashboard's chart; revisit
-  as its own follow-up once this ships and it's clear it's actually
-  needed in practice, rather than guessing now.
+- ~~Budgets do NOT roll up subcategory spend (v1) — a real, explicit
+  gap.~~ **Reversed 2026-09-25 — see the amendment below.** This
+  shipped exactly the confusion flagged here: the real account's Food
+  budget bar showed $88,450 while the same month's donut showed
+  $541,041 for Food, because the bar read raw (unrolled) spend and the
+  donut read rolled-up spend. Real user report, not a hypothetical.
 - **Deleting a parent doesn't cascade or clean up its former children —
   same precedent as spec 002's category delete.** A subcategory whose
   parent was deleted keeps its own `parentCategory` string, now
@@ -136,13 +133,17 @@ defaulting.
    their own top-level slice(s) instead of disappearing or crashing (the
    dangling-parent fallback).
 7. **Given** `npx tsc --noEmit` and `npx jest`, **then** both stay green.
+8. **Given** a budget set on a category with subcategories, **when** the
+   dashboard renders that budget's progress bar or a budget-overrun
+   suggestion fires for it, **then** the spend shown/evaluated is the
+   *rolled-up* total (direct + every subcategory) — the same number the
+   donut shows for that category, not a smaller, direct-only figure
+   (amendment 2026-09-25).
 
 ## Out of scope
 
 - More than one level of nesting (a subcategory of a subcategory) — see
   Decisions.
-- Budgets rolling up subcategory spend — a real, explicit gap, see
-  Decisions; revisit as its own spec if it turns out to matter.
 - Drill-down via tapping the donut arc itself (only the legend row is
   tappable in v1) — the arc still shows the spec 009 hover label on web,
   unchanged.
@@ -162,6 +163,7 @@ defaulting.
 | 5 — no affordance for a childless category | Component | `DashboardScreen.test.tsx`: a category with no subcategories renders no chevron/hint; tapping its row is a no-op (no state change). |
 | 6 — dangling-parent fallback | Unit | `categoryRollup.test.ts`: a subcategory whose `parentCategory` matches nothing in the category list appears as its own key in the rolled-up result, not folded into anything and not dropped. |
 | 7 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
+| 8 — budgets/suggestions use rolled-up spend | Unit + component | `DashboardScreen.test.tsx`: a budget on "Food" with subcategory transactions shows the rolled-up total in its bar, matching the donut's Food slice; a budget-overrun suggestion fires/doesn't fire based on the rolled-up percent, not the direct-only one. |
 
 ## Verification results
 
@@ -176,6 +178,41 @@ Implemented 2026-09-24.
 | 5 — no affordance for a childless category | ✅ | `DashboardScreen.test.tsx`: tapping Housing's row (no subcategories) is a no-op — no chevron/hint rendered, no `onPress` attached. |
 | 6 — dangling-parent fallback | ✅ | `categoryRollup.test.ts` + `DashboardScreen.test.tsx`: a subcategory whose parent no longer exists (`Deleted Parent`) shows as its own top-level slice, not dropped or misfiled. |
 | 7 — no regressions | ✅ | 199 tests pass (up from 182), `tsc --noEmit` clean, `npx expo export -p web` builds. |
+
+### Amendment (2026-09-25): budgets/suggestions now use rolled-up spend
+
+Real bug, reported live: the account's Food budget bar showed $88,450
+(direct-only spend) while the same month's donut showed $541,041 for
+Food (rolled up). Same category, two different numbers on the same
+screen — exactly the confusion this spec's original Decisions section
+predicted and deliberately deferred, now confirmed as a real problem
+rather than a hypothetical.
+
+- `DashboardScreen.tsx` now computes `rolledUpTotals` *before*
+  `computeSuggestions` and passes that (not raw `categorySpend`) both
+  into `computeSuggestions` and into the budgets section's per-budget
+  `spend` lookup. The donut's own totals were already rolled up — no
+  change there.
+- Raw `categorySpend` is still kept and still used for one thing: the
+  donut's drill-down (`subcategoryTotalsFor` needs each subcategory's
+  own unrolled amount to show its individual slice).
+- `BudgetsPanel` itself is unaffected — it never displayed spend, only
+  the monthly limit, so there was nothing to fix there.
+- `src/budgets/computeCategorySpend.ts` (spec 007) is untouched — it's
+  dead code as far as the dashboard is concerned (imported in
+  `DashboardScreen.tsx` but never called; superseded by
+  `dashboard/aggregation.ts`'s `categoryTotalsForMonth` when spec 009
+  shipped). Not removed here — out of scope for a bug fix, noted for a
+  future cleanup pass.
+
+**Result:** ✅ criterion 8. `DashboardScreen.test.tsx` gained a test: a
+budget on "Food" ($60,000 limit) with a direct Food transaction
+($30,000) plus a Groceries subcategory transaction ($40,000) shows
+$70,000/$60,000 (117%, over) in its bar and fires a budget-overrun
+suggestion — both of which raw (direct-only, $30,000/$60,000, under)
+would have missed entirely. Existing criterion-2 test (spec 009, a
+childless category over budget) still passes unchanged. Full suite
+green, `tsc --noEmit` clean, web export builds.
 
 **What shipped:**
 - `src/transactions/types.ts` — `Category.parentCategory: string \| null`; `CategoryRepository.create` gained a required third `parentCategory` param.

@@ -73,15 +73,25 @@ export function DashboardScreen() {
 
   const now = new Date();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  // categorySpend stays raw/unrolled — budgets don't roll up subcategory
-  // spend (spec 011's explicit gap), so suggestions/budget bars keep
-  // using it exactly as before. Only the donut's own totals roll up.
+  // categorySpend is raw/unrolled (per-leaf-category totals) — kept
+  // around only for the donut's drill-down, which needs each
+  // subcategory's own unrolled amount. Budgets and suggestions use
+  // rolledUpTotals instead (2026-09-25 amendment, spec 011): a budget on
+  // "Food" must reflect Food + its subcategories, the same number the
+  // donut shows for Food — using raw spend here produced two different,
+  // contradictory numbers for the same category on the same screen.
   const categorySpend = categoryTotalsForMonth(transactions, now);
+  const rolledUpTotals = rollUpCategoryTotals(categorySpend, categories);
   const thisMonth = monthlyTotals(transactions, now);
   const lastMonth = monthlyTotals(transactions, lastMonthDate);
   const trend = last6MonthsExpense(transactions, now);
-  const suggestions = computeSuggestions({ budgets, categorySpend, debts, thisMonth, lastMonth });
-  const rolledUpTotals = rollUpCategoryTotals(categorySpend, categories);
+  const suggestions = computeSuggestions({
+    budgets,
+    categorySpend: rolledUpTotals,
+    debts,
+    thisMonth,
+    lastMonth,
+  });
   const donutTotals = drilledCategory
     ? subcategoryTotalsFor(categorySpend, categories, drilledCategory)
     : rolledUpTotals;
@@ -117,7 +127,7 @@ export function DashboardScreen() {
       ) : (
         <View style={styles.barList}>
           {budgets.map((b) => {
-            const spend = categorySpend[b.category] ?? 0;
+            const spend = rolledUpTotals[b.category] ?? 0;
             const percent = b.monthlyLimit > 0 ? spend / b.monthlyLimit : 0;
             const over = percent > 1;
             return (

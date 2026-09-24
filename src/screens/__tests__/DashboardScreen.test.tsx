@@ -275,4 +275,28 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
 
     expect(screen.getByTestId('dashboard-donut-legend-Old Sub')).toBeTruthy();
   });
+
+  it('uses rolled-up spend (direct + subcategories) for the budget bar and its overrun suggestion (criterion 8 — 2026-09-25 amendment)', async () => {
+    mockStores({
+      categories: SUBCATEGORIES,
+      budgets: [
+        {
+          id: 'b-1',
+          category: 'Food',
+          monthlyLimit: 60000,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 30000, date: now }),
+        tx({ id: 't2', category: 'Groceries', amount: 40000, date: now }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    const bar = screen.getByTestId('dashboard-budget-Food');
+    expect(within(bar).getByText(/117%/)).toBeTruthy();
+    expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
+  });
 });
