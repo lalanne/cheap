@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Screen } from '../components/Screen';
 import { useDebtsStore } from '../debts/store';
 import type { Debt } from '../debts/types';
 import { validatePaymentAmount } from '../debts/validatePaymentAmount';
@@ -17,7 +16,10 @@ function formatCLP(amount: number): string {
   return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
-export function DebtsScreen() {
+// Content-only — no Screen wrapper, no own scroll region. Composed by
+// ManageScreen alongside CategoriesPanel/BudgetsPanel (spec 009's
+// 2026-09-23 amendment); was a standalone top-level DebtsScreen before.
+export function DebtsPanel() {
   const debts = useDebtsStore((s) => s.debts);
   const addDebt = useDebtsStore((s) => s.addDebt);
   const logPayment = useDebtsStore((s) => s.logPayment);
@@ -123,7 +125,7 @@ export function DebtsScreen() {
   }
 
   return (
-    <Screen testID="debts-screen">
+    <View testID="debts-panel">
       <View style={styles.header}>
         <Text style={styles.title}>Debts</Text>
         {mode === 'closed' && <Button title="Add" onPress={openAddForm} testID="add-debt-button" />}
@@ -251,7 +253,7 @@ export function DebtsScreen() {
             </View>
           );
         })}
-    </Screen>
+    </View>
   );
 }
 

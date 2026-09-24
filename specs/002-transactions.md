@@ -57,6 +57,12 @@ one.
   `BudgetsScreen`/`DebtsScreen`. The existing inline "+ New" chip in
   `TransactionsScreen`'s category picker stays too — this is additive,
   not a replacement for the quick-add-while-logging flow.
+  **(Superseded 2026-09-23 — see spec 009's amendment):** the standalone
+  tab was cut back down as part of a five-tab-to-three consolidation;
+  the same list/add/delete UI now lives as `CategoriesPanel`, composed
+  into the `Manage` tab alongside `BudgetsPanel`/`DebtsPanel`, not on
+  its own screen. Nothing about criterion 9's behavior changed, only
+  where it's reached from.
 - `CategoryRepository` gains `delete(id): Promise<void>` — no Firestore
   rules change needed (`users/{uid}/categories/{categoryId}`'s existing
   `allow read, write: if isOwner(uid)` already covers delete).

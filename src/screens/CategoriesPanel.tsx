@@ -3,12 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Screen } from '../components/Screen';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
-export function CategoriesScreen() {
+// Content-only — no Screen wrapper, no own scroll region. Composed by
+// ManageScreen alongside BudgetsPanel/DebtsPanel (spec 009's 2026-09-23
+// amendment); was a standalone top-level CategoriesScreen before that.
+export function CategoriesPanel() {
   const categories = useTransactionsStore((s) => s.categories);
   const addCategory = useTransactionsStore((s) => s.addCategory);
   const deleteCategory = useTransactionsStore((s) => s.deleteCategory);
@@ -38,7 +40,7 @@ export function CategoriesScreen() {
   }
 
   return (
-    <Screen testID="categories-screen">
+    <View testID="categories-panel">
       <View style={styles.header}>
         <Text style={styles.title}>Categories</Text>
         {!formOpen && <Button title="Add" onPress={openForm} testID="add-category-button" />}
@@ -91,7 +93,7 @@ export function CategoriesScreen() {
           ))}
         </>
       )}
-    </Screen>
+    </View>
   );
 }
 

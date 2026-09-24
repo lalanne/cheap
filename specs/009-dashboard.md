@@ -33,6 +33,49 @@ established (`SignInScreen`'s sign-in/create-account tabs,
 `TransactionsScreen`'s Expense/Income toggle) — local component state in
 `App.tsx`, no new dependency, barely more code than a two-tab version.
 
+(The 002 amendment below added a fifth tab, `Categories`, before this
+was cut back down — see the 2026-09-23 amendment right after this
+section for the current, three-tab state.)
+
+### Amendment (2026-09-23): three tabs, not five — `Log` / `Manage` / `Dashboard`
+
+Five top-level tabs (`Transactions`, `Categories`, `Budgets`, `Debts`,
+`Dashboard`) turned out to be too many for what are mostly small,
+related data-entry screens — flagged by the user, explored as three
+grouping options on a design canvas (single merged tab; `Spending`/`Plan`
+by theme; split by how often you touch it), and resolved on the third:
+**group by frequency of use, not by domain.**
+
+- **`Log`** (renamed from `Transactions`, same screen/testID
+  `transactions-screen` — unchanged) — the thing done daily. The
+  existing inline "+ New" category chip already covers quick category
+  creation while logging; unaffected by this amendment.
+- **`Manage`** (new) — `Categories`, `Budgets`, and `Debts` together,
+  the things touched occasionally, not daily. `≥900px` (spec 006's
+  breakpoint, same one the dashboard's second row uses): three columns
+  side by side. Below that, or native: stacked full-width in the same
+  order (Categories, Budgets, Debts) — same responsive pattern as this
+  spec's own budgets/KPI and donut/trend/debts rows, reused rather than
+  inventing a second convention.
+- **`Dashboard`** — unchanged, stays its own tab; explicitly kept
+  separate from the consolidation (it's a different mode — deciding,
+  not managing/entering data).
+
+**Implementation shape:** `CategoriesScreen.tsx`/`BudgetsScreen.tsx`/
+`DebtsScreen.tsx` each split into a content-only `*Panel` component (no
+own `Screen` wrapper, no independent scroll region — same list/form
+markup, same testIDs, just not top-level anymore) plus `ManageScreen.tsx`,
+which composes the three panels inside one `Screen`/`ScrollView`, mirroring
+how `DashboardScreen` already composes multiple cards inside a single
+`Screen` rather than nesting several. The old top-level
+`CategoriesScreen`/`BudgetsScreen`/`DebtsScreen` components are retired
+(nothing renders them standalone anymore) — their `__tests__` files move
+to `CategoriesPanel.test.tsx`/`BudgetsPanel.test.tsx`/`DebtsPanel.test.tsx`
+with the same assertions, just against the panel directly.
+
+No change to any store, repository, Firestore rule, or validation logic
+in specs 002/007/008 — this is purely a navigation/layout amendment.
+
 ### Charts: plain `View`/`StyleSheet`, except the donut
 
 Most of the approved mockup is achievable with plain flexbox Views,
@@ -135,6 +178,15 @@ dividing by zero.
    correctly, cumulative offsets summing to a full circle) — using spec
    003's fixed chart color order, not reassigned per render.
 8. **Given** `npx tsc --noEmit` and `npx jest`, **then** both stay green.
+9. **Given** a signed-in user, **when** they open the app, **then**
+   exactly three tabs are shown — `Log`, `Manage`, `Dashboard` — not
+   five (amendment 2026-09-23).
+10. **Given** a signed-in user on the `Manage` tab, **when** the viewport
+    is `≥900px`, **then** Categories, Budgets, and Debts render as three
+    columns side by side; **when** it's narrower or native, **then** they
+    stack full-width in the same order — and every existing
+    add/edit/delete behavior for each (specs 002/007/008) keeps working
+    unchanged.
 
 ## Out of scope
 
@@ -158,6 +210,8 @@ dividing by zero.
 | 6 — empty states | Component | Render with empty budgets/debts arrays, assert the empty-state copy renders, not a blank or crashed section. |
 | 7 — donut segment math | Unit | Pure function test: given category totals, assert each segment's dash length/offset and that offsets sum to the full circumference. |
 | 8 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
+| 9 — three tabs, not five | Component | `App.test.tsx`: assert `tab-transactions`/`tab-manage`/`tab-dashboard` exist and `tab-categories`/`tab-budgets`/`tab-debts` no longer do. |
+| 10 — Manage tab composes the three panels, responsively | Component | `ManageScreen.test.tsx` (narrow/native: stacked, no wide-row testID) + `ManageScreen.wideWeb.test.tsx` (mocked wide: three-column row testID present) — same split-file pattern as this spec's own criterion 5; `CategoriesPanel`/`BudgetsPanel`/`DebtsPanel` tests carry over their existing add/edit/delete assertions unchanged. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
@@ -202,3 +256,20 @@ Implemented 2026-09-22.
 
 Staying at `implemented`, not `verified` — the manual browser resize
 pass (specs 005/006's established process) hasn't been done yet.
+
+**Amendment (2026-09-23) — three tabs, not five:** implemented as
+described in the Decisions section's amendment above. `CategoriesScreen`/
+`BudgetsScreen`/`DebtsScreen` retired; their content now lives in
+`CategoriesPanel`/`BudgetsPanel`/`DebtsPanel` (no own `Screen` wrapper),
+composed by new `src/screens/ManageScreen.tsx`. `App.tsx`'s tab switcher
+is down to `transactions` (labeled "Log") / `manage` / `dashboard`.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 9 — three tabs, not five | ✅ | `App.test.tsx`: asserts `tab-transactions`/`tab-manage`/`tab-dashboard` exist, `tab-categories`/`tab-budgets`/`tab-debts` don't. |
+| 10 — Manage tab, responsive | ✅ | `ManageScreen.test.tsx` (narrow: all three panels present, no `manage-wide-row`) + `ManageScreen.wideWeb.test.tsx` (mocked wide: `manage-wide-row` present); `CategoriesPanel.test.tsx`/`BudgetsPanel.test.tsx`/`DebtsPanel.test.tsx` carry over every prior add/edit/delete assertion unchanged, now against the panel directly. |
+
+179 tests pass (up from 174 — old `CategoriesScreen`/`BudgetsScreen`/
+`DebtsScreen` test files replaced 1:1 by the panel equivalents, plus new
+`ManageScreen`/`ManageScreen.wideWeb`/`App.test.tsx` coverage), `tsc
+--noEmit` clean, `npx expo export -p web` builds (325 modules, 1.5MB).

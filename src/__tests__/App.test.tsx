@@ -133,27 +133,25 @@ describe('App', () => {
     expect(startDebtsSync).toHaveBeenCalled();
   });
 
-  it('shows all five tabs and switches screens when one is pressed (specs 002/009)', async () => {
+  it('shows exactly three tabs — Log, Manage, Dashboard — and switches screens (spec 009 amendment, criterion 9)', async () => {
     mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
 
     await render(<App />);
 
     expect(screen.getByTestId('tab-transactions')).toBeTruthy();
-    expect(screen.getByTestId('tab-categories')).toBeTruthy();
-    expect(screen.getByTestId('tab-budgets')).toBeTruthy();
-    expect(screen.getByTestId('tab-debts')).toBeTruthy();
+    expect(screen.getByTestId('tab-manage')).toBeTruthy();
     expect(screen.getByTestId('tab-dashboard')).toBeTruthy();
+    expect(screen.queryByTestId('tab-categories')).toBeNull();
+    expect(screen.queryByTestId('tab-budgets')).toBeNull();
+    expect(screen.queryByTestId('tab-debts')).toBeNull();
     expect(screen.getByTestId('transactions-screen')).toBeTruthy();
 
-    await fireEvent.press(screen.getByTestId('tab-categories'));
-    expect(screen.getByTestId('categories-screen')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('tab-manage'));
+    expect(screen.getByTestId('manage-screen')).toBeTruthy();
+    expect(screen.getByTestId('categories-panel')).toBeTruthy();
+    expect(screen.getByTestId('budgets-panel')).toBeTruthy();
+    expect(screen.getByTestId('debts-panel')).toBeTruthy();
     expect(screen.queryByTestId('transactions-screen')).toBeNull();
-
-    await fireEvent.press(screen.getByTestId('tab-budgets'));
-    expect(screen.getByTestId('budgets-screen')).toBeTruthy();
-
-    await fireEvent.press(screen.getByTestId('tab-debts'));
-    expect(screen.getByTestId('debts-screen')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('tab-dashboard'));
     expect(screen.getByTestId('dashboard-screen')).toBeTruthy();

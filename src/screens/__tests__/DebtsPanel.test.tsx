@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Debt } from '../../debts/types';
 import { useDebtsStore } from '../../debts/store';
-import { DebtsScreen } from '../DebtsScreen';
+import { DebtsPanel } from '../DebtsPanel';
 
 jest.mock('../../debts/store', () => ({
   useDebtsStore: jest.fn(),
@@ -34,10 +34,17 @@ const EXISTING: Debt = {
   updatedAt: new Date('2026-09-01'),
 };
 
-describe('DebtsScreen', () => {
+describe('DebtsPanel (spec 009 amendment: Manage tab, not its own screen)', () => {
+  it('renders as a panel, not a top-level Screen', async () => {
+    mockStore();
+    await render(<DebtsPanel />);
+
+    expect(screen.getByTestId('debts-panel')).toBeTruthy();
+  });
+
   it('opens the add-debt form and creates a debt (criterion 1)', async () => {
     const store = mockStore();
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     await fireEvent.press(screen.getByTestId('add-debt-button'));
     await fireEvent.changeText(screen.getByTestId('debt-name-input'), 'Credit Card');
@@ -58,7 +65,7 @@ describe('DebtsScreen', () => {
 
   it('logs a payment through the store, not a direct balance edit (criterion 2)', async () => {
     const store = mockStore({ debts: [EXISTING] });
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     await fireEvent.press(screen.getByTestId('log-payment-button-d-1'));
     await fireEvent.changeText(screen.getByTestId('payment-amount-input'), '50000');
@@ -70,7 +77,7 @@ describe('DebtsScreen', () => {
 
   it('rejects a payment greater than the current balance (criterion 5)', async () => {
     const store = mockStore({ debts: [EXISTING] });
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     await fireEvent.press(screen.getByTestId('log-payment-button-d-1'));
     await fireEvent.changeText(screen.getByTestId('payment-amount-input'), '9999999');
@@ -82,7 +89,7 @@ describe('DebtsScreen', () => {
 
   it('edits the balance directly without logging a payment (criterion 3)', async () => {
     const store = mockStore({ debts: [EXISTING] });
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     await fireEvent.press(screen.getByTestId('edit-balance-button-d-1'));
     await fireEvent.changeText(screen.getByTestId('balance-amount-input'), '1000000');
@@ -95,7 +102,7 @@ describe('DebtsScreen', () => {
   it('shows a paid-off debt and deletes it on request (criterion 6)', async () => {
     const paidOff: Debt = { ...EXISTING, currentBalance: 0 };
     const store = mockStore({ debts: [paidOff] });
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     expect(screen.getByTestId('debt-row-d-1')).toBeTruthy();
     expect(screen.getByText(/paid off/i)).toBeTruthy();
@@ -107,7 +114,7 @@ describe('DebtsScreen', () => {
 
   it('shows an empty state when there are no debts', async () => {
     mockStore({ debts: [] });
-    await render(<DebtsScreen />);
+    await render(<DebtsPanel />);
 
     expect(screen.getByTestId('debts-empty-state')).toBeTruthy();
   });

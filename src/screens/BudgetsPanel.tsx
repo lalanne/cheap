@@ -5,7 +5,6 @@ import { useBudgetsStore } from '../budgets/store';
 import type { Budget } from '../budgets/types';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Screen } from '../components/Screen';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
 import { validateAmount } from '../transactions/validateAmount';
@@ -15,7 +14,10 @@ function formatCLP(amount: number): string {
   return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
-export function BudgetsScreen() {
+// Content-only — no Screen wrapper, no own scroll region. Composed by
+// ManageScreen alongside CategoriesPanel/DebtsPanel (spec 009's
+// 2026-09-23 amendment); was a standalone top-level BudgetsScreen before.
+export function BudgetsPanel() {
   const budgets = useBudgetsStore((s) => s.budgets);
   const setBudget = useBudgetsStore((s) => s.setBudget);
   const deleteBudget = useBudgetsStore((s) => s.deleteBudget);
@@ -61,7 +63,7 @@ export function BudgetsScreen() {
   }
 
   return (
-    <Screen testID="budgets-screen">
+    <View testID="budgets-panel">
       <View style={styles.header}>
         <Text style={styles.title}>Budgets</Text>
         {!formOpen && <Button title="Add" onPress={openAddForm} testID="add-budget-button" />}
@@ -128,7 +130,7 @@ export function BudgetsScreen() {
             </Pressable>
           </Pressable>
         ))}
-    </Screen>
+    </View>
   );
 }
 

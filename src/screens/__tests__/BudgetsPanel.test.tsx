@@ -3,13 +3,13 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { Budget } from '../../budgets/types';
 import { useBudgetsStore } from '../../budgets/store';
 import { useTransactionsStore } from '../../transactions/store';
-import { BudgetsScreen } from '../BudgetsScreen';
+import { BudgetsPanel } from '../BudgetsPanel';
 
 jest.mock('../../budgets/store', () => ({
   useBudgetsStore: jest.fn(),
 }));
 
-// BudgetsScreen also reads the category list from the transactions store
+// BudgetsPanel also reads the category list from the transactions store
 // — mocked for the same reason TransactionsScreen.test.tsx mocks it: the
 // real module pulls in the native Firestore repos, which Jest can't load.
 jest.mock('../../transactions/store', () => ({
@@ -40,10 +40,17 @@ const EXISTING: Budget = {
   updatedAt: new Date('2026-09-01'),
 };
 
-describe('BudgetsScreen', () => {
+describe('BudgetsPanel (spec 009 amendment: Manage tab, not its own screen)', () => {
+  it('renders as a panel, not a top-level Screen', async () => {
+    mockStore();
+    await render(<BudgetsPanel />);
+
+    expect(screen.getByTestId('budgets-panel')).toBeTruthy();
+  });
+
   it('opens the add-budget form and sets a new budget (criterion 1)', async () => {
     const store = mockStore();
-    await render(<BudgetsScreen />);
+    await render(<BudgetsPanel />);
 
     await fireEvent.press(screen.getByTestId('add-budget-button'));
     await fireEvent.press(screen.getByTestId('budget-category-chip-Food'));
@@ -55,7 +62,7 @@ describe('BudgetsScreen', () => {
 
   it('rejects an invalid amount without calling the store', async () => {
     const store = mockStore();
-    await render(<BudgetsScreen />);
+    await render(<BudgetsPanel />);
 
     await fireEvent.press(screen.getByTestId('add-budget-button'));
     await fireEvent.press(screen.getByTestId('budget-category-chip-Food'));
@@ -68,7 +75,7 @@ describe('BudgetsScreen', () => {
 
   it('edits an existing budget in place, prefilled (criterion 2)', async () => {
     const store = mockStore({ budgets: [EXISTING] });
-    await render(<BudgetsScreen />);
+    await render(<BudgetsPanel />);
 
     await fireEvent.press(screen.getByTestId('budget-row-b-1'));
     expect(screen.getByTestId('budget-amount-input').props.value).toBe('250000');
@@ -81,7 +88,7 @@ describe('BudgetsScreen', () => {
 
   it('deletes a budget (criterion 5)', async () => {
     const store = mockStore({ budgets: [EXISTING] });
-    await render(<BudgetsScreen />);
+    await render(<BudgetsPanel />);
 
     await fireEvent.press(screen.getByTestId('delete-budget-b-1'));
 
@@ -90,7 +97,7 @@ describe('BudgetsScreen', () => {
 
   it('shows an empty state when no budgets are set', async () => {
     mockStore({ budgets: [] });
-    await render(<BudgetsScreen />);
+    await render(<BudgetsPanel />);
 
     expect(screen.getByTestId('budgets-empty-state')).toBeTruthy();
   });

@@ -13,23 +13,22 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
 import { startDebtsSync } from './src/debts/store';
-import { BudgetsScreen } from './src/screens/BudgetsScreen';
-import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
-import { DebtsScreen } from './src/screens/DebtsScreen';
+import { ManageScreen } from './src/screens/ManageScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { TransactionsScreen } from './src/screens/TransactionsScreen';
 import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
 import { startTransactionsSync } from './src/transactions/store';
 import { colors, spacing, typography } from './src/theme/tokens';
 
-type Tab = 'transactions' | 'categories' | 'budgets' | 'debts' | 'dashboard';
+// Spec 009's 2026-09-23 amendment: three tabs, grouped by how often
+// they're touched, not five grouped by domain — Log (daily) / Manage
+// (Categories+Budgets+Debts, occasional) / Dashboard (deciding).
+type Tab = 'transactions' | 'manage' | 'dashboard';
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'transactions', label: 'Transactions' },
-  { key: 'categories', label: 'Categories' },
-  { key: 'budgets', label: 'Budgets' },
-  { key: 'debts', label: 'Debts' },
+  { key: 'transactions', label: 'Log' },
+  { key: 'manage', label: 'Manage' },
   { key: 'dashboard', label: 'Dashboard' },
 ];
 
@@ -67,12 +66,8 @@ export default function App() {
     );
   } else {
     let activeScreen;
-    if (activeTab === 'categories') {
-      activeScreen = <CategoriesScreen />;
-    } else if (activeTab === 'budgets') {
-      activeScreen = <BudgetsScreen />;
-    } else if (activeTab === 'debts') {
-      activeScreen = <DebtsScreen />;
+    if (activeTab === 'manage') {
+      activeScreen = <ManageScreen />;
     } else if (activeTab === 'dashboard') {
       activeScreen = <DashboardScreen />;
     } else {
