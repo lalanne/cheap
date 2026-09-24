@@ -90,3 +90,13 @@ implemented so far (spec 002 only models `expense`/`income` transactions)
   work acceptably on both React Native and web from one implementation
   (no maintaining two); spec 003 fixes the chart color palette, the
   library choice itself is decided when dashboard work starts.
+- **Period boundary: rigid calendar month (decided 2026-09-23).** Considered
+  a configurable "period start day" to match a pay date that isn't the 1st
+  (e.g. income landing on the 23rd/24th), since a handful of budgeting apps
+  in this space do that. Rejected — decided a day or two of drift between
+  pay date and month boundary isn't worth the added complexity (every
+  aggregation function would need a "which period is this date in" lookup
+  instead of `date.getMonth()`, plus a settings surface). All of 007/009's
+  month-based aggregation stays calendar-month, no exceptions, not
+  reconsidered without a concrete case for why it's actually causing bad
+  decisions.
