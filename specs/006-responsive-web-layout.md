@@ -1,6 +1,6 @@
 # 006 — Responsive Web Layout
 
-**Status:** implemented (deployed; manual browser resize check pending — see Verification results)
+**Status:** approved (amended — criterion 8/9 pending)
 **Depends on:** 002 (transactions), 003 (design system), 005 (web deployment — the deploy this styles)
 
 Direction chosen from the canvas (2026-09-21): **"B — Master-detail
@@ -80,13 +80,17 @@ None. No store, repository, or Firestore rules changes.
 1. **Given** a browser window `< 900px` wide, **then** `TransactionsScreen`
    renders pixel-for-pixel what spec 002 already shipped (form replaces
    list) — this spec changes nothing below the breakpoint.
-2. **Given** a window `≥ 900px` and the form closed, **then** the
-   transaction list renders in a left column and the right column shows
-   the empty-state prompt, not nothing.
-3. **Given** a window `≥ 900px`, **when** "Add" is pressed or a
-   transaction row is tapped, **then** the form opens in the right
-   column while the list stays visible and interactive in the left
-   column (not replaced).
+2. ~~Given a window ≥ 900px and the form closed, then the transaction
+   list renders in a left column and the right column shows the
+   empty-state prompt, not nothing.~~ **Superseded 2026-09-25 — see
+   criteria 8/9 below:** the single left column split into a month rail
+   plus a month-filtered list column; the right column's behavior is
+   unchanged.
+3. **Given** a window `≥ 900px`, **when** "Add" is pressed (now in the
+   month column's own header, not a page-level button — amendment
+   2026-09-25) or a transaction row is tapped, **then** the form opens
+   in the right column while the rail and the selected month's list
+   stay visible and interactive (not replaced).
 4. **Given** a window `≥ 900px` and the form open, **then** Amount and
    Date render side by side in one row, not stacked.
 5. **Given** `SignInScreen` or `VerifyEmailScreen` on web at any width,
@@ -96,6 +100,20 @@ None. No store, repository, or Firestore rules changes.
    web window, **then** behavior is identical to before this spec — no
    regression to the existing mobile flow.
 7. **Given** `npx tsc --noEmit` and `npx jest`, **then** both stay green.
+8. **Given** a window `≥ 900px`, **then** a month rail renders to the
+   left of the transaction list — one entry per month with any
+   transaction, most recent first, each showing its month name/year and
+   total spend; the middle column shows the selected month's full name
+   + year with an "Add transaction" button beside it, then that month's
+   rows — defaulting to the most recent month when nothing's been
+   clicked yet (amendment 2026-09-25).
+9. **Given** the month rail, **when** a different month is clicked,
+   **then** the middle column switches to that month (header + rows)
+   and the clicked rail item is visually marked selected; the form
+   column (right) is unaffected by this. **Given** zero transactions,
+   **then** the rail is empty and the middle column shows a "No
+   transactions yet" prompt with its own Add button instead of an empty
+   month.
 
 ## Out of scope
 
@@ -117,6 +135,7 @@ None. No store, repository, or Firestore rules changes.
 | 2, 3, 4 — wide-web list+form columns, empty state, Amount/Date row | Component/unit | New `TransactionsScreen` tests with `useWideWeb` mocked `true`: list stays rendered while the form is open; empty state shows when it isn't; both panels are queryable at once. |
 | 5 — `Screen` width cap on web | Unit | `Screen` test: `Platform.OS` mocked `'web'`, asserts the content container's style includes the max-width/centering. |
 | 7 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
+| 8, 9 — month rail, selection, empty state | Component | `TransactionsScreen.wideWeb.test.tsx`: rail lists every month with the right totals, most recent selected by default; clicking a rail item switches the middle column's header/rows and marks that item selected; the form column is unaffected by a rail click while open; zero transactions renders the empty prompt instead of a rail/month. |
 
 Manual, in a browser (after automated tests pass): resize the deployed
 app across 900px and confirm the criteria above at
@@ -173,3 +192,41 @@ confirming the "Add"/row-click transitions look right at the actual
 deployed URL) hasn't been done yet — same "no browser-automation tool
 available" limitation as specs 001/005. Staying at `implemented`, not
 `verified`, until that's checked against the running app.
+
+### Amendment (2026-09-25): a month rail, replacing the plain list column
+
+Explored a "month column" idea on a design canvas — a left rail listing
+every month (desktop) vs. an Add button folded into each of narrow's
+existing sticky month headers (mobile, spec 002's own amendment). Picked
+the rail for wide web specifically.
+
+- **Reuses `groupTransactionsByMonth`** (spec 002's 2026-09-25
+  amendment) — the same grouped data now drives both the narrow sticky
+  list and this rail; no second grouping implementation.
+- **Three columns, not two**: month rail (narrow, ~180px) → the selected
+  month's header (name + year + an "Add transaction" button) and rows
+  (replacing the old always-everything list column) → the form column
+  (unchanged from this spec's original design — list/rail stay visible
+  next to an open form, per criterion 3).
+- **Selection state defaults to the most recent month** when nothing's
+  been clicked — matches what the old list column showed at a glance
+  (everything, most-recent-first) without requiring a click on first
+  load.
+- **The page-level "Add" button is gone on wide web** — replaced by the
+  one beside the selected month's name in the middle column, per the
+  user's explicit ask ("the button to add transaction beside the
+  month"). The `add-transaction-button` testID moves with it (same
+  testID, new location) — existing tests that press it keep working
+  unchanged, since on wide web it's always present in the middle
+  column's header regardless of whether there are zero or many
+  transactions (a "No transactions yet" state substitutes the header
+  when the rail is empty, carrying the same button/testID).
+- **Clicking a rail item never touches the form column** — if the form
+  happens to be open (e.g. editing a transaction from the previously
+  selected month) and the user clicks a different rail item, the form
+  stays exactly as it was; only the middle column's month changes. No
+  spec requires resolving that interaction further (e.g. warning about
+  an unsaved edit) — matches this spec's existing "no change to
+  `handleSave`, validation, the store" boundary.
+
+**Result:** Not yet implemented.

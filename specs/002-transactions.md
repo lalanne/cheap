@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** implemented
+**Status:** approved (amended — criterion 14/15 pending)
 **Depends on:** 000, 001
 
 ## User stories
@@ -156,6 +156,16 @@ starter set has no `id` to act on.
     until the next month's header reaches it. **Given** native, **then**
     headers are not pinned (React Native's style system has no `sticky`
     position) but remain grouped and labeled identically.
+14. **Given** the transaction list on narrow/native with at least one
+    transaction, **then** no page-level "Add" button appears — each
+    month's header instead carries its own add button, opening the same
+    form with the same defaults (today's date, expense, first category)
+    as before; it is not aware of which month's header it was pressed
+    from (amendment 2026-09-25).
+15. **Given** zero transactions, **when** the screen renders with the
+    form closed, **then** an empty-state message appears with its own
+    Add button (there being no month header to attach one to yet), and
+    pressing it opens the same add-transaction form as always.
 
 ## Out of scope
 
@@ -178,6 +188,8 @@ starter set has no `id` to act on.
 | 11 — re-parent blocked for a category with children | Component | `CategoriesPanel` test: editing a top-level category with subcategories renders no parent picker; editing a subcategory always shows one, including a "None" option. |
 | 12 — grouped by month, most recent first | Unit + component | `groupByMonth.test.ts`: transactions across several months split into the right groups, in the right order, each with the correct expense-only total. `TransactionsScreen` test: month header text and per-month row order rendered from real store data. |
 | 13 — sticky on web, plain grouping on native | Component | `TransactionsScreen` test: the month header's style includes `position: 'sticky'` when `Platform.OS` is `'web'`, and does not on the native default — actual pinned-while-scrolling behavior needs a manual browser pass (no browser automation available), same caveat as every other visual-only behavior in this app. |
+| 14 — no page-level Add, per-month Add instead | Component | `TransactionsScreen` test: with transactions present, `add-transaction-button` (the old page-level testID) is absent; a per-month button (`add-transaction-button-${year}-${month}`) opens the form with the same defaults as before. |
+| 15 — empty-state Add for a brand-new account | Component | `TransactionsScreen` test: zero transactions renders an empty-state message and `add-transaction-button`; pressing it opens the form. |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
@@ -360,3 +372,34 @@ is `'web'` and absent on the native default. 227 tests pass (up from
 pinned-while-scrolling behavior in a real browser is unverified — no
 browser automation available, same standing gap as every other
 visual-only behavior in this app.
+
+### Amendment (2026-09-25): the Add button moves beside each month, not the page
+
+Continuation of the same "a month column in the Log" design canvas as
+spec 006's companion amendment — picked differently per platform: the
+rail (spec 006) for wide web, folding Add into the existing sticky
+month header for narrow/native.
+
+- **The page-level "Add" button is removed on narrow/native.** Each
+  month header (already sticky on web since the 2026-09-24 amendment)
+  gains a small "+" button, testID `add-transaction-button-${year}-${month}`
+  — distinct per month, since there can be several on screen for a long
+  history and testIDs must stay unique.
+- **Deliberately not month-aware.** Tapping any month's "+" opens the
+  exact same form with the exact same defaults (today's date, expense,
+  first category) as the old page-level button always did — it does not
+  pre-fill a date inside that section's month. A smarter version of this
+  is a real, separate feature (and a real design question — first of the
+  month? Last transaction's date? Today, clamped into that month?), not
+  something to guess at silently while relocating a button.
+- **Real gap fixed as a side effect, not scope creep — the empty-account
+  case.** With the page-level button gone, an account with zero
+  transactions would otherwise have *no* way to add a first one (there's
+  no month header yet to attach a "+" to). A dedicated empty state (see
+  criterion 15) fills that gap; `add-transaction-button` (the original,
+  singular testID) now lives there exclusively, which is also exactly
+  the state every existing "creates a transaction" test already uses
+  (`mockStore()` with no transactions) — those tests keep passing
+  unchanged.
+
+**Result:** Not yet implemented.

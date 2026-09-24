@@ -14,11 +14,11 @@ This project is built spec-first. Rules:
 |---|------|--------|
 | 000 | [Product overview & stack](000-overview.md) | approved |
 | 001 | [Authentication (Google + email/password)](001-auth.md) | approved (amended — criterion 12 pending) |
-| 002 | [Transactions: data model & manual entry](002-transactions.md) | implemented |
+| 002 | [Transactions: data model & manual entry](002-transactions.md) | approved (amended — criterion 14/15 pending) |
 | 003 | [Design system & visual language](003-design-system.md) | implemented |
 | 004 | [iOS deployment (TestFlight)](004-ios-deployment.md) | implemented |
 | 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
-| 006 | [Responsive web layout](006-responsive-web-layout.md) | implemented |
+| 006 | [Responsive web layout](006-responsive-web-layout.md) | approved (amended — criterion 8/9 pending) |
 | 007 | [Category budgets](007-budgets.md) | implemented |
 | 008 | [Debt tracking](008-debt-tracking.md) | implemented |
 | 009 | [Dashboard](009-dashboard.md) | implemented |
