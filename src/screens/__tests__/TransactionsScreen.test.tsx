@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import type { Transaction } from '../../transactions/types';
 import { useTransactionsStore } from '../../transactions/store';
@@ -145,5 +145,87 @@ describe('TransactionsScreen', () => {
     await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
 
     expect(store.addCategory).toHaveBeenCalledWith('Pets', 'both', null);
+  });
+});
+
+describe('TransactionsScreen — grouped by month (spec 002 2026-09-25 amendment)', () => {
+  const septTx: Transaction = {
+    id: 'tx-sep',
+    type: 'expense',
+    amount: 4500,
+    category: 'Food',
+    date: new Date(2026, 8, 22),
+    note: null,
+    createdAt: new Date(2026, 8, 22),
+    updatedAt: new Date(2026, 8, 22),
+  };
+  const septIncomeTx: Transaction = {
+    ...septTx,
+    id: 'tx-sep-income',
+    type: 'income',
+    amount: 1450000,
+    date: new Date(2026, 8, 23),
+  };
+  const augTx: Transaction = {
+    ...septTx,
+    id: 'tx-aug',
+    date: new Date(2026, 7, 30),
+    category: 'Housing',
+    amount: 350000,
+  };
+
+  it('shows a header per month with the month name and its expense-only total (criterion 12)', async () => {
+    mockStore({ transactions: [septIncomeTx, septTx, augTx] });
+    await render(<TransactionsScreen />);
+
+    const septHeader = screen.getByTestId('transaction-month-header-2026-9');
+    expect(within(septHeader).getByText('September 2026')).toBeTruthy();
+    expect(within(septHeader).getByText(/\$4\.500/)).toBeTruthy();
+
+    const augHeader = screen.getByTestId('transaction-month-header-2026-8');
+    expect(within(augHeader).getByText('August 2026')).toBeTruthy();
+    expect(within(augHeader).getByText(/\$350\.000/)).toBeTruthy();
+  });
+
+  it('lists each month in order, most recent first, rows within a month unchanged', async () => {
+    mockStore({ transactions: [septTx, augTx] });
+    await render(<TransactionsScreen />);
+
+    const testIDs = screen.getAllByTestId(/^transaction-(month-header|row)-/).map((el) => el.props.testID);
+    expect(testIDs).toEqual([
+      'transaction-month-header-2026-9',
+      'transaction-row-tx-sep',
+      'transaction-month-header-2026-8',
+      'transaction-row-tx-aug',
+    ]);
+  });
+
+  it('shows an abbreviated date on each row instead of the full ISO string', async () => {
+    mockStore({ transactions: [septTx] });
+    await render(<TransactionsScreen />);
+
+    const row = screen.getByTestId('transaction-row-tx-sep');
+    expect(within(row).getByText(/Sep 22/)).toBeTruthy();
+    expect(within(row).queryByText('2026-09-22')).toBeNull();
+  });
+
+  it('marks the month header as sticky on web', async () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      mockStore({ transactions: [septTx] });
+      await render(<TransactionsScreen />);
+
+      expect(flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position).toBe('sticky');
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it('does not mark the month header as sticky on native', async () => {
+    mockStore({ transactions: [septTx] });
+    await render(<TransactionsScreen />);
+
+    expect(flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position).not.toBe('sticky');
   });
 });

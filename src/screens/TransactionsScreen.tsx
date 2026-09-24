@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { DatePickerField } from '../components/DatePickerField';
 import { Input } from '../components/Input';
 import { Screen } from '../components/Screen';
 import { VersionStamp } from '../components/VersionStamp';
+import { groupTransactionsByMonth } from '../transactions/groupByMonth';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
 import type { Transaction, TransactionType } from '../transactions/types';
@@ -13,12 +14,32 @@ import { validateAmount } from '../transactions/validateAmount';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import { useWideWeb } from '../theme/useWideWeb';
 
+const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const FULL_MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 function formatCLP(amount: number): string {
   return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
+// Local date parts, not toISOString() (UTC) — matches the local-date
+// convention DatePickerField.web.tsx already established. Short form:
+// once a transaction sits under its month's header (2026-09-25
+// amendment), repeating the full year on every row is redundant.
 function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return `${SHORT_MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
 }
 
 export function TransactionsScreen() {
@@ -200,32 +221,55 @@ export function TransactionsScreen() {
     </>
   );
 
-  const rows = transactions.map((tx) => (
-    <Pressable
-      key={tx.id}
-      testID={`transaction-row-${tx.id}`}
-      style={styles.row}
-      onPress={() => openEditForm(tx)}
-    >
-      <View style={styles.rowMain}>
-        <Text style={styles.rowCategory}>{tx.category}</Text>
-        <Text style={styles.rowDate}>
-          {formatDate(tx.date)}
-          {tx.note ? ` · ${tx.note}` : ''}
-        </Text>
-      </View>
-      <Text style={tx.type === 'income' ? styles.rowAmountIncome : styles.rowAmountExpense}>
-        {tx.type === 'income' ? '+' : '−'}
-        {formatCLP(tx.amount)}
-      </Text>
+  function renderTransactionRow(tx: Transaction) {
+    return (
       <Pressable
-        testID={`delete-transaction-${tx.id}`}
-        onPress={() => deleteTransaction(tx.id)}
-        style={styles.deleteButton}
+        key={tx.id}
+        testID={`transaction-row-${tx.id}`}
+        style={styles.row}
+        onPress={() => openEditForm(tx)}
       >
-        <Text style={styles.deleteLabel}>Delete</Text>
+        <View style={styles.rowMain}>
+          <Text style={styles.rowCategory}>{tx.category}</Text>
+          <Text style={styles.rowDate}>
+            {formatDate(tx.date)}
+            {tx.note ? ` · ${tx.note}` : ''}
+          </Text>
+        </View>
+        <Text style={tx.type === 'income' ? styles.rowAmountIncome : styles.rowAmountExpense}>
+          {tx.type === 'income' ? '+' : '−'}
+          {formatCLP(tx.amount)}
+        </Text>
+        <Pressable
+          testID={`delete-transaction-${tx.id}`}
+          onPress={() => deleteTransaction(tx.id)}
+          style={styles.deleteButton}
+        >
+          <Text style={styles.deleteLabel}>Delete</Text>
+        </Pressable>
       </Pressable>
-    </Pressable>
+    );
+  }
+
+  // Spec 002's 2026-09-25 amendment — grouped by calendar month, most
+  // recent first (groupTransactionsByMonth relies on `transactions`
+  // already being date-descending, criterion 5). Sticky header is
+  // web-only: React Native's style system has no `position: 'sticky'`,
+  // so it's a no-op there rather than a crash, and the month still
+  // renders grouped/labeled identically on native.
+  const rows = groupTransactionsByMonth(transactions).map((group) => (
+    <View key={`${group.year}-${group.month}`}>
+      <View
+        testID={`transaction-month-header-${group.year}-${group.month}`}
+        style={[styles.monthHeader, Platform.OS === 'web' && styles.monthHeaderSticky]}
+      >
+        <Text style={styles.monthHeaderName}>
+          {FULL_MONTH_NAMES[group.month - 1]} {group.year}
+        </Text>
+        <Text style={styles.monthHeaderSpent}>Spent {formatCLP(group.totalSpent)}</Text>
+      </View>
+      {group.transactions.map(renderTransactionRow)}
+    </View>
   ));
 
   return (
@@ -418,6 +462,34 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.ink,
     marginBottom: spacing.sm,
+  },
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm + 2,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  // Web only (Platform.OS check at the call site) — React Native's style
+  // system has no `position: 'sticky'`; react-native-web forwards it
+  // straight through to real CSS.
+  monthHeaderSticky: {
+    position: 'sticky' as 'relative',
+    top: 0,
+    zIndex: 1,
+  },
+  monthHeaderName: {
+    fontFamily: typography.display,
+    fontSize: typography.size.base,
+    color: colors.ink,
+  },
+  monthHeaderSpent: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.xs,
+    color: colors.inkSecondary,
   },
   row: {
     flexDirection: 'row',

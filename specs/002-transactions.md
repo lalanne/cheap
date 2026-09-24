@@ -1,6 +1,6 @@
 # 002 — Transactions: Data Model & Manual Entry
 
-**Status:** approved (amended — criterion 12/13 pending)
+**Status:** implemented
 **Depends on:** 000, 001
 
 ## User stories
@@ -349,4 +349,14 @@ income/expense/net recap card) — picked the middle one.
   wide layout's list column (spec 006) renders the same grouped sections,
   just narrower; no separate wide-specific version needed.
 
-**Result:** Not yet implemented.
+**Result:** ✅ criteria 12/13. `groupByMonth.test.ts` (unit): grouping
+order, expense-only `totalSpent`, within-month order preserved, empty
+input. `TransactionsScreen.test.tsx` (component): month header text +
+spend total from real store data, header/row render order across
+months, abbreviated per-row dates (no full ISO string left visible),
+`position: 'sticky'` present on the header's style when `Platform.OS`
+is `'web'` and absent on the native default. 227 tests pass (up from
+218), `tsc --noEmit` clean, `npx expo export -p web` builds. Actual
+pinned-while-scrolling behavior in a real browser is unverified — no
+browser automation available, same standing gap as every other
+visual-only behavior in this app.
