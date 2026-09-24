@@ -6,7 +6,7 @@ import type { Category, CategoryRepository } from '../types';
 import { db, requireUid } from './firestoreDb';
 
 function toCategory(id: string, data: DocumentData): Category {
-  return { id, name: data.name, type: data.type };
+  return { id, name: data.name, type: data.type, parentCategory: data.parentCategory ?? null };
 }
 
 export const firestoreCategoryRepository: CategoryRepository = {
@@ -35,13 +35,13 @@ export const firestoreCategoryRepository: CategoryRepository = {
     };
   },
 
-  async create(name, type) {
+  async create(name, type, parentCategory) {
     if (!db) {
       throw new Error('Firestore is not configured.');
     }
     const uid = requireUid();
-    const ref = await addDoc(collection(db, `users/${uid}/categories`), { name, type });
-    return { id: ref.id, name, type };
+    const ref = await addDoc(collection(db, `users/${uid}/categories`), { name, type, parentCategory });
+    return { id: ref.id, name, type, parentCategory };
   },
 
   async delete(id) {

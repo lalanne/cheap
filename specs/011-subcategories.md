@@ -1,6 +1,6 @@
 # 011 — Subcategories
 
-**Status:** draft
+**Status:** implemented
 **Depends on:** 002 (transactions/categories), 007 (budgets — unaffected,
 see Decisions), 009 (dashboard — the donut this spec changes)
 
@@ -165,4 +165,25 @@ defaulting.
 
 ## Verification results
 
-Not yet implemented.
+Implemented 2026-09-24.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1 — create with a parent | ✅ | `transactionsStore.test.ts`: `addCategory` passes `parentCategory` through. `CategoriesPanel.test.tsx`: pick a parent chip, `addCategory` called with it; defaults to `null` when none picked. |
+| 2 — nested display in Categories panel | ✅ | `CategoriesPanel.test.tsx`: a subcategory renders inside its parent's `category-group-*` container (starter-parented and custom-top-level-parented both covered), delete still works on the nested row. |
+| 3 — roll-up into the parent's slice | ✅ | `categoryRollup.test.ts` (unit) + `DashboardScreen.test.tsx` (component): Groceries + Uber Eats fold into Food's legend amount; neither appears as its own top-level row. |
+| 4 — drill-down on tap, with a way back | ✅ | `DashboardScreen.test.tsx`: tap Food's legend row → donut/legend swap to `subcategoryTotalsFor`'s data, `dashboard-donut-back` appears; tap it → swaps back to the top-level view. |
+| 5 — no affordance for a childless category | ✅ | `DashboardScreen.test.tsx`: tapping Housing's row (no subcategories) is a no-op — no chevron/hint rendered, no `onPress` attached. |
+| 6 — dangling-parent fallback | ✅ | `categoryRollup.test.ts` + `DashboardScreen.test.tsx`: a subcategory whose parent no longer exists (`Deleted Parent`) shows as its own top-level slice, not dropped or misfiled. |
+| 7 — no regressions | ✅ | 199 tests pass (up from 182), `tsc --noEmit` clean, `npx expo export -p web` builds. |
+
+**What shipped:**
+- `src/transactions/types.ts` — `Category.parentCategory: string \| null`; `CategoryRepository.create` gained a required third `parentCategory` param.
+- `src/transactions/providers/firestoreCategoryRepository.{native,web}.ts` — write/read the new field.
+- `src/transactions/transactionsStore.ts` — `addCategory(name, type, parentCategory)`.
+- `src/dashboard/categoryRollup.ts` — `rollUpCategoryTotals`, `subcategoryTotalsFor`, pure and independently tested.
+- `src/screens/CategoriesPanel.tsx` — add form gained a "Parent category (optional)" chip picker (starter categories + top-level custom categories only, never an existing subcategory); list restructured into per-top-level-category groups with nested, individually-deletable subcategory rows.
+- `src/screens/DashboardScreen.tsx` — donut now renders `rollUpCategoryTotals`'s output at the top level; a legend row for a category with subcategories gets a chevron + count and is tappable, swapping the donut/legend to `subcategoryTotalsFor`'s data with a "← All categories" back link. The existing hover-to-reveal feature (spec 009 amendment) works unchanged against whichever ring is currently shown. `categorySpend` (raw, unrolled) stays exactly as before for budgets/suggestions — the explicit "budgets don't roll up" gap from this spec's Decisions.
+- No Firestore rules change (same collection, existing `isOwner` rule already covers the new field) — not re-run against the emulator, matching spec 002's amendment precedent for a field-only addition.
+
+Staying at `implemented`, not `verified` — no manual browser pass yet, same as every other spec here.

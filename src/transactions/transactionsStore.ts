@@ -19,7 +19,7 @@ type TransactionsActions = {
   addTransaction: (input: NewTransactionInput) => Promise<void>;
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  addCategory: (name: string, type: CategoryType) => Promise<Category>;
+  addCategory: (name: string, type: CategoryType, parentCategory: string | null) => Promise<Category>;
   deleteCategory: (id: string) => Promise<void>;
 };
 
@@ -51,7 +51,7 @@ export function createTransactionsStore(repos: TransactionsRepositories) {
       await repos.transactions.delete(id);
     },
 
-    addCategory: async (name, type) => repos.categories.create(name, type),
+    addCategory: async (name, type, parentCategory) => repos.categories.create(name, type, parentCategory),
 
     deleteCategory: async (id) => {
       await repos.categories.delete(id);

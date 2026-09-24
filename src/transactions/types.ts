@@ -27,6 +27,10 @@ export type Category = {
   id: string;
   name: string;
   type: CategoryType;
+  // Spec 011 — a starter category's name, or an existing top-level
+  // custom category's name; null = top-level. One level of nesting
+  // only (see spec 011's Decisions).
+  parentCategory: string | null;
 };
 
 /** users/{uid}/transactions — real-time via `subscribe`, matching the
@@ -43,6 +47,8 @@ export interface TransactionRepository {
  * one of those (spec 002's 2026-09-22 amendment). */
 export interface CategoryRepository {
   subscribe(callback: (categories: Category[]) => void): () => void;
-  create(name: string, type: CategoryType): Promise<Category>;
+  // parentCategory required (pass null explicitly), not optional — spec
+  // 011: every call site has to make the choice, not silently default.
+  create(name: string, type: CategoryType, parentCategory: string | null): Promise<Category>;
   delete(id: string): Promise<void>;
 }

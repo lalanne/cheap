@@ -135,7 +135,7 @@ describe('TransactionsScreen', () => {
 
   it('creates a custom category and makes it selectable (criterion 6)', async () => {
     const store = mockStore({
-      addCategory: jest.fn().mockResolvedValue({ id: 'cat-1', name: 'Pets', type: 'both' }),
+      addCategory: jest.fn().mockResolvedValue({ id: 'cat-1', name: 'Pets', type: 'both', parentCategory: null }),
     });
     await render(<TransactionsScreen />);
 
@@ -144,6 +144,6 @@ describe('TransactionsScreen', () => {
     await fireEvent.changeText(screen.getByTestId('new-category-input'), 'Pets');
     await fireEvent.press(screen.getByTestId('confirm-add-category-button'));
 
-    expect(store.addCategory).toHaveBeenCalledWith('Pets', 'both');
+    expect(store.addCategory).toHaveBeenCalledWith('Pets', 'both', null);
   });
 });

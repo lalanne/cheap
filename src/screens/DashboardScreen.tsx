@@ -1,5 +1,5 @@
 import { useState, type ComponentProps, type ComponentType } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Screen } from '../components/Screen';
@@ -8,6 +8,7 @@ import { computeCategorySpend } from '../budgets/computeCategorySpend';
 import { useDebtsStore } from '../debts/store';
 import { percentPaid } from '../debts/payoffMath';
 import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals } from '../dashboard/aggregation';
+import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
 import { useTransactionsStore } from '../transactions/store';
@@ -64,18 +65,27 @@ function suggestionCopy(s: Suggestion): { title: string; detail: string; highlig
 export function DashboardScreen() {
   const isWideWeb = useWideWeb();
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [drilledCategory, setDrilledCategory] = useState<string | null>(null);
   const transactions = useTransactionsStore((s) => s.transactions);
+  const categories = useTransactionsStore((s) => s.categories);
   const budgets = useBudgetsStore((s) => s.budgets);
   const debts = useDebtsStore((s) => s.debts);
 
   const now = new Date();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  // categorySpend stays raw/unrolled — budgets don't roll up subcategory
+  // spend (spec 011's explicit gap), so suggestions/budget bars keep
+  // using it exactly as before. Only the donut's own totals roll up.
   const categorySpend = categoryTotalsForMonth(transactions, now);
   const thisMonth = monthlyTotals(transactions, now);
   const lastMonth = monthlyTotals(transactions, lastMonthDate);
   const trend = last6MonthsExpense(transactions, now);
   const suggestions = computeSuggestions({ budgets, categorySpend, debts, thisMonth, lastMonth });
-  const donutSegments = computeDonutSegments(categorySpend, DONUT_RADIUS);
+  const rolledUpTotals = rollUpCategoryTotals(categorySpend, categories);
+  const donutTotals = drilledCategory
+    ? subcategoryTotalsFor(categorySpend, categories, drilledCategory)
+    : rolledUpTotals;
+  const donutSegments = computeDonutSegments(donutTotals, DONUT_RADIUS);
   const totalDebtRemaining = debts.reduce((sum, d) => sum + d.currentBalance, 0);
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -155,7 +165,12 @@ export function DashboardScreen() {
 
   const donutCard = (
     <View style={styles.card} testID="dashboard-donut">
-      <Text style={styles.cardTitle}>Where it went</Text>
+      <Text style={styles.cardTitle}>{drilledCategory ? `${drilledCategory} — where it went` : 'Where it went'}</Text>
+      {drilledCategory && (
+        <Pressable testID="dashboard-donut-back" onPress={() => setDrilledCategory(null)}>
+          <Text style={styles.backLink}>← All categories</Text>
+        </Pressable>
+      )}
       {donutSegments.length === 0 ? (
         <Text style={styles.emptyText}>No spend recorded this month.</Text>
       ) : (
@@ -188,19 +203,50 @@ export function DashboardScreen() {
             {hoveredCategory && (
               <View style={styles.donutCenterOverlay} pointerEvents="none" testID="dashboard-donut-hover-label">
                 <Text style={styles.donutCenterCategory}>{hoveredCategory}</Text>
-                <Text style={styles.donutCenterAmount}>{formatCLP(categorySpend[hoveredCategory] ?? 0)}</Text>
+                <Text style={styles.donutCenterAmount}>{formatCLP(donutTotals[hoveredCategory] ?? 0)}</Text>
               </View>
             )}
           </View>
           <View style={styles.legend}>
-            {donutSegments.map((seg) => (
-              <View key={seg.category} style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: seg.color }]} />
-                <Text style={styles.legendLabel}>
-                  {seg.category} · {formatCLP(categorySpend[seg.category] ?? 0)}
-                </Text>
-              </View>
-            ))}
+            {donutSegments.map((seg) => {
+              // A category can only be drilled into from the top-level
+              // view — subcategories are capped at one level (spec 011),
+              // so a row shown while already drilled is never tappable.
+              const hasChildren =
+                !drilledCategory && categories.some((c) => c.parentCategory === seg.category);
+              const childCount = hasChildren
+                ? categories.filter((c) => c.parentCategory === seg.category).length
+                : 0;
+              const rowContent = (
+                <View style={styles.legendRowInner}>
+                  <View style={styles.legendMain}>
+                    <View style={[styles.legendDot, { backgroundColor: seg.color }]} />
+                    <Text style={styles.legendLabel}>
+                      {seg.category} · {formatCLP(donutTotals[seg.category] ?? 0)}
+                    </Text>
+                    {hasChildren && (
+                      <Text style={styles.legendHint}>
+                        {childCount} subcategor{childCount === 1 ? 'y' : 'ies'}
+                      </Text>
+                    )}
+                  </View>
+                  {hasChildren && <Text style={styles.chevron}>›</Text>}
+                </View>
+              );
+              return hasChildren ? (
+                <Pressable
+                  key={seg.category}
+                  testID={`dashboard-donut-legend-${seg.category}`}
+                  onPress={() => setDrilledCategory(seg.category)}
+                >
+                  {rowContent}
+                </Pressable>
+              ) : (
+                <View key={seg.category} testID={`dashboard-donut-legend-${seg.category}`}>
+                  {rowContent}
+                </View>
+              );
+            })}
           </View>
         </>
       )}
@@ -431,10 +477,17 @@ const styles = StyleSheet.create({
   legend: {
     gap: spacing.xs + 2,
   },
-  legendRow: {
+  legendRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs + 2,
+  },
+  legendMain: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs + 2,
+    flexShrink: 1,
   },
   legendDot: {
     width: 8,
@@ -445,6 +498,22 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: typography.size.xs,
     color: colors.inkSecondary,
+  },
+  legendHint: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.inkMuted,
+  },
+  chevron: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.base,
+    color: colors.inkMuted,
+  },
+  backLink: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm,
+    color: colors.accent,
+    marginBottom: spacing.sm,
   },
   trendRow: {
     flexDirection: 'row',

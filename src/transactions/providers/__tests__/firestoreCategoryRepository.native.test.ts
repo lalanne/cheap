@@ -32,17 +32,30 @@ describe('firestoreCategoryRepository (native)', () => {
   it('writes under the signed-in uid', async () => {
     mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
 
-    const created = await firestoreCategoryRepository.create('Pets', 'both');
+    const created = await firestoreCategoryRepository.create('Pets', 'both', null);
 
     expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories');
-    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), { name: 'Pets', type: 'both' });
-    expect(created).toEqual({ id: 'cat-1', name: 'Pets', type: 'both' });
+    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), { name: 'Pets', type: 'both', parentCategory: null });
+    expect(created).toEqual({ id: 'cat-1', name: 'Pets', type: 'both', parentCategory: null });
+  });
+
+  it('writes a subcategory with its parent name (spec 011)', async () => {
+    mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
+
+    const created = await firestoreCategoryRepository.create('Uber Eats', 'both', 'Food');
+
+    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), {
+      name: 'Uber Eats',
+      type: 'both',
+      parentCategory: 'Food',
+    });
+    expect(created).toEqual({ id: 'cat-1', name: 'Uber Eats', type: 'both', parentCategory: 'Food' });
   });
 
   it('throws a clear error when nobody is signed in', async () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
-    await expect(firestoreCategoryRepository.create('Pets', 'both')).rejects.toThrow(
+    await expect(firestoreCategoryRepository.create('Pets', 'both', null)).rejects.toThrow(
       'No signed-in user'
     );
     expect(mockAddDoc).not.toHaveBeenCalled();

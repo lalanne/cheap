@@ -105,7 +105,9 @@ export function TransactionsScreen() {
     if (name === '') {
       return;
     }
-    const created = await addCategory(name, 'both');
+    // Quick-add-while-logging always creates a top-level category — the
+    // parent picker lives in the Manage tab's Categories panel (spec 011).
+    const created = await addCategory(name, 'both', null);
     setCategory(created.name);
     setNewCategoryName('');
     setAddingCategory(false);

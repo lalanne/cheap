@@ -22,7 +22,7 @@ function requireUid(): string {
 }
 
 function toCategory(id: string, data: DocumentData): Category {
-  return { id, name: data.name, type: data.type };
+  return { id, name: data.name, type: data.type, parentCategory: data.parentCategory ?? null };
 }
 
 export const firestoreCategoryRepository: CategoryRepository = {
@@ -48,10 +48,14 @@ export const firestoreCategoryRepository: CategoryRepository = {
     };
   },
 
-  async create(name, type) {
+  async create(name, type, parentCategory) {
     const uid = requireUid();
-    const ref = await addDoc(collection(getFirestore(), `users/${uid}/categories`), { name, type });
-    return { id: ref.id, name, type };
+    const ref = await addDoc(collection(getFirestore(), `users/${uid}/categories`), {
+      name,
+      type,
+      parentCategory,
+    });
+    return { id: ref.id, name, type, parentCategory };
   },
 
   async delete(id) {

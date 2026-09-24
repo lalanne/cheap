@@ -60,8 +60,8 @@ function createMockRepos() {
         catListener = null;
       };
     }),
-    create: jest.fn(async (name: string, type: CategoryType) => {
-      const cat: Category = { id: `cat-${nextId++}`, name, type };
+    create: jest.fn(async (name: string, type: CategoryType, parentCategory: string | null) => {
+      const cat: Category = { id: `cat-${nextId++}`, name, type, parentCategory };
       categories = [...categories, cat];
       catListener?.(categories);
       return cat;
@@ -195,7 +195,7 @@ describe('transactionsStore', () => {
     const repos = createMockRepos();
     const useStore = createStartedStore(repos);
 
-    const created = await useStore.getState().addCategory('Pets', 'expense');
+    const created = await useStore.getState().addCategory('Pets', 'expense', null);
 
     expect(useStore.getState().categories).toContainEqual(created);
 
@@ -206,10 +206,20 @@ describe('transactionsStore', () => {
     expect(reloadedStore.getState().categories).toContainEqual(created);
   });
 
+  it('creates a subcategory with its parent name (spec 011)', async () => {
+    const repos = createMockRepos();
+    const useStore = createStartedStore(repos);
+
+    const created = await useStore.getState().addCategory('Uber Eats', 'expense', 'Food');
+
+    expect(created.parentCategory).toBe('Food');
+    expect(repos.categories.create).toHaveBeenCalledWith('Uber Eats', 'expense', 'Food');
+  });
+
   it('deletes a custom category (spec 002 criterion 9)', async () => {
     const repos = createMockRepos();
     const useStore = createStartedStore(repos);
-    const created = await useStore.getState().addCategory('Pets', 'expense');
+    const created = await useStore.getState().addCategory('Pets', 'expense', null);
 
     await useStore.getState().deleteCategory(created.id);
 
