@@ -7,7 +7,7 @@ import { useBudgetsStore } from '../budgets/store';
 import { computeCategorySpend } from '../budgets/computeCategorySpend';
 import { useDebtsStore } from '../debts/store';
 import { percentPaid } from '../debts/payoffMath';
-import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals } from '../dashboard/aggregation';
+import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
 import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
@@ -66,6 +66,7 @@ export function DashboardScreen() {
   const isWideWeb = useWideWeb();
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [drilledCategory, setDrilledCategory] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const transactions = useTransactionsStore((s) => s.transactions);
   const categories = useTransactionsStore((s) => s.categories);
   const budgets = useBudgetsStore((s) => s.budgets);
@@ -92,13 +93,34 @@ export function DashboardScreen() {
     thisMonth,
     lastMonth,
   });
+
+  // Spec 009's 2026-09-25 amendment: the donut can point at a different
+  // month than "now" (tapping a trend bar), independent of
+  // budgets/suggestions/the KPI stack, which always reflect the current
+  // month. Reuses the current month's already-computed totals when no
+  // other month is selected, rather than recomputing identical numbers.
+  const isCurrentMonthSelected = selectedMonth === null;
+  const donutReferenceDate =
+    selectedMonth === null ? now : new Date(selectedMonth.year, selectedMonth.month - 1, 1);
+  const donutCategorySpend = isCurrentMonthSelected
+    ? categorySpend
+    : categoryTotalsForMonth(transactions, donutReferenceDate);
+  const donutRolledUpTotals = isCurrentMonthSelected
+    ? rolledUpTotals
+    : rollUpCategoryTotals(donutCategorySpend, categories);
   const donutTotals = drilledCategory
-    ? subcategoryTotalsFor(categorySpend, categories, drilledCategory)
-    : rolledUpTotals;
+    ? subcategoryTotalsFor(donutCategorySpend, categories, drilledCategory)
+    : donutRolledUpTotals;
   const donutSegments = computeDonutSegments(donutTotals, DONUT_RADIUS);
   const totalDebtRemaining = debts.reduce((sum, d) => sum + d.currentBalance, 0);
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const effectiveSelectedMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
+
+  function handleSelectMonth(m: MonthExpense) {
+    setSelectedMonth({ year: m.year, month: m.month });
+    setDrilledCategory(null);
+  }
 
   const suggestionsFeed = (
     <View testID="suggestions-feed">
@@ -173,9 +195,16 @@ export function DashboardScreen() {
     </View>
   );
 
+  const donutTitle = [
+    drilledCategory ? `${drilledCategory} — where it went` : 'Where it went',
+    selectedMonth === null ? null : `— ${monthLabels[selectedMonth.month - 1]}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   const donutCard = (
     <View style={styles.card} testID="dashboard-donut">
-      <Text style={styles.cardTitle}>{drilledCategory ? `${drilledCategory} — where it went` : 'Where it went'}</Text>
+      <Text style={styles.cardTitle}>{donutTitle}</Text>
       {drilledCategory && (
         <Pressable testID="dashboard-donut-back" onPress={() => setDrilledCategory(null)}>
           <Text style={styles.backLink}>← All categories</Text>
@@ -267,12 +296,25 @@ export function DashboardScreen() {
     <View style={styles.card} testID="dashboard-trend">
       <Text style={styles.cardTitle}>Spend, last 6 months</Text>
       <View style={styles.trendRow}>
-        {trend.map((m, i) => (
-          <View key={`${m.year}-${m.month}`} style={styles.trendCol} testID={`dashboard-trend-bar-${i}`}>
-            <View style={[styles.trendBar, { height: Math.max(4, (m.total / maxTrend) * 100) }]} />
-            <Text style={styles.trendLabel}>{monthLabels[m.month - 1]}</Text>
-          </View>
-        ))}
+        {trend.map((m, i) => {
+          const isSelected = m.year === effectiveSelectedMonth.year && m.month === effectiveSelectedMonth.month;
+          return (
+            <Pressable
+              key={`${m.year}-${m.month}`}
+              style={styles.trendCol}
+              testID={`dashboard-trend-bar-${i}`}
+              onPress={() => handleSelectMonth(m)}
+            >
+              <View style={[styles.trendBar, { height: Math.max(4, (m.total / maxTrend) * 100) }]} />
+              <Text
+                style={[styles.trendLabel, isSelected && styles.trendLabelSelected]}
+                testID={`dashboard-trend-bar-${i}-label`}
+              >
+                {monthLabels[m.month - 1]}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -545,5 +587,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: typography.size.xs,
     color: colors.inkMuted,
+  },
+  trendLabelSelected: {
+    fontFamily: typography.bodyBold,
+    color: colors.accent,
   },
 });

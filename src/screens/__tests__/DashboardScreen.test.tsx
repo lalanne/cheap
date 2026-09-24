@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
@@ -8,6 +8,11 @@ import { DashboardScreen } from '../DashboardScreen';
 import type { Budget } from '../../budgets/types';
 import type { Debt } from '../../debts/types';
 import type { Category, Transaction } from '../../transactions/types';
+import { colors } from '../../theme/tokens';
+
+function flatten(style: unknown) {
+  return StyleSheet.flatten(style as never) as Record<string, unknown>;
+}
 
 jest.mock('../../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
@@ -298,5 +303,78 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
     const bar = screen.getByTestId('dashboard-budget-Food');
     expect(within(bar).getByText(/117%/)).toBeTruthy();
     expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
+  });
+});
+
+describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 2026-09-25 amendment)', () => {
+  it("shows the tapped month's rolled-up totals in the donut, leaving budgets/KPIs on the current month (criterion 12)", async () => {
+    const now = new Date();
+    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+    mockStores({
+      budgets: [{ id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now }],
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 20000, date: now }),
+        tx({ id: 't2', category: 'Housing', amount: 90000, date: twoMonthsAgo }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    expect(within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/20%/)).toBeTruthy();
+
+    // last6MonthsExpense is oldest-first, index 5 = current month; two
+    // months ago is index 3.
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    expect(within(screen.getByTestId('dashboard-donut-legend-Housing')).getByText(/\$90\.000/)).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-donut-legend-Food')).toBeNull();
+    // Budgets/KPIs untouched — still the current month's numbers.
+    expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/20%/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$20\.000/)).toBeTruthy();
+  });
+
+  it('marks the tapped bar as selected and re-targets again on a second tap', async () => {
+    const now = new Date();
+    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+    mockStores({
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 20000, date: now }),
+        tx({ id: 't2', category: 'Housing', amount: 90000, date: twoMonthsAgo }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    const currentLabel = screen.getByTestId('dashboard-trend-bar-5-label');
+    const pastLabel = screen.getByTestId('dashboard-trend-bar-3-label');
+    expect(flatten(currentLabel.props.style).color).toBe(colors.accent);
+    expect(flatten(pastLabel.props.style).color).not.toBe(colors.accent);
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    expect(flatten(screen.getByTestId('dashboard-trend-bar-3-label').props.style).color).toBe(colors.accent);
+    expect(flatten(screen.getByTestId('dashboard-trend-bar-5-label').props.style).color).not.toBe(colors.accent);
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-5'));
+
+    expect(within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/)).toBeTruthy();
+  });
+
+  it('resets an active drill-down when a different month is selected', async () => {
+    const now = new Date();
+    mockStores({
+      categories: [{ id: 'c1', name: 'Groceries', type: 'both', parentCategory: 'Food' }],
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 10000, date: now }),
+        tx({ id: 't2', category: 'Groceries', amount: 5000, date: now }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    await fireEvent.press(screen.getByTestId('dashboard-donut-legend-Food'));
+    expect(screen.getByTestId('dashboard-donut-back')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-4'));
+
+    expect(screen.queryByTestId('dashboard-donut-back')).toBeNull();
   });
 });

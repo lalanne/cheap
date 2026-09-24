@@ -192,14 +192,24 @@ dividing by zero.
     the donut's center; **when** the mouse leaves, **then** the center
     clears. **Given** native, **then** nothing changes — no hover
     handler is attached (amendment 2026-09-24).
+12. **Given** the "Spend, last 6 months" trend chart, **when** the user
+    taps a bar, **then** the "Where it went" donut and its legend switch
+    to that bar's month (rolled-up per spec 011), the tapped bar is
+    visually marked as selected, and any active drill-down resets to the
+    top-level view. Budgets, suggestions, and the KPI stack are
+    unaffected — they always reflect the current month (amendment
+    2026-09-25).
 
 ## Out of scope
 
 - Multi-debt payoff *strategy* (avalanche/snowball ordering) — per spec
   008's own out-of-scope line.
 - A savings-rate lookback longer than one prior month — see Decisions.
-- Any chart interaction beyond static display (tapping a bar to filter,
-  a date-range picker, etc.).
+- ~~Any chart interaction beyond static display (tapping a bar to
+  filter, a date-range picker, etc.)~~ **Reversed 2026-09-25 — see
+  criterion 12:** tapping a trend bar now re-targets the donut. Still
+  out of scope: any *other* interaction (a date-range picker, tapping
+  the donut itself to filter the trend, etc.).
 - Editing budgets/debts from the dashboard itself — that stays on their
   own screens (specs 007/008); the dashboard is read-only.
 
@@ -218,6 +228,7 @@ dividing by zero.
 | 9 — three tabs, not five | Component | `App.test.tsx`: assert `tab-transactions`/`tab-manage`/`tab-dashboard` exist and `tab-categories`/`tab-budgets`/`tab-debts` no longer do. |
 | 10 — Manage tab composes the three panels, responsively | Component | `ManageScreen.test.tsx` (narrow/native: stacked, no wide-row testID) + `ManageScreen.wideWeb.test.tsx` (mocked wide: three-column row testID present) — same split-file pattern as this spec's own criterion 5; `CategoriesPanel`/`BudgetsPanel`/`DebtsPanel` tests carry over their existing add/edit/delete assertions unchanged. |
 | 11 — donut hover-to-reveal (web only) | Component | `DashboardScreen.test.tsx`: `Platform.OS` set to `'web'`, `fireEvent(circle, 'mouseEnter')`/`'mouseLeave'` on a `dashboard-donut-arc-*` testID, assert the center label appears/clears with the right category and amount; a native-default test asserts no hover label ever appears (no handler attached). |
+| 12 — tap a trend bar to retarget the donut | Component | `DashboardScreen.test.tsx`: tap a non-current `dashboard-trend-bar-*`, assert the donut legend shows that month's rolled-up amounts (not the current month's); assert budgets/KPIs unchanged; assert an active drill-down clears; tap a different bar, assert it re-targets again. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
@@ -341,3 +352,43 @@ moving off clears it back to empty.
 + amount appear and clear; one on the native default asserting no hover
 label ever appears (no handler attached). 182 tests pass (up from 180),
 `tsc --noEmit` clean, web export builds.
+
+### Amendment (2026-09-25): tap a trend bar to retarget the donut at that month
+
+New requirement, reversing this spec's original "no chart interaction"
+out-of-scope line: tapping a bar in "Spend, last 6 months" swaps the
+"Where it went" donut over to that month instead of always showing the
+current month.
+
+- **Selection state: `{ year, month } | null`**, `null` meaning "current
+  month" (the default, unchanged behavior). Tapping a bar sets it;
+  there's no separate "clear" control — tapping the current month's own
+  bar (always the last one) is the way back, same as tapping any other
+  bar.
+- **Only the donut card moves — budgets, suggestions, and the KPI stack
+  stay on the current month.** The user's request was specifically about
+  the pie chart; changing what a budget bar or a suggestion means based
+  on a clicked trend bar would be a much bigger, confusing behavior
+  change nobody asked for. `categorySpend`/`rolledUpTotals` (current
+  month, feeding budgets/suggestions/KPIs) and the donut's own reference
+  date are computed separately.
+- **Selecting a month resets any active drill-down** (spec 011) back to
+  the top-level view — simpler and more predictable than trying to
+  preserve "drilled into Food" across a month change where Food's
+  subcategory mix may look completely different.
+- **The donut card's title reflects the selected month** when it isn't
+  the current one (e.g. "Where it went — Aug"), combined with the
+  drill-down category name when both apply (e.g. "Food — where it went
+  — Aug"), so it's never ambiguous which month is on screen.
+- **The selected bar is visually marked** (existing `trendBar`/
+  `trendLabel` styles get a selected variant) so it's clear which
+  month's data the donut is currently showing.
+
+**Result:** ✅ criterion 12. `DashboardScreen.test.tsx`: tapping a
+non-current trend bar swaps the donut's legend amounts to that month's
+rolled-up totals (distinct from the current month's, in the test data);
+the budgets section and KPI stack stay unchanged; the tapped bar's label
+turns accent/bold (selected) and the previously-selected one reverts;
+tapping a different bar afterward re-targets again; an active drill-down
+clears on a month change. 218 tests pass (up from 215), `tsc --noEmit`
+clean, `npx expo export -p web` builds.
