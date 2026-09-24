@@ -22,6 +22,7 @@ This project is built spec-first. Rules:
 | 007 | [Category budgets](007-budgets.md) | implemented |
 | 008 | [Debt tracking](008-debt-tracking.md) | implemented |
 | 009 | [Dashboard](009-dashboard.md) | implemented |
+| 010 | [MCP server: financial data for Claude](010-mcp-server.md) | draft |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 
