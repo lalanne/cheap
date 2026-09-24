@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, type ComponentProps, type ComponentType } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Screen } from '../components/Screen';
@@ -16,6 +17,18 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 const DONUT_RADIUS = 60;
 const DONUT_STROKE = 16;
 const DONUT_SIZE = (DONUT_RADIUS + DONUT_STROKE) * 2;
+
+// react-native-svg's web renderer forwards unrecognized props straight to
+// the underlying DOM node (its prepare() spreads unknown props through
+// untouched), so onMouseEnter/onMouseLeave work at runtime even though
+// Circle's TypeScript types don't declare them — this cast covers that
+// one gap instead of `as any`-ing every prop.
+const HoverableCircle = Circle as unknown as ComponentType<
+  ComponentProps<typeof Circle> & {
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
+  }
+>;
 
 function formatCLP(amount: number): string {
   return `$${Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
@@ -50,6 +63,7 @@ function suggestionCopy(s: Suggestion): { title: string; detail: string; highlig
 
 export function DashboardScreen() {
   const isWideWeb = useWideWeb();
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const transactions = useTransactionsStore((s) => s.transactions);
   const budgets = useBudgetsStore((s) => s.budgets);
   const debts = useDebtsStore((s) => s.debts);
@@ -149,7 +163,7 @@ export function DashboardScreen() {
           <View style={styles.donutWrap}>
             <Svg width={DONUT_SIZE} height={DONUT_SIZE} testID="dashboard-donut-svg">
               {donutSegments.map((seg) => (
-                <Circle
+                <HoverableCircle
                   key={seg.category}
                   testID={`dashboard-donut-arc-${seg.category}`}
                   cx={DONUT_SIZE / 2}
@@ -162,9 +176,21 @@ export function DashboardScreen() {
                   fill="transparent"
                   rotation="-90"
                   origin={`${DONUT_SIZE / 2}, ${DONUT_SIZE / 2}`}
+                  {...(Platform.OS === 'web'
+                    ? {
+                        onMouseEnter: () => setHoveredCategory(seg.category),
+                        onMouseLeave: () => setHoveredCategory(null),
+                      }
+                    : {})}
                 />
               ))}
             </Svg>
+            {hoveredCategory && (
+              <View style={styles.donutCenterOverlay} pointerEvents="none" testID="dashboard-donut-hover-label">
+                <Text style={styles.donutCenterCategory}>{hoveredCategory}</Text>
+                <Text style={styles.donutCenterAmount}>{formatCLP(categorySpend[hoveredCategory] ?? 0)}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.legend}>
             {donutSegments.map((seg) => (
@@ -379,6 +405,28 @@ const styles = StyleSheet.create({
   donutWrap: {
     alignItems: 'center',
     marginBottom: spacing.sm + 2,
+    position: 'relative',
+  },
+  donutCenterOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutCenterCategory: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.xs,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  donutCenterAmount: {
+    fontFamily: typography.display,
+    fontSize: typography.size.sm,
+    color: colors.ink,
+    textAlign: 'center',
   },
   legend: {
     gap: spacing.xs + 2,

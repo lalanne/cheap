@@ -187,6 +187,11 @@ dividing by zero.
     stack full-width in the same order — and every existing
     add/edit/delete behavior for each (specs 002/007/008) keeps working
     unchanged.
+11. **Given** the dashboard on web, **when** the mouse hovers a donut
+    segment, **then** that category's name and spend amount appear in
+    the donut's center; **when** the mouse leaves, **then** the center
+    clears. **Given** native, **then** nothing changes — no hover
+    handler is attached (amendment 2026-09-24).
 
 ## Out of scope
 
@@ -212,6 +217,7 @@ dividing by zero.
 | 8 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
 | 9 — three tabs, not five | Component | `App.test.tsx`: assert `tab-transactions`/`tab-manage`/`tab-dashboard` exist and `tab-categories`/`tab-budgets`/`tab-debts` no longer do. |
 | 10 — Manage tab composes the three panels, responsively | Component | `ManageScreen.test.tsx` (narrow/native: stacked, no wide-row testID) + `ManageScreen.wideWeb.test.tsx` (mocked wide: three-column row testID present) — same split-file pattern as this spec's own criterion 5; `CategoriesPanel`/`BudgetsPanel`/`DebtsPanel` tests carry over their existing add/edit/delete assertions unchanged. |
+| 11 — donut hover-to-reveal (web only) | Component | `DashboardScreen.test.tsx`: `Platform.OS` set to `'web'`, `fireEvent(circle, 'mouseEnter')`/`'mouseLeave'` on a `dashboard-donut-arc-*` testID, assert the center label appears/clears with the right category and amount; a native-default test asserts no hover label ever appears (no handler attached). |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
@@ -306,3 +312,32 @@ actual rendered prop, not just on `computeDonutSegments`'s output in
 isolation. Same class of gap CLAUDE.md's TDD rule exists to catch;
 worth remembering for any other spot where a pure function's result
 gets passed into a visual prop rather than displayed as text.
+
+Criterion 11 (donut hover, below) implemented and verified in the same
+pass as this fix.
+
+### Amendment (2026-09-24): hover-to-reveal category on the donut (web only)
+
+New requirement: hovering a donut segment shows that category's name
+and spend amount in the donut's center hole (currently always empty);
+moving off clears it back to empty.
+
+- **Web only** — hover has no touch/native equivalent, so this changes
+  nothing on native. Gated by `Platform.OS === 'web'`: the
+  `onMouseEnter`/`onMouseLeave` handlers are only attached to each
+  `<Circle>` on web.
+- **react-native-svg forwards unrecognized props straight to the DOM
+  node** on web (confirmed by reading its `prepare()` source: unknown
+  props pass through via a `...rest` spread, untouched) — so
+  `onMouseEnter`/`onMouseLeave` work at runtime even though they aren't
+  in `Circle`'s TypeScript prop types. Handled with one typed cast on
+  the `Circle` reference for this usage, rather than `as any`-ing every
+  prop individually.
+- New acceptance criterion 11 (see Acceptance criteria section above).
+
+**Result:** ✅. `DashboardScreen.test.tsx` gained two tests: one with
+`Platform.OS` set to `'web'` firing `mouseEnter`/`mouseLeave` on a
+`dashboard-donut-arc-*` testID and asserting the center label's category
++ amount appear and clear; one on the native default asserting no hover
+label ever appears (no handler attached). 182 tests pass (up from 180),
+`tsc --noEmit` clean, web export builds.

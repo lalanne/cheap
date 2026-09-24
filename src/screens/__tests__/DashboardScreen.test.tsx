@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
@@ -150,5 +151,46 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
       `${transportDashLength}`,
       `${circumference}`,
     ]);
+  });
+
+  it('does not attach a hover handler on native — no hover label ever appears (criterion 11)', async () => {
+    const now = new Date();
+    mockStores({
+      transactions: [tx({ id: 't1', category: 'Food', amount: 300, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    await fireEvent(screen.getByTestId('dashboard-donut-arc-Food'), 'mouseEnter');
+
+    expect(screen.queryByTestId('dashboard-donut-hover-label')).toBeNull();
+  });
+});
+
+describe('DashboardScreen (web) — donut hover-to-reveal (spec 009 criterion 11)', () => {
+  it('shows the hovered category and its spend in the donut center, and clears on mouse leave', async () => {
+    const now = new Date();
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      mockStores({
+        transactions: [
+          tx({ id: 't1', category: 'Food', amount: 300, date: now }),
+          tx({ id: 't2', category: 'Transport', amount: 100, date: now }),
+        ],
+      });
+      await render(<DashboardScreen />);
+
+      expect(screen.queryByTestId('dashboard-donut-hover-label')).toBeNull();
+
+      await fireEvent(screen.getByTestId('dashboard-donut-arc-Food'), 'mouseEnter');
+      const label = screen.getByTestId('dashboard-donut-hover-label');
+      expect(within(label).getByText('Food')).toBeTruthy();
+      expect(within(label).getByText('$300')).toBeTruthy();
+
+      await fireEvent(screen.getByTestId('dashboard-donut-arc-Food'), 'mouseLeave');
+      expect(screen.queryByTestId('dashboard-donut-hover-label')).toBeNull();
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 });
