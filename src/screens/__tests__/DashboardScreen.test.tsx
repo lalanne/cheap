@@ -436,6 +436,18 @@ describe('DashboardScreen — overdraft line (spec 012 criterion 12)', () => {
     expect(within(row).getByText(/\$1\.240\.000/)).toBeTruthy();
   });
 
+  it('shows the balance only, with no months estimate, when the rate is unknown (amendment, criterion 19)', async () => {
+    mockStores({
+      overdraftLine: { ...LINE, monthlyRate: null },
+      overdraftEvents: [drawEvent(1240000)],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-overdraft-row');
+    expect(within(row).getByText('$1.240.000')).toBeTruthy();
+    expect(within(row).queryByText(/mo/)).toBeNull();
+  });
+
   it('does not show the "No debts tracked yet" empty state when only the overdraft is in use', async () => {
     mockStores({ overdraftLine: LINE, overdraftEvents: [drawEvent(1240000)] });
     await render(<DashboardScreen />);

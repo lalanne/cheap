@@ -65,7 +65,7 @@ function suggestionCopy(s: Suggestion): { title: string; detail: string; highlig
   };
 }
 
-function overdraftRowValue(balance: number, monthlyRate: number, planned: number | null): string {
+function overdraftRowValue(balance: number, monthlyRate: number | null, planned: number | null): string {
   const payoff = overdraftPayoff(balance, monthlyRate, planned);
   const owed = formatOverdraftCLP(balance);
   return payoff.kind === 'clears' ? `${owed} · ~${payoff.months} mo` : owed;

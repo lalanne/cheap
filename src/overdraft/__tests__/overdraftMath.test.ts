@@ -221,6 +221,13 @@ describe('projectedMonthlyInterest (criterion 8)', () => {
     expect(projectedMonthlyInterest(0, 1.9)).toBe(0);
     expect(projectedMonthlyInterest(1240000, 0)).toBe(0);
   });
+
+  it('is unknown (null), not 0, when the rate is unknown (amendment, criterion 17)', () => {
+    expect(projectedMonthlyInterest(1240000, null)).toBeNull();
+    expect(projectedMonthlyInterest(0, null)).toBeNull();
+    // A real 0% rate is still a known zero.
+    expect(projectedMonthlyInterest(1240000, 0)).toBe(0);
+  });
 });
 
 describe('overdraftPayoff (criterion 9)', () => {
@@ -247,6 +254,20 @@ describe('overdraftPayoff (criterion 9)', () => {
     // remaining interest = round(P·n′ − B) = 63.630
     expect(overdraftPayoff(1240000, 1.9, 300000)).toEqual({ kind: 'clears', months: 5, remainingInterest: 63630 });
     expect(overdraftPayoff(1240000, 1.9, 400000)).toEqual({ kind: 'clears', months: 4, remainingInterest: 50122 });
+  });
+
+  it('gives an interest-free lower bound of ⌈B/P⌉ months when the rate is unknown (amendment, criterion 18)', () => {
+    expect(overdraftPayoff(1240000, null, 300000)).toEqual({ kind: 'at-least', months: 5 });
+    expect(overdraftPayoff(900000, null, 300000)).toEqual({ kind: 'at-least', months: 3 });
+  });
+
+  it('never warns the payment does not cover the interest while the rate is unknown', () => {
+    expect(overdraftPayoff(1240000, null, 20000)).toEqual({ kind: 'at-least', months: 62 });
+  });
+
+  it('still asks for a planned payment, or is done, when the rate is unknown', () => {
+    expect(overdraftPayoff(1240000, null, null)).toEqual({ kind: 'no-plan' });
+    expect(overdraftPayoff(0, null, 300000)).toEqual({ kind: 'done' });
   });
 
   it('clears in one month when the payment covers the balance plus a month of interest', () => {

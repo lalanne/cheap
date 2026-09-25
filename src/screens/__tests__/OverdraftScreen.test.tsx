@@ -133,7 +133,43 @@ describe('OverdraftScreen — first-run setup (spec 012 criterion 1)', () => {
     expect(screen.getByText('Enter a whole number in pesos — no decimals or symbols.')).toBeTruthy();
   });
 
-  it('rejects a missing or non-numeric monthly rate', async () => {
+  it('saves the line without a rate when the rate is left blank (amendment, criterion 16)', async () => {
+    const store = mockStore({ line: null });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.changeText(screen.getByTestId('setup-limit-input'), '2000000');
+    await fireEvent.press(screen.getByTestId('save-overdraft-line-button'));
+
+    expect(store.setupLine).toHaveBeenCalledWith({
+      limit: 2000000,
+      monthlyRate: null,
+      plannedMonthlyPayment: null,
+      openingBalance: null,
+    });
+  });
+
+  it('saves a real 0% rate as 0, not as unknown (amendment, criterion 16)', async () => {
+    const store = mockStore({ line: null });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.changeText(screen.getByTestId('setup-limit-input'), '2000000');
+    await fireEvent.changeText(screen.getByTestId('setup-rate-input'), '0');
+    await fireEvent.press(screen.getByTestId('save-overdraft-line-button'));
+
+    expect(store.setupLine).toHaveBeenCalledWith(expect.objectContaining({ monthlyRate: 0 }));
+  });
+
+  it('still requires the limit even though the rate is optional', async () => {
+    const store = mockStore({ line: null });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('save-overdraft-line-button'));
+
+    expect(store.setupLine).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter an amount.')).toBeTruthy();
+  });
+
+  it('rejects a non-numeric monthly rate', async () => {
     const store = mockStore({ line: null });
     await render(<OverdraftScreen />);
 
@@ -269,6 +305,89 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
     expect(screen.getByTestId('overdraft-empty')).toBeTruthy();
     expect(within(screen.getByTestId('overdraft-status')).getByText('Not in use')).toBeTruthy();
     expect(within(screen.getByTestId('overdraft-gauge')).getByText('0% used')).toBeTruthy();
+  });
+});
+
+describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () => {
+  const UNKNOWN_RATE = { ...LINE, monthlyRate: null };
+
+  it('shows an "add your rate" prompt instead of $0 / mo on the carrying-cost card, and it opens settings (criterion 17)', async () => {
+    mockStore({ line: UNKNOWN_RATE, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    const card = screen.getByTestId('overdraft-cost-carrying');
+    expect(within(card).queryByText(/\/ mo/)).toBeNull();
+    expect(within(card).getByText('Add your rate to see this')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('carrying-add-rate-button'));
+    expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
+  });
+
+  it('leaves the charged-this-month and total-paid cards unchanged (criterion 17)', async () => {
+    mockStore({ line: UNKNOWN_RATE, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('overdraft-cost-month')).getByText('$28.550')).toBeTruthy();
+    expect(within(screen.getByTestId('overdraft-cost-total')).getByText('$48.550')).toBeTruthy();
+  });
+
+  it('still shows $0 / mo for a real 0% rate, with no prompt (criterion 17)', async () => {
+    mockStore({ line: { ...LINE, monthlyRate: 0 }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('overdraft-cost-carrying')).getByText('$0 / mo')).toBeTruthy();
+    expect(screen.queryByTestId('carrying-add-rate-button')).toBeNull();
+  });
+
+  it('shows the interest-free lower bound with an add-your-rate prompt (criterion 18)', async () => {
+    mockStore({ line: UNKNOWN_RATE, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    const road = screen.getByTestId('overdraft-road');
+    expect(within(road).getByText('Clears in at least 5 months, not counting interest.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('add-rate-button'));
+    expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
+  });
+
+  it('never warns that the payment does not cover the interest without a rate (criterion 18)', async () => {
+    mockStore({ line: { ...UNKNOWN_RATE, plannedMonthlyPayment: 20000 }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('overdraft-road')).queryByText(/doesn.t cover the interest/)).toBeNull();
+  });
+
+  it('still prompts for a planned payment when neither a rate nor a payment is set (criterion 18)', async () => {
+    mockStore({ line: { ...UNKNOWN_RATE, plannedMonthlyPayment: null }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(screen.getByTestId('set-planned-payment-button')).toBeTruthy();
+  });
+
+  it('drops the carrying-cost sentence from the first-use confirmation (criterion 19)', async () => {
+    mockStore({ line: UNKNOWN_RATE, events: [] });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('log-draw-button'));
+    await fireEvent.changeText(screen.getByTestId('overdraft-amount-input'), '180000');
+    await fireEvent.press(screen.getByTestId('confirm-overdraft-button'));
+    const confirmation = await screen.findByTestId('overdraft-confirmation');
+
+    expect(within(confirmation).getByText("You're now using your overdraft")).toBeTruthy();
+    expect(within(confirmation).getByText('Balance $180.000, 9% of your $2.000.000 line.')).toBeTruthy();
+  });
+
+  it('drops the carrying-cost sentence from the crossed-75% confirmation (criterion 19)', async () => {
+    mockStore({ line: UNKNOWN_RATE, events: [ev('d', 'draw', 1400000, monthsAgo(1, 3))] });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('log-draw-button'));
+    await fireEvent.changeText(screen.getByTestId('overdraft-amount-input'), '120000');
+    await fireEvent.press(screen.getByTestId('confirm-overdraft-button'));
+    const confirmation = await screen.findByTestId('overdraft-confirmation');
+
+    expect(within(confirmation).getByText('You crossed 75% of your line')).toBeTruthy();
+    expect(within(confirmation).getByText('Balance $1.520.000, 76%, with $480.000 left.')).toBeTruthy();
   });
 });
 
@@ -476,6 +595,36 @@ describe('OverdraftScreen — line settings (criterion 15)', () => {
     expect(store.logPayment).not.toHaveBeenCalled();
     expect(store.logInterest).not.toHaveBeenCalled();
     expect(store.logFee).not.toHaveBeenCalled();
+  });
+
+  it('clears the rate when the field is left blank, saving null and creating no event (amendment, criterion 20)', async () => {
+    const store = mockStore({ events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('edit-overdraft-settings-button'));
+    await fireEvent.changeText(screen.getByTestId('settings-rate-input'), '');
+    await fireEvent.press(screen.getByTestId('save-overdraft-settings-button'));
+
+    expect(store.updateLine).toHaveBeenCalledWith({
+      limit: 2000000,
+      monthlyRate: null,
+      plannedMonthlyPayment: 300000,
+    });
+    expect(store.logDraw).not.toHaveBeenCalled();
+    expect(store.logInterest).not.toHaveBeenCalled();
+  });
+
+  it('opens with a blank rate field when the rate is unknown, and sets one (amendment, criterion 20)', async () => {
+    const store = mockStore({ line: { ...LINE, monthlyRate: null }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('edit-overdraft-settings-button'));
+    expect(screen.getByTestId('settings-rate-input').props.value).toBe('');
+
+    await fireEvent.changeText(screen.getByTestId('settings-rate-input'), '1.9');
+    await fireEvent.press(screen.getByTestId('save-overdraft-settings-button'));
+
+    expect(store.updateLine).toHaveBeenCalledWith(expect.objectContaining({ monthlyRate: 1.9 }));
   });
 
   it('rejects an invalid limit without saving', async () => {

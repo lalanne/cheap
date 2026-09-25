@@ -9,7 +9,9 @@ export const OVERDRAFT_CHARGES_CATEGORY = 'Overdraft interest & fees';
 /** users/{uid}/overdraft/line — the singleton settings doc. */
 export type OverdraftLine = {
   limit: number; // whole CLP, approved line size
-  monthlyRate: number; // % per month on the used balance, e.g. 1.9
+  // % per month on the used balance, e.g. 1.9. null = unknown (the user
+  // doesn't know it), which is not the same as a real 0% rate.
+  monthlyRate: number | null;
   plannedMonthlyPayment: number | null; // whole CLP, drives the payoff estimate
   createdAt: Date;
   updatedAt: Date;
@@ -29,7 +31,7 @@ export type OverdraftEvent = {
 
 export type NewOverdraftLineInput = {
   limit: number;
-  monthlyRate: number;
+  monthlyRate: number | null;
   plannedMonthlyPayment?: number | null;
   // Debt already on the line at first use, entered as an "Opening balance" draw.
   openingBalance?: number | null;
@@ -38,7 +40,7 @@ export type NewOverdraftLineInput = {
 
 export type OverdraftLinePatch = {
   limit?: number;
-  monthlyRate?: number;
+  monthlyRate?: number | null;
   plannedMonthlyPayment?: number | null;
 };
 

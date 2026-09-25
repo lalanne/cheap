@@ -298,3 +298,100 @@ debt section.
 clean. Staying at `implemented`, not `verified`: not yet checked against the
 running app on a device or in the browser (and the `.web` repository has no
 test of its own, like every other `.web` repository here).
+
+## Amendment (2026-09-25, approved): the monthly rate is optional
+
+**Why:** the author may not know the line's monthly rate (it's on a
+statement or the contract, not always to hand). Requiring it forces a
+made-up number, and `0` as a placeholder is a silent lie: carrying cost
+shows `$0 / mo` and the payoff estimate claims "≈ $0 more in interest".
+Unknown should look unknown. Everything that comes from logged events
+(gauge, banner, charged-this-month, total paid, history) never needed the
+rate and is unchanged.
+
+### Requirements
+
+- `monthlyRate` becomes `number | null`. `null` means *unknown*; `0` still
+  means a real 0% rate. A line doc with a missing field reads as `null`;
+  existing docs with a numeric rate are unaffected.
+- **Setup and settings:** the rate field is optional. Blank saves `null`;
+  a non-blank value that isn't a number is still rejected. In settings the
+  user can clear a previously entered rate (blank → `null`) or set one, at
+  any time; neither creates an event.
+- **Carrying cost:** with an unknown rate, `projectedMonthlyInterest` is
+  *unknown* (not `0`). The *Carrying cost* card shows an "Add your rate to
+  see this" prompt that opens the settings form, instead of `$0 / mo`. A
+  real rate of `0` still shows `$0 / mo`.
+- **Payoff with an unknown rate** (planned payment P, balance B > 0): the
+  interest can't be estimated, so the result is a lower bound: *at least*
+  ⌈B/P⌉ months, not counting interest, with a prompt to add the rate for a
+  real estimate. No P set → still "set a planned payment"; B = 0 → still
+  done. The "payment doesn't cover the interest" warning needs a rate, so it
+  never appears while the rate is unknown.
+- **Confirmations:** with an unknown rate, the *now using* and *crossed
+  75%* confirmations drop the carrying-cost sentence and keep the rest of
+  the copy ("Balance $180.000, 9% of your $2.000.000 line.").
+- **Dashboard row:** for an unknown rate the row shows the balance only (no
+  "~N mo", since that estimate is interest-free and would mislead).
+- Impact on existing pieces (for implementation, not new behavior):
+  `OverdraftLine.monthlyRate`, `NewOverdraftLineInput`, `OverdraftLinePatch`,
+  `projectedMonthlyInterest`, `overdraftPayoff` (new result kind for the
+  lower bound), the native/web repositories (`?? null` on read), and the
+  setup/settings forms.
+
+### Acceptance criteria
+
+16. **Given** the setup form with the rate left blank, **when** the user
+    saves (with a valid limit), **then** the line is created with
+    `monthlyRate: null`; a non-blank, non-numeric rate is still rejected
+    with the inline error; a numeric rate (including `0`) saves as entered.
+17. **Given** an unknown rate, **then** `projectedMonthlyInterest` is
+    unknown (distinct from `0` for a real 0% rate), and the Carrying cost
+    card shows the "add your rate" prompt (which opens the settings form)
+    instead of `$0 / mo`; the charged-this-month and total-paid cards are
+    unchanged.
+18. **Given** an unknown rate, a planned payment P, and a balance B > 0,
+    **then** the payoff result is the lower bound ⌈B/P⌉ months excluding
+    interest, shown as "at least" with the add-your-rate prompt; with no P
+    it is still `no-plan`; at B = 0 it is still `done`; the
+    doesn't-cover-interest warning is never shown.
+19. **Given** an unknown rate, **then** the *now using* and *crossed 75%*
+    confirmations omit the carrying-cost sentence and are otherwise
+    unchanged; and the dashboard's overdraft row shows the balance only.
+20. **Given** the settings form, **when** the user clears the rate or sets
+    one, **then** the line doc updates to `null` or the number, derived
+    values recompute, and no event is created.
+
+### Out of scope
+
+- A helper that estimates the rate from a logged interest charge and the
+  balance carried that month (e.g. $23.560 on ~$1.240.000 ≈ 1.9%). Tempting,
+  but the balance moves through the month, so the figure is approximate and
+  could be mistaken for the bank's rate. Revisit only if not knowing the
+  rate turns out to be a recurring problem.
+
+### Verification plan
+
+| Criterion | Layer | How |
+|-----------|-------|-----|
+| 16 — setup without a rate | Component + Unit | `OverdraftScreen` test: blank rate saves `monthlyRate: null` via `setupLine`; `abc` still rejected; `0` saved as `0`. Native repo test: `saveLine` writes `monthlyRate: null`. |
+| 17 — carrying cost unknown | Unit + Component | `overdraftMath` test: `projectedMonthlyInterest(balance, null)` is `null`, `(balance, 0)` is `0`. `OverdraftScreen` test: prompt shown and opens settings for `null`; `$0 / mo` for `0`; other cost cards unchanged. |
+| 18 — payoff lower bound | Unit + Component | `overdraftMath` test: unknown rate with P → lower-bound kind with ⌈B/P⌉; no-P → `no-plan`; B = 0 → `done`. `OverdraftScreen` test: "at least" copy and prompt; no not-covering warning. |
+| 19 — confirmations and dashboard row | Component | `OverdraftScreen` test: started / crossed-75% copy without the carrying-cost sentence. `DashboardScreen` test: row shows balance only. |
+| 20 — clear or set the rate | Unit + Component | Store/repo tests: `updateLine` accepts `monthlyRate: null` and creates no event; `OverdraftScreen` test: blank rate in settings saves `null`. Repo read maps a missing field to `null`. |
+
+### Verification results (amendment)
+
+Implemented 2026-09-25, tests first: 12 new tests failed on assertions
+(not just missing modules) before any code changed.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 16 — setup without a rate | ✅ | `OverdraftScreen.test.tsx` (blank → `null`, `0` → `0`, `abc` still rejected, limit still required); repo test (`saveLine` writes `null`/`0`). |
+| 17 — carrying cost unknown | ✅ | `overdraftMath.test.ts` (`null` vs `0`); `OverdraftScreen.test.tsx` (prompt opens settings, no `$0 / mo`; a real 0% still shows `$0 / mo`; other cost cards unchanged). |
+| 18 — payoff lower bound | ✅ | `overdraftMath.test.ts` (`at-least` ⌈B/P⌉, no `not-covering`, `no-plan`/`done` unchanged); `OverdraftScreen.test.tsx` ("at least" copy + prompt). |
+| 19 — confirmations and dashboard row | ✅ | `OverdraftScreen.test.tsx` (both confirmations drop the carrying-cost sentence); `DashboardScreen.test.tsx` (row shows balance only). |
+| 20 — clear or set the rate | ✅ | Store test (`updateLine` with `null`, no event); repo tests (`updateDoc` passes `null`; a missing field reads as `null`); `OverdraftScreen.test.tsx` (blank clears, prefill blank, sets a number). |
+
+378 unit/component tests pass, 19 Firestore rules tests pass, `tsc --noEmit`
+clean. Still `implemented`, not `verified` (not yet exercised in the running app).

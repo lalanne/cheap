@@ -35,10 +35,11 @@ jest.mock('@react-native-firebase/firestore', () => ({
 }));
 
 const mockGetAuth = jest.fn();
+const mockOnAuthStateChanged = jest.fn((..._args: unknown[]) => jest.fn());
 
 jest.mock('@react-native-firebase/auth', () => ({
   getAuth: (...args: unknown[]) => mockGetAuth(...args),
-  onAuthStateChanged: jest.fn(() => jest.fn()),
+  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args),
 }));
 
 import { OVERDRAFT_CHARGES_CATEGORY } from '../../types';
@@ -140,6 +141,16 @@ describe('firestoreOverdraftRepository (native)', () => {
       );
     });
 
+    it('stores an unknown rate as null and a real 0% rate as 0 (amendment, criterion 16)', async () => {
+      const t = stubTransaction();
+
+      await firestoreOverdraftRepository.saveLine({ limit: 2000000, monthlyRate: null });
+      expect(t.set).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ monthlyRate: null }));
+
+      await firestoreOverdraftRepository.saveLine({ limit: 2000000, monthlyRate: 0 });
+      expect(t.set).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ monthlyRate: 0 }));
+    });
+
     it('writes no event when there is no opening balance', async () => {
       const t = stubTransaction();
 
@@ -160,6 +171,42 @@ describe('firestoreOverdraftRepository (native)', () => {
       );
       expect(mockAddDoc).not.toHaveBeenCalled();
       expect(mockRunTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateLine — clearing the rate (amendment, criterion 20)', () => {
+    it('passes a null rate through to the line doc', async () => {
+      await firestoreOverdraftRepository.updateLine({ monthlyRate: null });
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ monthlyRate: null })
+      );
+      expect(mockAddDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('subscribeLine — reading the rate (amendment, criterion 20)', () => {
+    function deliver(data: Record<string, unknown> | undefined) {
+      const callback = jest.fn();
+      firestoreOverdraftRepository.subscribeLine(callback);
+      const onAuth = mockOnAuthStateChanged.mock.calls[0][1] as (user: { uid: string } | null) => void;
+      onAuth({ uid: 'uid-1' });
+      const onSnap = mockOnSnapshot.mock.calls[0][1] as (snap: { data: () => unknown }) => void;
+      onSnap({ data: () => data });
+      return callback;
+    }
+
+    it('reads a line doc with no monthlyRate field as an unknown (null) rate', () => {
+      const callback = deliver({ limit: 2000000, plannedMonthlyPayment: null });
+
+      expect(callback).toHaveBeenCalledWith(expect.objectContaining({ limit: 2000000, monthlyRate: null }));
+    });
+
+    it('keeps a numeric rate, including 0, as is', () => {
+      expect(deliver({ limit: 2000000, monthlyRate: 1.9 })).toHaveBeenCalledWith(
+        expect.objectContaining({ monthlyRate: 1.9 })
+      );
     });
   });
 
