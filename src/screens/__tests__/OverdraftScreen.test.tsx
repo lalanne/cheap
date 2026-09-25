@@ -133,6 +133,15 @@ describe('OverdraftScreen — first-run setup (spec 012 criterion 1)', () => {
     expect(screen.getByText('Enter a whole number in pesos — no decimals or symbols.')).toBeTruthy();
   });
 
+  it('labels the rate field as optional and says it can be added later (addendum, criterion 21)', async () => {
+    mockStore({ line: null });
+    await render(<OverdraftScreen />);
+
+    const form = screen.getByTestId('overdraft-setup-form');
+    expect(within(form).getByText('Monthly rate, % (optional)')).toBeTruthy();
+    expect(within(form).getByText(/leave the rate blank/i)).toBeTruthy();
+  });
+
   it('saves the line without a rate when the rate is left blank (amendment, criterion 16)', async () => {
     const store = mockStore({ line: null });
     await render(<OverdraftScreen />);
@@ -595,6 +604,15 @@ describe('OverdraftScreen — line settings (criterion 15)', () => {
     expect(store.logPayment).not.toHaveBeenCalled();
     expect(store.logInterest).not.toHaveBeenCalled();
     expect(store.logFee).not.toHaveBeenCalled();
+  });
+
+  it('labels the rate field as optional in the settings form too (addendum, criterion 21)', async () => {
+    mockStore({ events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    await fireEvent.press(screen.getByTestId('edit-overdraft-settings-button'));
+
+    expect(within(screen.getByTestId('overdraft-settings-form')).getByText('Monthly rate, % (optional)')).toBeTruthy();
   });
 
   it('clears the rate when the field is left blank, saving null and creating no event (amendment, criterion 20)', async () => {
