@@ -6,6 +6,9 @@ import { Screen } from '../components/Screen';
 import { useBudgetsStore } from '../budgets/store';
 import { computeCategorySpend } from '../budgets/computeCategorySpend';
 import { useDebtsStore } from '../debts/store';
+import { formatCLP as formatOverdraftCLP } from '../overdraft/format';
+import { balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
+import { useOverdraftStore } from '../overdraft/store';
 import { percentPaid } from '../debts/payoffMath';
 import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
 import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
@@ -62,6 +65,12 @@ function suggestionCopy(s: Suggestion): { title: string; detail: string; highlig
   };
 }
 
+function overdraftRowValue(balance: number, monthlyRate: number, planned: number | null): string {
+  const payoff = overdraftPayoff(balance, monthlyRate, planned);
+  const owed = formatOverdraftCLP(balance);
+  return payoff.kind === 'clears' ? `${owed} · ~${payoff.months} mo` : owed;
+}
+
 export function DashboardScreen() {
   const isWideWeb = useWideWeb();
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -71,6 +80,8 @@ export function DashboardScreen() {
   const categories = useTransactionsStore((s) => s.categories);
   const budgets = useBudgetsStore((s) => s.budgets);
   const debts = useDebtsStore((s) => s.debts);
+  const overdraftLine = useOverdraftStore((s) => s.line);
+  const overdraftEvents = useOverdraftStore((s) => s.events);
 
   const now = new Date();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -112,7 +123,11 @@ export function DashboardScreen() {
     ? subcategoryTotalsFor(donutCategorySpend, categories, drilledCategory)
     : donutRolledUpTotals;
   const donutSegments = computeDonutSegments(donutTotals, DONUT_RADIUS);
-  const totalDebtRemaining = debts.reduce((sum, d) => sum + d.currentBalance, 0);
+  // Spec 012 criterion 12 — a line with a balance counts as debt and gets a
+  // compact row; an unused or absent line changes nothing here.
+  const overdraftBalance = overdraftLine ? balanceOf(overdraftEvents) : 0;
+  const showOverdraft = overdraftLine !== null && overdraftBalance > 0;
+  const totalDebtRemaining = debts.reduce((sum, d) => sum + d.currentBalance, 0) + (showOverdraft ? overdraftBalance : 0);
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const effectiveSelectedMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
@@ -322,10 +337,20 @@ export function DashboardScreen() {
   const debtsCard = (
     <View style={styles.card} testID="dashboard-debts">
       <Text style={styles.cardTitle}>Debt payoff</Text>
+      {showOverdraft && overdraftLine ? (
+        <View style={styles.barList} testID="dashboard-overdraft-row">
+          <View style={styles.barLabelRow}>
+            <Text style={styles.barLabel}>Overdraft line</Text>
+            <Text style={styles.barValue}>{overdraftRowValue(overdraftBalance, overdraftLine.monthlyRate, overdraftLine.plannedMonthlyPayment)}</Text>
+          </View>
+        </View>
+      ) : null}
       {debts.length === 0 ? (
-        <Text style={styles.emptyText} testID="dashboard-debts-empty">
-          No debts tracked yet.
-        </Text>
+        showOverdraft ? null : (
+          <Text style={styles.emptyText} testID="dashboard-debts-empty">
+            No debts tracked yet.
+          </Text>
+        )
       ) : (
         <View style={styles.barList}>
           {debts.map((d) => {

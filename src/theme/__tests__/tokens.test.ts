@@ -23,6 +23,27 @@ describe('theme tokens', () => {
     ]);
   });
 
+  it('defines the graded status palette for the overdraft gauge and banner (spec 003 amendment, spec 012)', () => {
+    expect(colors.status.notice).toEqual({
+      text: '#A16207',
+      dark: '#5C3F04',
+      tone: '#FBF3DC',
+      border: '#EBD79A',
+    });
+    expect(colors.status.warning).toEqual({
+      text: '#C2410C',
+      dark: '#7C2D0A',
+      tone: '#FCE8DC',
+      border: '#F2C2A4',
+    });
+    expect(colors.status.critical).toEqual({
+      text: '#B91C1C',
+      dark: '#7F1D1D',
+      tone: '#FBE1E1',
+      border: '#F0B3B3',
+    });
+  });
+
   it('defines card and input radii', () => {
     expect(radius.card).toBe(14);
     expect(radius.input).toBe(10);
