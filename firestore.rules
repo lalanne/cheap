@@ -31,5 +31,14 @@ service cloud.firestore {
     match /users/{uid}/debts/{debtId} {
       allow read, write: if isOwner(uid);
     }
+
+    // Spec 012 — the overdraft line settings doc and its event ledger.
+    match /users/{uid}/overdraft/{docId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /users/{uid}/overdraftEvents/{eventId} {
+      allow read, write: if isOwner(uid);
+    }
   }
 }

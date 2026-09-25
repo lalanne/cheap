@@ -3,10 +3,12 @@ import { Platform, StyleSheet } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
+import { useOverdraftStore } from '../../overdraft/store';
 import { useTransactionsStore } from '../../transactions/store';
 import { DashboardScreen } from '../DashboardScreen';
 import type { Budget } from '../../budgets/types';
 import type { Debt } from '../../debts/types';
+import type { OverdraftEvent, OverdraftLine } from '../../overdraft/types';
 import type { Category, Transaction } from '../../transactions/types';
 import { colors } from '../../theme/tokens';
 
@@ -22,6 +24,9 @@ jest.mock('../../budgets/store', () => ({
 }));
 jest.mock('../../debts/store', () => ({
   useDebtsStore: jest.fn(),
+}));
+jest.mock('../../overdraft/store', () => ({
+  useOverdraftStore: jest.fn(),
 }));
 
 function localDate(year: number, month: number, day: number): Date {
@@ -47,11 +52,15 @@ function mockStores({
   categories = [],
   budgets = [],
   debts = [],
+  overdraftLine = null,
+  overdraftEvents = [],
 }: {
   transactions?: Transaction[];
   categories?: Category[];
   budgets?: Budget[];
   debts?: Debt[];
+  overdraftLine?: OverdraftLine | null;
+  overdraftEvents?: OverdraftEvent[];
 }) {
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { transactions: Transaction[]; categories: Category[] }) => unknown) =>
@@ -62,6 +71,10 @@ function mockStores({
   );
   (useDebtsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { debts: Debt[] }) => unknown) => selector({ debts })
+  );
+  (useOverdraftStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { line: OverdraftLine | null; events: OverdraftEvent[] }) => unknown) =>
+      selector({ line: overdraftLine, events: overdraftEvents })
   );
 }
 
@@ -376,5 +389,73 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-4'));
 
     expect(screen.queryByTestId('dashboard-donut-back')).toBeNull();
+  });
+});
+
+describe('DashboardScreen — overdraft line (spec 012 criterion 12)', () => {
+  const LINE: OverdraftLine = {
+    limit: 2000000,
+    monthlyRate: 1.9,
+    plannedMonthlyPayment: 300000,
+    createdAt: new Date(2026, 0, 1),
+    updatedAt: new Date(2026, 0, 1),
+  };
+  const drawEvent = (amount: number): OverdraftEvent => ({
+    id: 'e-1',
+    type: 'draw',
+    amount,
+    date: new Date(2026, 3, 9),
+    note: null,
+    transactionId: null,
+    createdAt: new Date(2026, 3, 9),
+  });
+  const CARD: Debt = {
+    id: 'd-1',
+    name: 'Credit Card',
+    originalAmount: 2000000,
+    currentBalance: 1200000,
+    minimumPayment: 100000,
+    interestRate: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  it('adds the overdraft balance to the total-debt KPI', async () => {
+    mockStores({ debts: [CARD], overdraftLine: LINE, overdraftEvents: [drawEvent(1240000)] });
+    await render(<DashboardScreen />);
+
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$2.440.000')).toBeTruthy();
+  });
+
+  it('shows the line as a compact row in the debt section', async () => {
+    mockStores({ debts: [CARD], overdraftLine: LINE, overdraftEvents: [drawEvent(1240000)] });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-overdraft-row');
+    expect(within(row).getByText('Overdraft line')).toBeTruthy();
+    expect(within(row).getByText(/\$1\.240\.000/)).toBeTruthy();
+  });
+
+  it('does not show the "No debts tracked yet" empty state when only the overdraft is in use', async () => {
+    mockStores({ overdraftLine: LINE, overdraftEvents: [drawEvent(1240000)] });
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('dashboard-overdraft-row')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-debts-empty')).toBeNull();
+  });
+
+  it('leaves the KPI and debt section alone when there is no line, or it is unused', async () => {
+    mockStores({ debts: [CARD] });
+    await render(<DashboardScreen />);
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$1.200.000')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-overdraft-row')).toBeNull();
+  });
+
+  it('shows no row for a line at a zero balance', async () => {
+    mockStores({ overdraftLine: LINE, overdraftEvents: [] });
+    await render(<DashboardScreen />);
+
+    expect(screen.queryByTestId('dashboard-overdraft-row')).toBeNull();
+    expect(screen.getByTestId('dashboard-debts-empty')).toBeTruthy();
   });
 });

@@ -12,22 +12,27 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
+import { OverdraftBanner } from './src/components/OverdraftBanner';
 import { startDebtsSync } from './src/debts/store';
+import { startOverdraftSync } from './src/overdraft/store';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { ManageScreen } from './src/screens/ManageScreen';
+import { OverdraftScreen } from './src/screens/OverdraftScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { TransactionsScreen } from './src/screens/TransactionsScreen';
 import { VerifyEmailScreen } from './src/screens/VerifyEmailScreen';
 import { startTransactionsSync } from './src/transactions/store';
 import { colors, spacing, typography } from './src/theme/tokens';
 
-// Spec 009's 2026-09-23 amendment: three tabs, grouped by how often
-// they're touched, not five grouped by domain — Log (daily) / Manage
-// (Categories+Budgets+Debts, occasional) / Dashboard (deciding).
-type Tab = 'transactions' | 'manage' | 'dashboard';
+// Spec 009's 2026-09-23 amendment: tabs grouped by how often they're
+// touched, not by domain — Log (daily) / Overdraft (daily, spec 012's
+// 2026-09-25 amendment) / Manage (Categories+Budgets+Debts, occasional) /
+// Dashboard (deciding).
+type Tab = 'transactions' | 'overdraft' | 'manage' | 'dashboard';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'transactions', label: 'Log' },
+  { key: 'overdraft', label: 'Overdraft' },
   { key: 'manage', label: 'Manage' },
   { key: 'dashboard', label: 'Dashboard' },
 ];
@@ -46,6 +51,7 @@ export default function App() {
   useEffect(() => startTransactionsSync(), []);
   useEffect(() => startBudgetsSync(), []);
   useEffect(() => startDebtsSync(), []);
+  useEffect(() => startOverdraftSync(), []);
 
   let content;
   if (!fontsLoaded || status === 'initializing') {
@@ -66,7 +72,9 @@ export default function App() {
     );
   } else {
     let activeScreen;
-    if (activeTab === 'manage') {
+    if (activeTab === 'overdraft') {
+      activeScreen = <OverdraftScreen />;
+    } else if (activeTab === 'manage') {
       activeScreen = <ManageScreen />;
     } else if (activeTab === 'dashboard') {
       activeScreen = <DashboardScreen />;
@@ -89,6 +97,7 @@ export default function App() {
             </Pressable>
           ))}
         </View>
+        <OverdraftBanner onPress={() => setActiveTab('overdraft')} />
         {activeScreen}
       </View>
     );
