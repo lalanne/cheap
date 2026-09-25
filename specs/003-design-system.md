@@ -137,3 +137,19 @@ first) globally mocking the library via its own official
 `export default {...}`, so the mock factory needs `.default`, not the
 bare `require()` result). Real-device re-verification of criteria 4–5
 pending the next TestFlight build.
+
+### Amendment (2026-09-25, implemented): warning and critical status tokens
+
+Spec 012 needs a graded status scale for the overdraft gauge and banner.
+Red stays reserved for the genuinely critical state (over the limit), as
+above; amber and orange cover the two earlier steps. Status is always also
+carried by an icon and wording, never color alone.
+
+| Role | Text/icon | Tone background | Tone border |
+|------|-----------|-----------------|-------------|
+| Notice (in use) | `#A16207` (dark text `#5C3F04`) | `#FBF3DC` | `#EBD79A` |
+| Warning (high, ≥75%) | `#C2410C` (dark text `#7C2D0A`) | `#FCE8DC` | `#F2C2A4` |
+| Critical (over limit) | `#B91C1C` (dark text `#7F1D1D`) | `#FBE1E1` | `#F0B3B3` |
+
+Added to `src/theme/tokens.ts` as `colors.status.*` when spec 012 is
+implemented; no screen uses raw hex for these.

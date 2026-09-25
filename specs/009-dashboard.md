@@ -392,3 +392,18 @@ turns accent/bold (selected) and the previously-selected one reverts;
 tapping a different bar afterward re-targets again; an active drill-down
 clears on a month change. 218 tests pass (up from 215), `tsc --noEmit`
 clean, `npx expo export -p web` builds.
+
+### Amendment (2026-09-25, implemented): four tabs — `Log` / `Overdraft` / `Manage` / `Dashboard`
+
+Spec 012 (overdraft line) adds a top-level `Overdraft` tab, between `Log`
+and `Manage`, because the line is used daily and needs one-tap access to
+Log draw / Log payment. Chosen over "under Manage" and "Dashboard hero" on
+a design canvas. The three-tab rule above ("group by frequency of use")
+still holds: `Overdraft` is a daily-use surface, like `Log`.
+
+- Criterion 9 becomes: `tab-transactions`, `tab-overdraft`, `tab-manage`,
+  `tab-dashboard` exist; `tab-categories`/`tab-budgets`/`tab-debts` still
+  don't.
+- The dashboard's "total debt remaining" KPI includes the overdraft
+  balance, and its debt section shows the line as a compact row (spec 012,
+  criterion 12).
