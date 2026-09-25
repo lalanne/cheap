@@ -65,12 +65,19 @@ function statusColor(status: OverdraftStatus): string {
   }
 }
 
-function parseRate(raw: string): number | null {
+// The rate is optional (spec 012's 2026-09-25 amendment): blank is a valid
+// "unknown" (null), distinct from a real 0%; anything else must be a number.
+type RateResult = { ok: true; value: number | null } | { ok: false };
+
+function parseRate(raw: string): RateResult {
   const trimmed = raw.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
-    return null;
+  if (trimmed === '') {
+    return { ok: true, value: null };
   }
-  return Number(trimmed);
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+    return { ok: false };
+  }
+  return { ok: true, value: Number(trimmed) };
 }
 
 const HISTORY_WIDTH = 358;
@@ -113,16 +120,16 @@ export function OverdraftScreen() {
     const opening = includeOpening && openingText.trim() !== '' ? validateAmount(openingText) : null;
 
     setLimitError(limit.ok ? null : limit.error);
-    setRateError(rate === null ? 'Enter a monthly rate, like 1.9.' : null);
+    setRateError(rate.ok ? null : 'Enter a monthly rate, like 1.9.');
     setPlannedError(planned && !planned.ok ? planned.error : null);
     setOpeningError(opening && !opening.ok ? opening.error : null);
 
-    if (!limit.ok || rate === null || (planned && !planned.ok) || (opening && !opening.ok)) {
+    if (!limit.ok || !rate.ok || (planned && !planned.ok) || (opening && !opening.ok)) {
       return null;
     }
     return {
       limit: limit.value,
-      monthlyRate: rate,
+      monthlyRate: rate.value,
       plannedMonthlyPayment: planned && planned.ok ? planned.value : null,
       openingBalance: opening && opening.ok ? opening.value : null,
     };
@@ -141,7 +148,7 @@ export function OverdraftScreen() {
       return;
     }
     setLimitText(String(line.limit));
-    setRateText(String(line.monthlyRate));
+    setRateText(line.monthlyRate === null ? '' : String(line.monthlyRate));
     setPlannedText(line.plannedMonthlyPayment ? String(line.plannedMonthlyPayment) : '');
     setLimitError(null);
     setRateError(null);
@@ -236,16 +243,24 @@ export function OverdraftScreen() {
     }
     const shown = confirmation.balance;
     const pct = usedPercent(shown, line.limit);
-    const projected = formatCLP(projectedMonthlyInterest(shown, line.monthlyRate));
+    const projectedInterest = projectedMonthlyInterest(shown, line.monthlyRate);
     let palette: StatusPalette = colors.status.notice;
     let icon: 'info' | 'warning' | 'stop' = 'info';
     let title = "You're now using your overdraft";
-    let body = `Balance ${formatCLP(shown)}, ${pct}% of your ${formatCLP(line.limit)} line. At ${line.monthlyRate}% a month, carrying this costs about ${projected} a month.`;
+    // With an unknown rate there's no carrying cost to quote, so that
+    // sentence is dropped and the rest of the copy stands.
+    let body = `Balance ${formatCLP(shown)}, ${pct}% of your ${formatCLP(line.limit)} line.${
+      projectedInterest === null
+        ? ''
+        : ` At ${line.monthlyRate}% a month, carrying this costs about ${formatCLP(projectedInterest)} a month.`
+    }`;
     if (confirmation.transition === 'crossed-high') {
       palette = colors.status.warning;
       icon = 'warning';
       title = 'You crossed 75% of your line';
-      body = `Balance ${formatCLP(shown)}, ${pct}%, with ${formatCLP(availableOf(shown, line.limit))} left. Carrying cost is now about ${projected} a month.`;
+      body = `Balance ${formatCLP(shown)}, ${pct}%, with ${formatCLP(availableOf(shown, line.limit))} left.${
+        projectedInterest === null ? '' : ` Carrying cost is now about ${formatCLP(projectedInterest)} a month.`
+      }`;
     } else if (confirmation.transition === 'crossed-limit') {
       palette = colors.status.critical;
       icon = 'stop';
@@ -288,6 +303,17 @@ export function OverdraftScreen() {
           <Text style={styles.payoffText}>
             Your payment doesn't cover the interest — the balance won't shrink.
           </Text>
+        );
+      case 'at-least':
+        return (
+          <>
+            <Text style={styles.payoffText}>
+              {`Clears in at least ${payoff.months} ${payoff.months === 1 ? 'month' : 'months'}, not counting interest.`}
+            </Text>
+            <Pressable testID="add-rate-button" onPress={openSettings} style={styles.linkButton}>
+              <Text style={styles.linkLabel}>Add your rate for a real estimate</Text>
+            </Pressable>
+          </>
         );
       default:
         return (
@@ -395,8 +421,16 @@ export function OverdraftScreen() {
       <View style={styles.costRow}>
         <View style={[styles.card, styles.flex]} testID="overdraft-cost-carrying">
           <Text style={styles.eyebrow}>CARRYING COST</Text>
-          <Text style={styles.smallNumber}>{`${formatCLP(carrying)} / mo`}</Text>
-          <Text style={styles.helper}>at the current balance</Text>
+          {carrying === null ? (
+            <Pressable testID="carrying-add-rate-button" onPress={openSettings} style={styles.linkButton}>
+              <Text style={styles.linkLabel}>Add your rate to see this</Text>
+            </Pressable>
+          ) : (
+            <>
+              <Text style={styles.smallNumber}>{`${formatCLP(carrying)} / mo`}</Text>
+              <Text style={styles.helper}>at the current balance</Text>
+            </>
+          )}
         </View>
         <View style={[styles.card, styles.flex]} testID="overdraft-cost-total">
           <Text style={styles.eyebrow}>TOTAL PAID</Text>

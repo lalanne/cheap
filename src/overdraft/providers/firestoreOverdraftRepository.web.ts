@@ -41,7 +41,7 @@ function requireDb() {
 function toLine(data: DocumentData): OverdraftLine {
   return {
     limit: data.limit,
-    monthlyRate: data.monthlyRate,
+    monthlyRate: data.monthlyRate ?? null,
     plannedMonthlyPayment: data.plannedMonthlyPayment ?? null,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
@@ -132,7 +132,7 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
     await runTransaction(firestore, async (t) => {
       t.set(lineRef, {
         limit: input.limit,
-        monthlyRate: input.monthlyRate,
+        monthlyRate: input.monthlyRate ?? null,
         plannedMonthlyPayment: input.plannedMonthlyPayment ?? null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

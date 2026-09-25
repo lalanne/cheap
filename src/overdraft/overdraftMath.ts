@@ -106,7 +106,12 @@ export function costSummary(events: OverdraftEvent[], now: Date): CostSummary {
   return { interestThisMonth, feesThisMonth, totalCost };
 }
 
-export function projectedMonthlyInterest(balance: number, monthlyRate: number): number {
+// null when the rate is unknown — deliberately not 0, so the UI can ask for
+// the rate instead of claiming the line costs nothing.
+export function projectedMonthlyInterest(balance: number, monthlyRate: number | null): number | null {
+  if (monthlyRate === null) {
+    return null;
+  }
   if (balance <= 0 || monthlyRate <= 0) {
     return 0;
   }
@@ -117,6 +122,9 @@ export type OverdraftPayoff =
   | { kind: 'done' }
   | { kind: 'no-plan' }
   | { kind: 'not-covering' }
+  // Rate unknown: interest can't be estimated, so this is an interest-free
+  // lower bound, ⌈B/P⌉ months.
+  | { kind: 'at-least'; months: number }
   | { kind: 'clears'; months: number; remainingInterest: number };
 
 // Unlike spec 008's deliberately simple estimate, interest is the point
@@ -125,7 +133,7 @@ export type OverdraftPayoff =
 // (rounding first would overstate it — the last payment is smaller than P).
 export function overdraftPayoff(
   balance: number,
-  monthlyRate: number,
+  monthlyRate: number | null,
   plannedPayment: number | null
 ): OverdraftPayoff {
   if (balance <= 0) {
@@ -133,6 +141,9 @@ export function overdraftPayoff(
   }
   if (plannedPayment === null || plannedPayment <= 0) {
     return { kind: 'no-plan' };
+  }
+  if (monthlyRate === null) {
+    return { kind: 'at-least', months: Math.ceil(balance / plannedPayment) };
   }
   const r = monthlyRate / 100;
   if (r <= 0) {

@@ -129,6 +129,26 @@ describe('overdraftStore', () => {
     expect(useOverdraftStore.getState().line).toMatchObject({ limit: 2000000, monthlyRate: 1.9 });
   });
 
+  it('sets the line up without a rate, passing null through (amendment, criterion 16)', async () => {
+    const { repo } = createMockRepo();
+    const { useOverdraftStore } = createOverdraftStore(repo);
+
+    await useOverdraftStore.getState().setupLine({ limit: 2000000, monthlyRate: null });
+
+    expect(repo.saveLine).toHaveBeenCalledWith({ limit: 2000000, monthlyRate: null });
+  });
+
+  it('clears the rate through updateLine without creating any event (amendment, criterion 20)', async () => {
+    const { repo } = createMockRepo();
+    const { useOverdraftStore } = createOverdraftStore(repo);
+
+    await useOverdraftStore.getState().updateLine({ monthlyRate: null });
+
+    expect(repo.updateLine).toHaveBeenCalledWith({ monthlyRate: null });
+    expect(repo.logDraw).not.toHaveBeenCalled();
+    expect(repo.logCharge).not.toHaveBeenCalled();
+  });
+
   it('logs a draw as a plain movement — never as a charge (criterion 5)', async () => {
     const { repo } = createMockRepo();
     const { useOverdraftStore } = createOverdraftStore(repo);
