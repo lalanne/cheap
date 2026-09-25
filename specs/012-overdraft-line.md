@@ -362,6 +362,21 @@ rate and is unchanged.
     one, **then** the line doc updates to `null` or the number, derived
     values recompute, and no event is created.
 
+### Addendum (2026-09-25): the field must say it's optional
+
+Found on the deployed web app: the rate was optional in behavior but the
+label read "Monthly rate (%)", so it looked required. Requirement: in both the
+setup and settings forms the rate field is labelled **"Monthly rate, %
+(optional)"** (matching "Planned monthly payment (optional)"), and the setup
+form's intro tells the user they can leave it blank and add it later.
+
+21. **Given** the setup form or the settings form, **then** the rate field is
+    labelled "Monthly rate, % (optional)", and the setup form says the rate
+    can be left blank and added later.
+
+Verification: `OverdraftScreen` component tests for both forms' labels and the
+setup hint.
+
 ### Out of scope
 
 - A helper that estimates the rate from a logged interest charge and the

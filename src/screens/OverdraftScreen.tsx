@@ -184,11 +184,12 @@ export function OverdraftScreen() {
         <View style={styles.card} testID="overdraft-setup-form">
           <Text style={styles.sectionTitle}>Set up your line</Text>
           <Text style={styles.helper}>
-            Enter your approved limit and the monthly rate on your statement. If you already owe something on it,
-            add that as the opening balance.
+            Enter your approved limit and the monthly rate on your statement. Don't know the rate? Leave the rate
+            blank and add it later from Edit settings. If you already owe something on the line, add that as the
+            opening balance.
           </Text>
           <Input label="Limit" value={limitText} onChangeText={setLimitText} keyboardType="number-pad" error={limitError} testID="setup-limit-input" />
-          <Input label="Monthly rate (%)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="setup-rate-input" />
+          <Input label="Monthly rate, % (optional)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="setup-rate-input" />
           <Input label="Planned monthly payment (optional)" value={plannedText} onChangeText={setPlannedText} keyboardType="number-pad" error={plannedError} testID="setup-planned-payment-input" />
           <Input label="Opening balance (optional)" value={openingText} onChangeText={setOpeningText} keyboardType="number-pad" error={openingError} testID="setup-opening-balance-input" />
           <Button title="Save" onPress={handleSaveSetup} testID="save-overdraft-line-button" />
@@ -400,7 +401,7 @@ export function OverdraftScreen() {
         <View style={styles.card} testID="overdraft-settings-form">
           <Text style={styles.sectionTitle}>Line settings</Text>
           <Input label="Limit" value={limitText} onChangeText={setLimitText} keyboardType="number-pad" error={limitError} testID="settings-limit-input" />
-          <Input label="Monthly rate (%)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="settings-rate-input" />
+          <Input label="Monthly rate, % (optional)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="settings-rate-input" />
           <Input label="Planned monthly payment (optional)" value={plannedText} onChangeText={setPlannedText} keyboardType="number-pad" error={plannedError} testID="settings-planned-payment-input" />
           <Button title="Save" onPress={handleSaveSettings} testID="save-overdraft-settings-button" />
           <Pressable onPress={() => setMode('closed')} style={styles.linkButton}>
