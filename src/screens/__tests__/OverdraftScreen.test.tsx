@@ -400,6 +400,73 @@ describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () =>
   });
 });
 
+describe('OverdraftScreen — Line terms card (addendum, criterion 22)', () => {
+  const TERMS_LINE = { ...LINE, monthlyRate: 3.45 };
+
+  it('shows the limit, the monthly rate and the planned payment', async () => {
+    mockStore({ line: TERMS_LINE, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    const terms = screen.getByTestId('overdraft-terms');
+    expect(within(terms).getByText('Line terms')).toBeTruthy();
+    expect(within(screen.getByTestId('terms-limit')).getByText('$2.000.000')).toBeTruthy();
+    expect(within(screen.getByTestId('terms-rate')).getByText('3.45%')).toBeTruthy();
+    expect(within(screen.getByTestId('terms-planned')).getByText('$300.000 / month')).toBeTruthy();
+  });
+
+  it('shows the card even with no events', async () => {
+    mockStore({ line: TERMS_LINE, events: [] });
+    await render(<OverdraftScreen />);
+
+    expect(screen.getByTestId('overdraft-terms')).toBeTruthy();
+  });
+
+  it('opens the settings form from the card’s Edit button, the only Edit-settings control on the screen', async () => {
+    mockStore({ line: TERMS_LINE, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(screen.getAllByTestId('edit-overdraft-settings-button')).toHaveLength(1);
+    await fireEvent.press(within(screen.getByTestId('overdraft-terms')).getByTestId('edit-overdraft-settings-button'));
+
+    expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
+  });
+
+  it('shows "Not set · Add" for an unknown rate, and it opens the settings form', async () => {
+    mockStore({ line: { ...LINE, monthlyRate: null }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('terms-rate')).getByText('Not set · Add')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('terms-add-rate-button'));
+
+    expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
+  });
+
+  it('shows a real 0% rate as "0%", not as not set', async () => {
+    mockStore({ line: { ...LINE, monthlyRate: 0 }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('terms-rate')).getByText('0%')).toBeTruthy();
+    expect(screen.queryByTestId('terms-add-rate-button')).toBeNull();
+  });
+
+  it('shows "Not set · Add" for an unset planned payment, and it opens the settings form', async () => {
+    mockStore({ line: { ...TERMS_LINE, plannedMonthlyPayment: null }, events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(within(screen.getByTestId('terms-planned')).getByText('Not set · Add')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('terms-add-payment-button'));
+
+    expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
+  });
+
+  it('is not shown in the first-run setup state', async () => {
+    mockStore({ line: null });
+    await render(<OverdraftScreen />);
+
+    expect(screen.queryByTestId('overdraft-terms')).toBeNull();
+  });
+});
+
 describe('OverdraftScreen — logging (criteria 5, 6, 7)', () => {
   it('logs a draw through logDraw only, with the amount, a date and the note', async () => {
     const store = mockStore({ events: busyEvents() });
