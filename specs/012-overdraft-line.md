@@ -377,6 +377,30 @@ form's intro tells the user they can leave it blank and add it later.
 Verification: `OverdraftScreen` component tests for both forms' labels and the
 setup hint.
 
+### Addendum (2026-09-26): a "Line terms" card shows the settings
+
+Found in use: once the rate is entered it is not visible anywhere on the
+Overdraft tab (only inside the settings form, and once in a confirmation).
+Chosen from three options on a design canvas (rate in the header / on the
+carrying-cost card / a terms card): **a "Line terms" card**.
+
+- A card titled **Line terms**, directly under the usage gauge (after any open
+  log or settings form), with three rows: **Limit**, **Monthly rate**,
+  **Planned payment**, and one **Edit** button that opens the settings form.
+  It replaces the "Edit settings" link in the screen header.
+- The rate row shows the rate as entered ("3.45%"; a real `0` shows "0%").
+  An unknown rate shows **"Not set · Add"** as a button that opens the
+  settings form. An unset planned payment does the same.
+- The card shows whenever a line exists, including with no events.
+
+22. **Given** a line, **then** the Overdraft tab shows a Line terms card with
+    the limit, the monthly rate ("Not set · Add" when unknown, "0%" for a
+    real zero) and the planned payment ("Not set · Add" when unset); its Edit
+    button, and each "Not set · Add" button, open the settings form; the
+    header no longer carries a separate "Edit settings" link.
+
+Verification: `OverdraftScreen` component tests for each state above.
+
 ### Out of scope
 
 - A helper that estimates the rate from a logged interest charge and the

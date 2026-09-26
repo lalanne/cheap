@@ -343,9 +343,6 @@ export function OverdraftScreen() {
     <Screen testID="overdraft-screen">
       <View style={styles.headerRow}>
         <Text style={styles.title}>Overdraft</Text>
-        <Pressable testID="edit-overdraft-settings-button" onPress={openSettings} style={styles.linkButton}>
-          <Text style={styles.linkLabel}>Edit settings</Text>
-        </Pressable>
       </View>
 
       {renderConfirmation()}
@@ -409,6 +406,39 @@ export function OverdraftScreen() {
           </Pressable>
         </View>
       )}
+
+      <View style={styles.termsCard} testID="overdraft-terms">
+        <View style={styles.termsHeader}>
+          <Text style={styles.termsTitle}>Line terms</Text>
+          <Pressable testID="edit-overdraft-settings-button" onPress={openSettings} style={styles.linkButton}>
+            <Text style={styles.linkLabel}>Edit</Text>
+          </Pressable>
+        </View>
+        <View style={styles.termsRow} testID="terms-limit">
+          <Text style={styles.helperBase}>Limit</Text>
+          <Text style={styles.strong}>{formatCLP(line.limit)}</Text>
+        </View>
+        <View style={styles.termsRow} testID="terms-rate">
+          <Text style={styles.helperBase}>Monthly rate</Text>
+          {line.monthlyRate === null ? (
+            <Pressable testID="terms-add-rate-button" onPress={openSettings} style={styles.linkButton}>
+              <Text style={styles.linkLabel}>Not set · Add</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.strong}>{`${line.monthlyRate}%`}</Text>
+          )}
+        </View>
+        <View style={styles.termsRow} testID="terms-planned">
+          <Text style={styles.helperBase}>Planned payment</Text>
+          {line.plannedMonthlyPayment ? (
+            <Text style={styles.strong}>{`${formatCLP(line.plannedMonthlyPayment)} / month`}</Text>
+          ) : (
+            <Pressable testID="terms-add-payment-button" onPress={openSettings} style={styles.linkButton}>
+              <Text style={styles.linkLabel}>Not set · Add</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
 
       <Text style={styles.sectionTitle}>What it's costing you</Text>
       <View style={styles.card} testID="overdraft-cost-month">
@@ -547,6 +577,27 @@ const styles = StyleSheet.create({
     color: colors.inkSecondary,
   },
   helper: { fontFamily: typography.body, fontSize: typography.size.sm, color: colors.inkSecondary },
+  helperBase: { fontFamily: typography.body, fontSize: typography.size.base, color: colors.inkSecondary },
+  termsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm + 4,
+  },
+  termsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
+  termsTitle: { fontFamily: typography.display, fontSize: typography.size.lg, color: colors.ink },
+  termsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 44,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   strong: { fontFamily: typography.bodyBold, fontSize: typography.size.base, color: colors.ink },
   bigNumber: { fontFamily: typography.display, fontSize: 40, color: colors.ink },
   midNumber: { fontFamily: typography.display, fontSize: typography.size.xl, color: colors.ink },
