@@ -28,6 +28,7 @@ import type { OverdraftEvent, OverdraftEventType } from '../overdraft/types';
 import { validateAmount } from '../transactions/validateAmount';
 import { validatePaymentAmount } from '../debts/validatePaymentAmount';
 import { colors, radius, spacing, typography, type StatusPalette } from '../theme/tokens';
+import { useWideWeb } from '../theme/useWideWeb';
 
 type FormMode = 'closed' | 'draw' | 'payment' | 'interest' | 'fee' | 'settings';
 
@@ -86,7 +87,25 @@ const HISTORY_TOP = 10;
 const HISTORY_BASE = 116;
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Spec 012's 2026-09-27 addendum (criterion 24) — the running balance right
+// after each event, replayed in the same chronological order overdraftMath
+// uses (date, then createdAt to break same-day ties). Only shown in the
+// wide-web activity table; harmless (and cheap) to compute either way.
+function computeBalanceAfterMap(events: OverdraftEvent[]): Map<string, number> {
+  const ordered = [...events].sort(
+    (a, b) => a.date.getTime() - b.date.getTime() || a.createdAt.getTime() - b.createdAt.getTime()
+  );
+  let running = 0;
+  const map = new Map<string, number>();
+  for (const e of ordered) {
+    running += e.type === 'payment' ? -e.amount : e.amount;
+    map.set(e.id, running);
+  }
+  return map;
+}
+
 export function OverdraftScreen() {
+  const isWideWeb = useWideWeb();
   const line = useOverdraftStore((s) => s.line);
   const events = useOverdraftStore((s) => s.events);
   const setupLine = useOverdraftStore((s) => s.setupLine);
@@ -338,49 +357,59 @@ export function OverdraftScreen() {
   const areaPath = `${stepPath} V${HISTORY_BASE} H12 Z`;
 
   const isLogForm = mode !== 'closed' && mode !== 'settings';
+  const balanceAfterMap = computeBalanceAfterMap(events);
 
-  return (
-    <Screen testID="overdraft-screen">
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Overdraft</Text>
-      </View>
-
-      {renderConfirmation()}
-
-      <View style={styles.card} testID="overdraft-gauge">
-        <View style={styles.rowBetween}>
-          <Text style={styles.eyebrow}>USED</Text>
-          <View testID="overdraft-status" style={styles.statusPill}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor(status) }]} />
-            <Text style={styles.statusLabel}>{STATUS_LABELS[status]}</Text>
-          </View>
-        </View>
-        <Text style={styles.bigNumber}>{formatCLP(balance)}</Text>
-        <Text style={styles.helper}>{`of ${formatCLP(line.limit)} limit`}</Text>
-        <View style={styles.gaugeTrack}>
-          <View
-            testID="overdraft-gauge-fill"
-            style={[styles.gaugeFill, { width: `${Math.min(100, percent)}%`, backgroundColor: statusColor(status) }]}
-          />
-          <View testID="overdraft-gauge-threshold" style={styles.gaugeThreshold} />
-        </View>
-        <View style={styles.thresholdLabelRow}>
-          <Text style={styles.thresholdLabel}>75%</Text>
-        </View>
-        <View style={styles.rowBetween}>
-          <Text style={styles.strong}>{`${percent}% used`}</Text>
-          <Text style={styles.helper}>{`${formatCLP(availableOf(balance, line.limit))} available`}</Text>
-        </View>
-        <View style={styles.buttonRow}>
-          <View style={styles.flex}>
-            <Button title="Log draw" onPress={() => openForm('draw')} testID="log-draw-button" />
-          </View>
-          <Pressable testID="log-payment-button" onPress={() => openForm('payment')} style={[styles.outlineButton, styles.flex]}>
-            <Text style={styles.outlineButtonLabel}>Log payment</Text>
-          </Pressable>
+  const gaugeCard = (
+    <View style={styles.card} testID="overdraft-gauge">
+      <View style={styles.rowBetween}>
+        <Text style={styles.eyebrow}>USED</Text>
+        <View testID="overdraft-status" style={styles.statusPill}>
+          <View style={[styles.statusDot, { backgroundColor: statusColor(status) }]} />
+          <Text style={styles.statusLabel}>{STATUS_LABELS[status]}</Text>
         </View>
       </View>
+      <Text style={styles.bigNumber}>{formatCLP(balance)}</Text>
+      <Text style={styles.helper}>{`of ${formatCLP(line.limit)} limit`}</Text>
+      <View style={styles.gaugeTrack}>
+        <View
+          testID="overdraft-gauge-fill"
+          style={[styles.gaugeFill, { width: `${Math.min(100, percent)}%`, backgroundColor: statusColor(status) }]}
+        />
+        <View testID="overdraft-gauge-threshold" style={styles.gaugeThreshold} />
+      </View>
+      <View style={styles.thresholdLabelRow}>
+        <Text style={styles.thresholdLabel}>75%</Text>
+      </View>
+      <View style={styles.rowBetween}>
+        <Text style={styles.strong}>{`${percent}% used`}</Text>
+        <Text style={styles.helper}>{`${formatCLP(availableOf(balance, line.limit))} available`}</Text>
+      </View>
+      <View style={styles.buttonRow}>
+        <View style={styles.flex}>
+          <Button title="Log draw" onPress={() => openForm('draw')} testID="log-draw-button" />
+        </View>
+        <Pressable testID="log-payment-button" onPress={() => openForm('payment')} style={[styles.outlineButton, styles.flex]}>
+          <Text style={styles.outlineButtonLabel}>Log payment</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 
+  // Reused as-is in the narrow activity header and the wide rail (spec 012's
+  // 2026-09-27 addendum) — never both at once, since isWideWeb picks one.
+  const interestFeeButtons = (
+    <View style={styles.splitRow}>
+      <Pressable testID="log-interest-button" onPress={() => openForm('interest')} style={styles.linkButton}>
+        <Text style={styles.linkLabel}>Log interest</Text>
+      </Pressable>
+      <Pressable testID="log-fee-button" onPress={() => openForm('fee')} style={styles.linkButton}>
+        <Text style={styles.linkLabel}>Log fee</Text>
+      </Pressable>
+    </View>
+  );
+
+  const formsBlock = (
+    <>
       {isLogForm && (
         <View style={styles.card} testID="overdraft-form">
           <Text style={styles.sectionTitle}>{FORM_TITLES[mode]}</Text>
@@ -406,40 +435,46 @@ export function OverdraftScreen() {
           </Pressable>
         </View>
       )}
+    </>
+  );
 
-      <View style={styles.termsCard} testID="overdraft-terms">
-        <View style={styles.termsHeader}>
-          <Text style={styles.termsTitle}>Line terms</Text>
-          <Pressable testID="edit-overdraft-settings-button" onPress={openSettings} style={styles.linkButton}>
-            <Text style={styles.linkLabel}>Edit</Text>
-          </Pressable>
-        </View>
-        <View style={styles.termsRow} testID="terms-limit">
-          <Text style={styles.helperBase}>Limit</Text>
-          <Text style={styles.strong}>{formatCLP(line.limit)}</Text>
-        </View>
-        <View style={styles.termsRow} testID="terms-rate">
-          <Text style={styles.helperBase}>Monthly rate</Text>
-          {line.monthlyRate === null ? (
-            <Pressable testID="terms-add-rate-button" onPress={openSettings} style={styles.linkButton}>
-              <Text style={styles.linkLabel}>Not set · Add</Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.strong}>{`${line.monthlyRate}%`}</Text>
-          )}
-        </View>
-        <View style={styles.termsRow} testID="terms-planned">
-          <Text style={styles.helperBase}>Planned payment</Text>
-          {line.plannedMonthlyPayment ? (
-            <Text style={styles.strong}>{`${formatCLP(line.plannedMonthlyPayment)} / month`}</Text>
-          ) : (
-            <Pressable testID="terms-add-payment-button" onPress={openSettings} style={styles.linkButton}>
-              <Text style={styles.linkLabel}>Not set · Add</Text>
-            </Pressable>
-          )}
-        </View>
+  const termsCard = (
+    <View style={styles.termsCard} testID="overdraft-terms">
+      <View style={styles.termsHeader}>
+        <Text style={styles.termsTitle}>Line terms</Text>
+        <Pressable testID="edit-overdraft-settings-button" onPress={openSettings} style={styles.linkButton}>
+          <Text style={styles.linkLabel}>Edit</Text>
+        </Pressable>
       </View>
+      <View style={styles.termsRow} testID="terms-limit">
+        <Text style={styles.helperBase}>Limit</Text>
+        <Text style={styles.strong}>{formatCLP(line.limit)}</Text>
+      </View>
+      <View style={styles.termsRow} testID="terms-rate">
+        <Text style={styles.helperBase}>Monthly rate</Text>
+        {line.monthlyRate === null ? (
+          <Pressable testID="terms-add-rate-button" onPress={openSettings} style={styles.linkButton}>
+            <Text style={styles.linkLabel}>Not set · Add</Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.strong}>{`${line.monthlyRate}%`}</Text>
+        )}
+      </View>
+      <View style={styles.termsRow} testID="terms-planned">
+        <Text style={styles.helperBase}>Planned payment</Text>
+        {line.plannedMonthlyPayment ? (
+          <Text style={styles.strong}>{`${formatCLP(line.plannedMonthlyPayment)} / month`}</Text>
+        ) : (
+          <Pressable testID="terms-add-payment-button" onPress={openSettings} style={styles.linkButton}>
+            <Text style={styles.linkLabel}>Not set · Add</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
 
+  const costSection = (
+    <>
       <Text style={styles.sectionTitle}>What it's costing you</Text>
       <View style={styles.card} testID="overdraft-cost-month">
         <Text style={styles.eyebrow}>CHARGED THIS MONTH</Text>
@@ -469,7 +504,11 @@ export function OverdraftScreen() {
           <Text style={styles.helper}>interest + fees, all time</Text>
         </View>
       </View>
+    </>
+  );
 
+  const roadSection = (
+    <>
       <Text style={styles.sectionTitle}>Road to zero</Text>
       <View style={styles.card} testID="overdraft-road">
         <View style={styles.rowBetween}>
@@ -488,7 +527,11 @@ export function OverdraftScreen() {
         ) : null}
         {renderPayoff()}
       </View>
+    </>
+  );
 
+  const historySection = (
+    <>
       <Text style={styles.sectionTitle}>Balance, last 6 months</Text>
       <View style={styles.card} testID="overdraft-history">
         <Svg width="100%" height={HISTORY_HEIGHT} viewBox={`0 0 ${HISTORY_WIDTH} ${HISTORY_HEIGHT}`}>
@@ -506,28 +549,68 @@ export function OverdraftScreen() {
           ))}
         </Svg>
       </View>
+    </>
+  );
 
-      <View style={styles.rowBetween}>
-        <Text style={styles.sectionTitle}>Recent activity</Text>
-        <View style={styles.splitRow}>
-          <Pressable testID="log-interest-button" onPress={() => openForm('interest')} style={styles.linkButton}>
-            <Text style={styles.linkLabel}>Log interest</Text>
-          </Pressable>
-          <Pressable testID="log-fee-button" onPress={() => openForm('fee')} style={styles.linkButton}>
-            <Text style={styles.linkLabel}>Log fee</Text>
-          </Pressable>
-        </View>
+  // Empty state is shared; the populated body differs — a plain list
+  // narrow/native, a table with a Balance after column wide-web (criterion 24).
+  const activityBody =
+    sortedEvents.length === 0 ? (
+      <Text style={styles.helper} testID="overdraft-empty">
+        No activity yet. Log a draw when the bank tops up your account.
+      </Text>
+    ) : isWideWeb ? (
+      <View style={styles.card} testID="overdraft-activity-table">
+        {sortedEvents.map((e) => (
+          <ActivityRow key={e.id} event={e} balanceAfter={balanceAfterMap.get(e.id) ?? 0} onDelete={() => deleteEvent(e.id)} />
+        ))}
       </View>
-      {sortedEvents.length === 0 ? (
-        <Text style={styles.helper} testID="overdraft-empty">
-          No activity yet. Log a draw when the bank tops up your account.
-        </Text>
-      ) : (
-        <View style={styles.card}>
-          {sortedEvents.map((e) => (
-            <EventRow key={e.id} event={e} onDelete={() => deleteEvent(e.id)} />
-          ))}
+    ) : (
+      <View style={styles.card}>
+        {sortedEvents.map((e) => (
+          <EventRow key={e.id} event={e} onDelete={() => deleteEvent(e.id)} />
+        ))}
+      </View>
+    );
+
+  return (
+    <Screen testID="overdraft-screen" wide={isWideWeb}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Overdraft</Text>
+      </View>
+
+      {renderConfirmation()}
+
+      {isWideWeb ? (
+        <View style={styles.wideRow}>
+          <View style={styles.rail} testID="overdraft-rail">
+            {gaugeCard}
+            {interestFeeButtons}
+            {formsBlock}
+            {termsCard}
+          </View>
+          <View style={styles.wideColumn} testID="overdraft-wide-column">
+            {costSection}
+            {roadSection}
+            {historySection}
+            <Text style={styles.sectionTitle}>Recent activity</Text>
+            {activityBody}
+          </View>
         </View>
+      ) : (
+        <>
+          {gaugeCard}
+          {formsBlock}
+          {termsCard}
+          {costSection}
+          {roadSection}
+          {historySection}
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>Recent activity</Text>
+            {interestFeeButtons}
+          </View>
+          {activityBody}
+        </>
       )}
     </Screen>
   );
@@ -545,6 +628,37 @@ function EventRow({ event, onDelete }: { event: OverdraftEvent; onDelete: () => 
       </View>
       <Text style={[styles.strong, { color: amountColor }]}>{amount}</Text>
       <Pressable testID={`delete-event-${event.id}`} onPress={onDelete} style={styles.linkButton}>
+        <Text style={styles.linkLabel}>Delete</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// The wide-web table row (spec 012's 2026-09-27 addendum, criterion 24) —
+// same data as EventRow, laid out in columns with a Balance after figure
+// the narrow list has no room for.
+function ActivityRow({
+  event,
+  balanceAfter,
+  onDelete,
+}: {
+  event: OverdraftEvent;
+  balanceAfter: number;
+  onDelete: () => void;
+}) {
+  const isPayment = event.type === 'payment';
+  const amount = `${isPayment ? '−' : '+'}${formatCLP(event.amount)}`;
+  const amountColor = isPayment ? colors.success : event.type === 'draw' ? colors.status.notice.text : colors.ink;
+  return (
+    <View testID={`overdraft-activity-row-${event.id}`} style={styles.activityRow}>
+      <Text style={[styles.helper, styles.activityDate]}>{formatShortDate(event.date)}</Text>
+      <Text style={[styles.strong, styles.activityType]}>{EVENT_LABELS[event.type]}</Text>
+      <Text style={[styles.helper, styles.activityNote]}>{event.note ?? ''}</Text>
+      <Text style={[styles.strong, styles.activityAmount, { color: amountColor }]}>{amount}</Text>
+      <Text testID="balance-after" style={[styles.helper, styles.activityAmount]}>
+        {formatCLP(balanceAfter)}
+      </Text>
+      <Pressable testID={`delete-event-${event.id}`} onPress={onDelete} style={[styles.linkButton, styles.activityDelete]}>
         <Text style={styles.linkLabel}>Delete</Text>
       </Pressable>
     </View>
@@ -657,6 +771,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  // Spec 012's 2026-09-27 addendum (option C) — a fixed left rail beside a
+  // scrolling right column, only at the useWideWeb breakpoint (spec 009's
+  // ≥900px web pattern); unrelated to the narrow/native layout above.
+  wideRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.lg,
+  },
+  rail: {
+    width: 380,
+    flexShrink: 0,
+  },
+  wideColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  activityDate: { width: 60 },
+  activityType: { width: 90 },
+  activityNote: { flex: 1 },
+  activityAmount: { width: 110, textAlign: 'right' },
+  activityDelete: { width: 70, alignItems: 'flex-end' },
   confirmation: {
     borderRadius: radius.card,
     borderWidth: 1,
