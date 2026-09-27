@@ -401,7 +401,7 @@ carrying-cost card / a terms card): **a "Line terms" card**.
 
 Verification: `OverdraftScreen` component tests for each state above.
 
-### Addendum (2026-09-27): a wide-web layout (option C)
+### Addendum (2026-09-27, approved): a wide-web layout (option C)
 
 Found in use: on a wide browser window the Overdraft tab used the same
 560px-capped single column as narrow/native (spec 003's default `Screen`
@@ -470,3 +470,19 @@ Implemented 2026-09-25, tests first: 12 new tests failed on assertions
 
 378 unit/component tests pass, 19 Firestore rules tests pass, `tsc --noEmit`
 clean. Still `implemented`, not `verified` (not yet exercised in the running app).
+
+### Verification results (addendum)
+
+Implemented 2026-09-27, tests first: 2 new assertions failed (missing
+`overdraft-rail`/`overdraft-wide-column`/`overdraft-activity-table`/Balance
+after) before any code changed; the narrow-mode and empty/setup-state tests
+already passed against the unmodified screen, confirming the change is purely
+additive at `≥900px`.
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 23 — rail + column at ≥900px, unchanged below it | ✅ | `OverdraftScreen.wideWeb.test.tsx` (rail contains gauge/4 log buttons/terms; column contains cost cards/road/history/activity table; setup state shows neither); `OverdraftScreen.test.tsx` new narrow-mode test asserts neither wrapper renders. |
+| 24 — Balance after column | ✅ | `OverdraftScreen.wideWeb.test.tsx` — 5 events, each row's `balance-after` matches the running total replayed in date/createdAt order, newest row first; delete still works from the table row. |
+
+392 unit/component tests pass (up from 387), 19 Firestore rules tests pass
+(unaffected — no data model change), `tsc --noEmit` clean.

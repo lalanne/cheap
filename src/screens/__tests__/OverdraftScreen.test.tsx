@@ -467,6 +467,18 @@ describe('OverdraftScreen — Line terms card (addendum, criterion 22)', () => {
   });
 });
 
+describe('OverdraftScreen — narrow/native (addendum criterion 23: no wide rail/column)', () => {
+  it('renders the existing single-column layout, with no rail or wide-column wrapper', async () => {
+    mockStore({ events: busyEvents() });
+    await render(<OverdraftScreen />);
+
+    expect(screen.queryByTestId('overdraft-rail')).toBeNull();
+    expect(screen.queryByTestId('overdraft-wide-column')).toBeNull();
+    expect(screen.getByTestId('overdraft-gauge')).toBeTruthy();
+    expect(screen.getByTestId('overdraft-terms')).toBeTruthy();
+  });
+});
+
 describe('OverdraftScreen — logging (criteria 5, 6, 7)', () => {
   it('logs a draw through logDraw only, with the amount, a date and the note', async () => {
     const store = mockStore({ events: busyEvents() });
