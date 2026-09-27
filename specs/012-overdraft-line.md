@@ -401,6 +401,42 @@ carrying-cost card / a terms card): **a "Line terms" card**.
 
 Verification: `OverdraftScreen` component tests for each state above.
 
+### Addendum (2026-09-27): a wide-web layout (option C)
+
+Found in use: on a wide browser window the Overdraft tab used the same
+560px-capped single column as narrow/native (spec 003's default `Screen`
+cap), leaving most of the window empty. Chosen from three options on a
+design canvas (two columns / dashboard-style rows / a fixed rail with a
+scrolling main area): **option C**, following spec 009's existing
+`useWideWeb()` (`≥900px` web) pattern.
+
+- `≥900px` web only (native and narrow/mobile web are unchanged): the
+  screen renders through `Screen`'s `wide` cap (spec 006, same as the
+  Dashboard/Manage wide layouts) in a fixed **left rail** (gauge, Log
+  draw/payment/interest/fee, Line terms) beside a **scrolling right column**
+  (cost cards, Road to zero, balance history, activity). Below `900px`
+  (including narrow web) the existing single-column layout is unchanged.
+- The activity list becomes a **table** only at this width, gaining a
+  **Balance after** column: the derived balance immediately after each
+  event, newest first (same order as the existing list). Computed from the
+  already-loaded event history, nothing new stored.
+- No new data, no new store/repository methods — this is a rendering-only
+  change, same category as spec 006 and spec 009's own wide-web amendments.
+
+23. **Given** the Overdraft tab at `≥900px` on web, **then** the gauge,
+    logging actions, and Line terms render in a fixed left rail, and the
+    cost cards, road to zero, balance history and activity render in a
+    right column, both within one screen (no page-level scroll of the rail
+    itself); below `900px`, and on native at any width, the existing
+    single-column layout is unchanged.
+24. **Given** the wide layout, **then** the activity table includes a
+    Balance after column whose values are the running balance immediately
+    after each event, consistent with the event order (newest first).
+
+Verification: `OverdraftScreen` component tests (narrow/native, matching
+spec 009's own split) plus an `OverdraftScreen.wideWeb.test.tsx` (mocked
+`useWideWeb() === true`), same pattern as `DashboardScreen.wideWeb.test.tsx`.
+
 ### Out of scope
 
 - A helper that estimates the rate from a logged interest charge and the
