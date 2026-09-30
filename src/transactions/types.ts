@@ -7,6 +7,9 @@ export type Transaction = {
   category: string; // starter-set key, or a custom category id
   date: Date; // user-specified transaction date
   note: string | null;
+  // Spec 002's 2026-09-29 amendment (spec 013) — which credit card, if any,
+  // paid for this expense; always null on an income transaction.
+  cardId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -17,6 +20,7 @@ export type NewTransactionInput = {
   category: string;
   date: Date;
   note?: string | null;
+  cardId?: string | null;
 };
 
 export type UpdateTransactionInput = Partial<NewTransactionInput>;

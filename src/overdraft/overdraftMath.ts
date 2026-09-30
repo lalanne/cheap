@@ -106,59 +106,13 @@ export function costSummary(events: OverdraftEvent[], now: Date): CostSummary {
   return { interestThisMonth, feesThisMonth, totalCost };
 }
 
-// null when the rate is unknown — deliberately not 0, so the UI can ask for
-// the rate instead of claiming the line costs nothing.
-export function projectedMonthlyInterest(balance: number, monthlyRate: number | null): number | null {
-  if (monthlyRate === null) {
-    return null;
-  }
-  if (balance <= 0 || monthlyRate <= 0) {
-    return 0;
-  }
-  return Math.round((balance * monthlyRate) / 100);
-}
-
-export type OverdraftPayoff =
-  | { kind: 'done' }
-  | { kind: 'no-plan' }
-  | { kind: 'not-covering' }
-  // Rate unknown: interest can't be estimated, so this is an interest-free
-  // lower bound, ⌈B/P⌉ months.
-  | { kind: 'at-least'; months: number }
-  | { kind: 'clears'; months: number; remainingInterest: number };
-
-// Unlike spec 008's deliberately simple estimate, interest is the point
-// here: n = −ln(1 − r·B/P) / ln(1 + r) months, paying P at each month's end
-// after that month's interest. Interest is P·n′ − B from the *unrounded* n′
-// (rounding first would overstate it — the last payment is smaller than P).
-export function overdraftPayoff(
-  balance: number,
-  monthlyRate: number | null,
-  plannedPayment: number | null
-): OverdraftPayoff {
-  if (balance <= 0) {
-    return { kind: 'done' };
-  }
-  if (plannedPayment === null || plannedPayment <= 0) {
-    return { kind: 'no-plan' };
-  }
-  if (monthlyRate === null) {
-    return { kind: 'at-least', months: Math.ceil(balance / plannedPayment) };
-  }
-  const r = monthlyRate / 100;
-  if (r <= 0) {
-    return { kind: 'clears', months: Math.ceil(balance / plannedPayment), remainingInterest: 0 };
-  }
-  if (plannedPayment <= balance * r) {
-    return { kind: 'not-covering' };
-  }
-  const exactMonths = -Math.log(1 - (r * balance) / plannedPayment) / Math.log(1 + r);
-  return {
-    kind: 'clears',
-    months: Math.ceil(exactMonths),
-    remainingInterest: Math.round(plannedPayment * exactMonths - balance),
-  };
-}
+// Spec 013's 2026-09-29 extraction: this math is identical for any
+// revolving balance (the overdraft, or a credit card), so it now lives in
+// one shared module both features import — re-exported here under this
+// spec's own names so nothing else in this file (or its callers) changes.
+export { projectedMonthlyInterest } from '../finance/revolvingPayoff';
+export { revolvingPayoff as overdraftPayoff } from '../finance/revolvingPayoff';
+export type { RevolvingPayoff as OverdraftPayoff } from '../finance/revolvingPayoff';
 
 export type UsageTransition = 'started' | 'crossed-high' | 'crossed-limit';
 

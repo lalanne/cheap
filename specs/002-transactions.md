@@ -446,3 +446,12 @@ Verification: unit tests on `NewTransactionInput`/`UpdateTransactionInput`
 handling in the store and both `.native`/`.web` repositories (mirroring
 the existing amount/category/date field tests); a `TransactionsScreen`
 component test for the picker appearing only on the expense form.
+
+**Result:** ✅ criteria 16/17, implemented 2026-09-29 alongside spec 013.
+`Transaction`/`NewTransactionInput` gained `cardId: string | null`; both
+Firestore repositories read a missing field as `null` and write `null` by
+default; `update()` only touches `cardId` when it's present in the patch,
+same as every other field. `TransactionsScreen` gained a "Paid with" chip
+row (testID `card-picker`), shown only when `type === 'expense'` and at
+least one card exists; switching to Income clears any picked card.
+461 tests pass, `tsc --noEmit` clean.

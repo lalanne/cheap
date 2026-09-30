@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
+import { useCreditCardsStore } from '../../creditCards/store';
 import { useDebtsStore } from '../../debts/store';
 import { useOverdraftStore } from '../../overdraft/store';
 import { useTransactionsStore } from '../../transactions/store';
@@ -17,6 +18,9 @@ jest.mock('../../debts/store', () => ({
 }));
 jest.mock('../../overdraft/store', () => ({
   useOverdraftStore: jest.fn(),
+}));
+jest.mock('../../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
 }));
 jest.mock('../../theme/useWideWeb', () => ({
   useWideWeb: () => true,
@@ -35,6 +39,9 @@ describe('DashboardScreen (wide web, spec 009 criterion 5)', () => {
     );
     (useOverdraftStore as unknown as jest.Mock).mockImplementation(
       (selector: (s: { line: null; events: never[] }) => unknown) => selector({ line: null, events: [] })
+    );
+    (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+      (selector: (s: { cards: never[]; payments: never[] }) => unknown) => selector({ cards: [], payments: [] })
     );
 
     await render(<DashboardScreen />);

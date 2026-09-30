@@ -13,6 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
 import { OverdraftBanner } from './src/components/OverdraftBanner';
+import { startCreditCardsSync } from './src/creditCards/store';
 import { startDebtsSync } from './src/debts/store';
 import { startOverdraftSync } from './src/overdraft/store';
 import { DashboardScreen } from './src/screens/DashboardScreen';
@@ -52,6 +53,7 @@ export default function App() {
   useEffect(() => startBudgetsSync(), []);
   useEffect(() => startDebtsSync(), []);
   useEffect(() => startOverdraftSync(), []);
+  useEffect(() => startCreditCardsSync(), []);
 
   let content;
   if (!fontsLoaded || status === 'initializing') {

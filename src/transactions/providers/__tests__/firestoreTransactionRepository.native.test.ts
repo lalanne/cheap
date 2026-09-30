@@ -79,6 +79,45 @@ describe('firestoreTransactionRepository (native)', () => {
     );
   });
 
+  it('writes cardId as null when the expense was not paid with a card (spec 002 2026-09-29 amendment)', async () => {
+    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    await firestoreTransactionRepository.create({
+      type: 'expense',
+      amount: 45000,
+      category: 'Groceries',
+      date: new Date('2026-09-29'),
+      note: null,
+    });
+
+    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: null }));
+  });
+
+  it('writes the given cardId when the expense was paid with a card', async () => {
+    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    await firestoreTransactionRepository.create({
+      type: 'expense',
+      amount: 45000,
+      category: 'Groceries',
+      date: new Date('2026-09-29'),
+      note: null,
+      cardId: 'card-1',
+    });
+
+    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: 'card-1' }));
+  });
+
+  it('updates cardId only when it is included in the update, same as any other field', async () => {
+    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    await firestoreTransactionRepository.update('tx-1', { cardId: 'card-2' });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: 'card-2' }));
+
+    mockUpdateDoc.mockClear();
+    await firestoreTransactionRepository.update('tx-1', { amount: 5000 });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.not.objectContaining({ cardId: expect.anything() }));
+  });
+
   it('throws a clear error instead of silently doing nothing when nobody is signed in', async () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 

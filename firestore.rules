@@ -40,5 +40,14 @@ service cloud.firestore {
     match /users/{uid}/overdraftEvents/{eventId} {
       allow read, write: if isOwner(uid);
     }
+
+    // Spec 013 — the credit card entity and its (payments-only) ledger.
+    match /users/{uid}/creditCards/{cardId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /users/{uid}/creditCardPayments/{paymentId} {
+      allow read, write: if isOwner(uid);
+    }
   }
 }

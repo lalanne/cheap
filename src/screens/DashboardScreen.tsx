@@ -5,6 +5,8 @@ import Svg, { Circle } from 'react-native-svg';
 import { Screen } from '../components/Screen';
 import { useBudgetsStore } from '../budgets/store';
 import { computeCategorySpend } from '../budgets/computeCategorySpend';
+import { creditCardBalance } from '../creditCards/creditCardMath';
+import { useCreditCardsStore } from '../creditCards/store';
 import { useDebtsStore } from '../debts/store';
 import { formatCLP as formatOverdraftCLP } from '../overdraft/format';
 import { balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
@@ -82,6 +84,8 @@ export function DashboardScreen() {
   const debts = useDebtsStore((s) => s.debts);
   const overdraftLine = useOverdraftStore((s) => s.line);
   const overdraftEvents = useOverdraftStore((s) => s.events);
+  const creditCards = useCreditCardsStore((s) => s.cards);
+  const creditCardPayments = useCreditCardsStore((s) => s.payments);
 
   const now = new Date();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -127,7 +131,16 @@ export function DashboardScreen() {
   // compact row; an unused or absent line changes nothing here.
   const overdraftBalance = overdraftLine ? balanceOf(overdraftEvents) : 0;
   const showOverdraft = overdraftLine !== null && overdraftBalance > 0;
-  const totalDebtRemaining = debts.reduce((sum, d) => sum + d.currentBalance, 0) + (showOverdraft ? overdraftBalance : 0);
+  // Spec 013 criterion 8 — each card's balance (a live sum over tagged
+  // transactions and payments, see creditCardMath) counts as debt too.
+  const totalCreditCardBalance = creditCards.reduce(
+    (sum, c) => sum + creditCardBalance(c.id, transactions, creditCardPayments),
+    0
+  );
+  const totalDebtRemaining =
+    debts.reduce((sum, d) => sum + d.currentBalance, 0) +
+    (showOverdraft ? overdraftBalance : 0) +
+    totalCreditCardBalance;
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const effectiveSelectedMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
@@ -345,8 +358,19 @@ export function DashboardScreen() {
           </View>
         </View>
       ) : null}
+      {creditCards.map((c) => {
+        const balance = creditCardBalance(c.id, transactions, creditCardPayments);
+        return (
+          <View key={c.id} testID={`dashboard-card-${c.id}`} style={styles.barList}>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>{c.name}</Text>
+              <Text style={styles.barValue}>{formatCLP(balance)}</Text>
+            </View>
+          </View>
+        );
+      })}
       {debts.length === 0 ? (
-        showOverdraft ? null : (
+        showOverdraft || creditCards.length > 0 ? null : (
           <Text style={styles.emptyText} testID="dashboard-debts-empty">
             No debts tracked yet.
           </Text>
