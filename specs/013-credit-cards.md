@@ -1,6 +1,6 @@
 # 013 — Credit Cards (CLP)
 
-**Status:** draft
+**Status:** approved
 **Depends on:** 000 (v1 scope — CLP only, this spec stays inside that; a
 second card in USD is an explicit future spec, not this one), 001, 002
 (this spec's 2026-09-29 amendment: an optional `cardId` on an expense),
