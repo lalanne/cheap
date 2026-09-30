@@ -413,7 +413,7 @@ open the add form, which is exactly where `add-transaction-button` still
 lives. 235 tests pass (up from 227), `tsc --noEmit` clean, web export
 builds.
 
-### Amendment (2026-09-29, draft): an optional card on an expense — spec 013
+### Amendment (2026-09-29, approved): an optional card on an expense — spec 013
 
 Spec 013 (credit cards) needs to know which transactions were paid on a
 card, without inventing a second place to log spending (see that spec's
