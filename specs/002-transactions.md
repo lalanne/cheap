@@ -412,3 +412,37 @@ unchanged — every one of them exercises the empty-transactions case to
 open the add form, which is exactly where `add-transaction-button` still
 lives. 235 tests pass (up from 227), `tsc --noEmit` clean, web export
 builds.
+
+### Amendment (2026-09-29, draft): an optional card on an expense — spec 013
+
+Spec 013 (credit cards) needs to know which transactions were paid on a
+card, without inventing a second place to log spending (see that spec's
+"Why not a separate ledger" for the reasoning). This amendment is the
+minimal hook it needs.
+
+- `Transaction` and `NewTransactionInput`/`UpdateTransactionInput` gain an
+  optional `cardId: string | null` — which credit card (if any) paid for
+  this expense. `null`/absent means paid another way (cash, debit,
+  whatever) — unchanged from today, and every existing transaction reads
+  as `null`.
+- **Only valid on an `expense`.** The form only offers a card picker when
+  logging or editing an expense; an `income` transaction's `cardId` is
+  always `null`. Not a rules-enforced constraint (v1 has none of those on
+  field shapes) — the UI simply never offers it, same trust level as the
+  rest of this app's client-side validation.
+- No other change to how a transaction is created, edited, deleted or
+  aggregated — `cardId` is inert to every existing screen and computation
+  until spec 013's own code reads it.
+
+16. **Given** the expense form, **when** a card is picked, **then** the
+    saved transaction's `cardId` matches it; left unpicked, `cardId` is
+    `null`. **Given** the income form, **then** no card picker is offered
+    and `cardId` is always `null`.
+17. **Given** an existing transaction, **when** it's edited to add, change
+    or clear its card, **then** only `cardId` changes — amount, category,
+    date and note are unaffected.
+
+Verification: unit tests on `NewTransactionInput`/`UpdateTransactionInput`
+handling in the store and both `.native`/`.web` repositories (mirroring
+the existing amount/category/date field tests); a `TransactionsScreen`
+component test for the picker appearing only on the expense form.
