@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '../auth/store';
 import { startBudgetsSync, useBudgetsStore } from '../budgets/store';
+import { startCreditCardsSync, useCreditCardsStore } from '../creditCards/store';
 import { startDebtsSync, useDebtsStore } from '../debts/store';
 import { startOverdraftSync, useOverdraftStore } from '../overdraft/store';
 import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
@@ -34,6 +35,11 @@ jest.mock('../debts/store', () => ({
 jest.mock('../overdraft/store', () => ({
   useOverdraftStore: jest.fn(),
   startOverdraftSync: jest.fn(() => () => {}),
+}));
+
+jest.mock('../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
+  startCreditCardsSync: jest.fn(() => () => {}),
 }));
 
 function mockAuthState(state: {
@@ -96,6 +102,18 @@ describe('App', () => {
     const debtsState = { debts: [], addDebt: jest.fn(), logPayment: jest.fn(), editBalance: jest.fn(), deleteDebt: jest.fn() };
     (useDebtsStore as unknown as jest.Mock).mockImplementation(
       (selector: (s: typeof debtsState) => unknown) => selector(debtsState)
+    );
+    const creditCardsState = {
+      cards: [],
+      payments: [],
+      addCard: jest.fn(),
+      updateCard: jest.fn(),
+      deleteCard: jest.fn(),
+      logPayment: jest.fn(),
+      deletePayment: jest.fn(),
+    };
+    (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+      (selector: (s: typeof creditCardsState) => unknown) => selector(creditCardsState)
     );
   });
 
@@ -163,6 +181,14 @@ describe('App', () => {
     await render(<App />);
 
     expect(startOverdraftSync).toHaveBeenCalled();
+  });
+
+  it('starts credit cards sync after mount too', async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    expect(startCreditCardsSync).toHaveBeenCalled();
   });
 
   it('shows exactly four tabs — Log, Overdraft, Manage, Dashboard — and switches screens (spec 009 amendment, spec 012 criterion 14)', async () => {

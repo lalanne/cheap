@@ -6,6 +6,7 @@ import { DatePickerField } from '../components/DatePickerField';
 import { Input } from '../components/Input';
 import { Screen } from '../components/Screen';
 import { VersionStamp } from '../components/VersionStamp';
+import { useCreditCardsStore } from '../creditCards/store';
 import { groupTransactionsByMonth } from '../transactions/groupByMonth';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
 import { useTransactionsStore } from '../transactions/store';
@@ -50,6 +51,7 @@ export function TransactionsScreen() {
   const updateTransaction = useTransactionsStore((s) => s.updateTransaction);
   const deleteTransaction = useTransactionsStore((s) => s.deleteTransaction);
   const addCategory = useTransactionsStore((s) => s.addCategory);
+  const cards = useCreditCardsStore((s) => s.cards);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,6 +61,10 @@ export function TransactionsScreen() {
   const [type, setType] = useState<TransactionType>('expense');
   const [amountText, setAmountText] = useState('');
   const [category, setCategory] = useState<string>(STARTER_CATEGORIES[0]);
+  // Spec 002's 2026-09-29 amendment (spec 013) — only meaningful on an
+  // expense; always null on income, enforced by never offering the picker
+  // there (see typeToggle/setType below) rather than by a stored rule.
+  const [cardId, setCardId] = useState<string | null>(null);
   const [date, setDate] = useState<Date>(new Date());
   const [note, setNote] = useState('');
   const [amountError, setAmountError] = useState<string | null>(null);
@@ -73,6 +79,7 @@ export function TransactionsScreen() {
     setType('expense');
     setAmountText('');
     setCategory(STARTER_CATEGORIES[0]);
+    setCardId(null);
     setDate(new Date());
     setNote('');
     setAmountError(null);
@@ -86,6 +93,7 @@ export function TransactionsScreen() {
     setType(tx.type);
     setAmountText(String(tx.amount));
     setCategory(tx.category);
+    setCardId(tx.cardId ?? null);
     setDate(tx.date);
     setNote(tx.note ?? '');
     setAmountError(null);
@@ -111,6 +119,7 @@ export function TransactionsScreen() {
       category,
       date,
       note: note.trim() === '' ? null : note.trim(),
+      cardId: type === 'expense' ? cardId : null,
     };
     try {
       if (editingId) {
@@ -149,7 +158,10 @@ export function TransactionsScreen() {
       <Pressable
         testID="type-income"
         style={type === 'income' ? styles.tabActive : styles.tab}
-        onPress={() => setType('income')}
+        onPress={() => {
+          setType('income');
+          setCardId(null);
+        }}
       >
         <Text style={type === 'income' ? styles.tabLabelActive : styles.tabLabel}>Income</Text>
       </Pressable>
@@ -208,6 +220,34 @@ export function TransactionsScreen() {
       )}
     </>
   );
+
+  // Spec 002's 2026-09-29 amendment (spec 013) — only on an expense, and
+  // only once a card exists; "None" (the default) keeps cardId null.
+  const cardSection =
+    type === 'expense' && cards.length > 0 ? (
+      <View testID="card-picker">
+        <Text style={styles.label}>Paid with</Text>
+        <View style={styles.chipRow}>
+          <Pressable
+            testID="card-option-none"
+            style={cardId === null ? styles.chipActive : styles.chip}
+            onPress={() => setCardId(null)}
+          >
+            <Text style={cardId === null ? styles.chipLabelActive : styles.chipLabel}>None</Text>
+          </Pressable>
+          {cards.map((c) => (
+            <Pressable
+              key={c.id}
+              testID={`card-option-${c.id}`}
+              style={cardId === c.id ? styles.chipActive : styles.chip}
+              onPress={() => setCardId(c.id)}
+            >
+              <Text style={cardId === c.id ? styles.chipLabelActive : styles.chipLabel}>{c.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    ) : null;
 
   const noteAndActions = (
     <>
@@ -360,6 +400,7 @@ export function TransactionsScreen() {
                   <View style={styles.amountDateCell}>{dateField}</View>
                 </View>
                 {categorySection}
+                {cardSection}
                 {noteAndActions}
               </View>
             ) : (
@@ -376,6 +417,7 @@ export function TransactionsScreen() {
               {typeToggle}
               {amountField}
               {categorySection}
+              {cardSection}
               {dateField}
               {noteAndActions}
             </View>

@@ -264,3 +264,32 @@ describe('transactionsStore', () => {
     expect(repos.transactions.renameCategoryInTransactions).not.toHaveBeenCalled();
   });
 });
+
+describe('transactionsStore — cardId (spec 002 2026-09-29 amendment)', () => {
+  it('passes cardId through when creating an expense tagged with a card', async () => {
+    const repos = createMockRepos();
+    const { useTransactionsStore } = createTransactionsStore(repos);
+
+    await useTransactionsStore.getState().addTransaction({
+      type: 'expense',
+      amount: 45000,
+      category: 'Groceries',
+      date: new Date('2026-09-29'),
+      note: null,
+      cardId: 'card-1',
+    });
+
+    expect(repos.transactions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ cardId: 'card-1' })
+    );
+  });
+
+  it('passes a cardId update through like any other field', async () => {
+    const repos = createMockRepos();
+    const { useTransactionsStore } = createTransactionsStore(repos);
+
+    await useTransactionsStore.getState().updateTransaction('tx-1', { cardId: 'card-2' });
+
+    expect(repos.transactions.update).toHaveBeenCalledWith('tx-1', { cardId: 'card-2' });
+  });
+});

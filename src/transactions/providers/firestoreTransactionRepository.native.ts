@@ -43,6 +43,7 @@ function toTransaction(id: string, data: DocumentData): Transaction {
     category: data.category,
     date: (data.date as Timestamp).toDate(),
     note: data.note ?? null,
+    cardId: data.cardId ?? null,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
   };
@@ -80,6 +81,7 @@ export const firestoreTransactionRepository: TransactionRepository = {
       category: input.category,
       date: Timestamp.fromDate(input.date),
       note: input.note ?? null,
+      cardId: input.cardId ?? null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -90,6 +92,7 @@ export const firestoreTransactionRepository: TransactionRepository = {
       category: input.category,
       date: input.date,
       note: input.note ?? null,
+      cardId: input.cardId ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -103,6 +106,7 @@ export const firestoreTransactionRepository: TransactionRepository = {
     if (input.category !== undefined) data.category = input.category;
     if (input.date !== undefined) data.date = Timestamp.fromDate(input.date);
     if (input.note !== undefined) data.note = input.note;
+    if (input.cardId !== undefined) data.cardId = input.cardId;
     await updateDoc(doc(getFirestore(), `users/${uid}/transactions/${id}`), data);
   },
 

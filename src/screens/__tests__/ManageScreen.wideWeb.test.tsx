@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
+import { useCreditCardsStore } from '../../creditCards/store';
 import { useDebtsStore } from '../../debts/store';
 import { useTransactionsStore } from '../../transactions/store';
 import { ManageScreen } from '../ManageScreen';
@@ -13,6 +14,9 @@ jest.mock('../../budgets/store', () => ({
 }));
 jest.mock('../../debts/store', () => ({
   useDebtsStore: jest.fn(),
+}));
+jest.mock('../../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
 }));
 jest.mock('../../theme/useWideWeb', () => ({
   useWideWeb: () => true,
@@ -39,6 +43,28 @@ describe('ManageScreen (wide web, spec 009 amendment criterion 10)', () => {
         }) => unknown
       ) => selector({ debts: [], addDebt: jest.fn(), logPayment: jest.fn(), editBalance: jest.fn(), deleteDebt: jest.fn() })
     );
+    (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+      (
+        selector: (s: {
+          cards: never[];
+          payments: never[];
+          addCard: jest.Mock;
+          updateCard: jest.Mock;
+          deleteCard: jest.Mock;
+          logPayment: jest.Mock;
+          deletePayment: jest.Mock;
+        }) => unknown
+      ) =>
+        selector({
+          cards: [],
+          payments: [],
+          addCard: jest.fn(),
+          updateCard: jest.fn(),
+          deleteCard: jest.fn(),
+          logPayment: jest.fn(),
+          deletePayment: jest.fn(),
+        })
+    );
 
     await render(<ManageScreen />);
 
@@ -46,5 +72,6 @@ describe('ManageScreen (wide web, spec 009 amendment criterion 10)', () => {
     expect(screen.getByTestId('categories-panel')).toBeTruthy();
     expect(screen.getByTestId('budgets-panel')).toBeTruthy();
     expect(screen.getByTestId('debts-panel')).toBeTruthy();
+    expect(screen.getByTestId('credit-cards-panel')).toBeTruthy();
   });
 });

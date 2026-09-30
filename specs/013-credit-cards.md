@@ -1,6 +1,6 @@
 # 013 — Credit Cards (CLP)
 
-**Status:** approved
+**Status:** implemented
 **Depends on:** 000 (v1 scope — CLP only, this spec stays inside that; a
 second card in USD is an explicit future spec, not this one), 001, 002
 (this spec's 2026-09-29 amendment: an optional `cardId` on an expense),
@@ -212,3 +212,32 @@ overdraft repayment. Payments are immutable (delete and re-log a mistake).
 | 7 — Manage panel renders | Component | `CreditCardsPanel` test: balance/available/status/payoff shown; zero-activity card shows zero, not an error. |
 | 8 — dashboard includes cards | Component | `DashboardScreen` test: KPI sum includes every card's balance; one compact row per card. |
 | 9 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: uidB denied on uidA's cards and payments. |
+
+## Verification results
+
+Implemented 2026-09-29, tests first (each new file's tests failed on a
+missing module or a real assertion before any implementation code).
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1 — create a card | ✅ | `creditCardsStore.test.ts` (`addCard` → `cards.create`); `firestoreCreditCardRepository.native.test.ts` (writes under the uid, unset rate stored as `null`). |
+| 2 — tagging a purchase | ✅ | Covered by spec 002's own criteria 16–17; this spec's `TransactionsScreen`/`CreditCardsPanel` tests confirm the picker's cards come from `creditCards` and the balance math consumes `cardId` correctly. |
+| 3 — derived balance, live | ✅ | `creditCardMath.test.ts` — mixed transactions/payments, ignores other cards/income/untagged, and an edited or deleted transaction changes the result with no extra write (no cascade-delete needed, unlike spec 012). |
+| 4 — status boundaries, over-limit allowed | ✅ | `creditCardMath.test.ts` — exact at 1.499.999/1.500.000/2.000.000/2.000.001; `CreditCardsPanel.test.tsx` shows no badge below 75%, a badge from 75% up. |
+| 5 — payment validation | ✅ | `CreditCardsPanel.test.tsx` + `firestoreCreditCardPaymentRepository.native.test.ts` — reuses spec 008's `validatePaymentAmount`; a payment writes only to `creditCardPayments`, never `transactions`. |
+| 6 — payoff math matches spec 012 | ✅ | Extracted to `src/finance/revolvingPayoff.ts`; `overdraftMath.ts` re-exports it under its old names, and its existing test file passes unchanged — same module, both specs. |
+| 7 — Manage panel renders | ✅ | `CreditCardsPanel.test.tsx` — balance/available/status/payoff shown; a fresh card with no activity shows `$0`, not an error; wired into `ManageScreen` (both layouts) alongside Categories/Budgets/Debts. |
+| 8 — dashboard includes cards | ✅ | `DashboardScreen.test.tsx` — KPI sum includes every card's balance, combines correctly with debts and the overdraft line, one compact row per card. |
+| 9 — cross-user isolation | ✅ | `firebase/tests/creditCards.rules.test.ts`, 22/22 rules tests passing against the local emulator. |
+
+**What shipped:** `src/creditCards/` (`types`, `creditCardMath`,
+`creditCardsStore`, `store`, `providers/firestoreCreditCard{,Payment}Repository.{native,web}`),
+`src/finance/revolvingPayoff.ts` (extracted from `src/overdraft/overdraftMath.ts`,
+which now re-exports it), `src/screens/CreditCardsPanel.tsx` (in `ManageScreen`),
+`cardId` on `Transaction`/`NewTransactionInput` plus a "Paid with" picker in
+`TransactionsScreen` (spec 002's amendment), `firestore.rules` for the two
+new collections, and the dashboard's total-debt KPI/debt-section integration.
+
+461 unit/component tests pass, 22 Firestore rules tests pass, `tsc --noEmit`
+clean, web export builds. Staying at `implemented`, not `verified`: not yet
+exercised in the running app.

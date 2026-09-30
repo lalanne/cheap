@@ -3,11 +3,13 @@ import { Platform, StyleSheet } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
+import { useCreditCardsStore } from '../../creditCards/store';
 import { useOverdraftStore } from '../../overdraft/store';
 import { useTransactionsStore } from '../../transactions/store';
 import { DashboardScreen } from '../DashboardScreen';
 import type { Budget } from '../../budgets/types';
 import type { Debt } from '../../debts/types';
+import type { CreditCard, CreditCardPayment } from '../../creditCards/types';
 import type { OverdraftEvent, OverdraftLine } from '../../overdraft/types';
 import type { Category, Transaction } from '../../transactions/types';
 import { colors } from '../../theme/tokens';
@@ -27,6 +29,9 @@ jest.mock('../../debts/store', () => ({
 }));
 jest.mock('../../overdraft/store', () => ({
   useOverdraftStore: jest.fn(),
+}));
+jest.mock('../../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
 }));
 
 function localDate(year: number, month: number, day: number): Date {
@@ -54,6 +59,8 @@ function mockStores({
   debts = [],
   overdraftLine = null,
   overdraftEvents = [],
+  creditCards = [],
+  creditCardPayments = [],
 }: {
   transactions?: Transaction[];
   categories?: Category[];
@@ -61,6 +68,8 @@ function mockStores({
   debts?: Debt[];
   overdraftLine?: OverdraftLine | null;
   overdraftEvents?: OverdraftEvent[];
+  creditCards?: CreditCard[];
+  creditCardPayments?: CreditCardPayment[];
 }) {
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { transactions: Transaction[]; categories: Category[] }) => unknown) =>
@@ -75,6 +84,10 @@ function mockStores({
   (useOverdraftStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { line: OverdraftLine | null; events: OverdraftEvent[] }) => unknown) =>
       selector({ line: overdraftLine, events: overdraftEvents })
+  );
+  (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { cards: CreditCard[]; payments: CreditCardPayment[] }) => unknown) =>
+      selector({ cards: creditCards, payments: creditCardPayments })
   );
 }
 
@@ -469,5 +482,61 @@ describe('DashboardScreen — overdraft line (spec 012 criterion 12)', () => {
 
     expect(screen.queryByTestId('dashboard-overdraft-row')).toBeNull();
     expect(screen.getByTestId('dashboard-debts-empty')).toBeTruthy();
+  });
+});
+
+describe('DashboardScreen — credit cards (spec 013 criterion 8)', () => {
+  const VISA: CreditCard = {
+    id: 'card-1',
+    name: 'Visa CLP',
+    limit: 2000000,
+    minimumPayment: 100000,
+    monthlyRate: 3.45,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  it("adds every card's balance to the total-debt KPI", async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', amount: 45000, cardId: 'card-1' })],
+      creditCards: [VISA],
+    });
+    await render(<DashboardScreen />);
+
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$45.000')).toBeTruthy();
+  });
+
+  it('shows one compact row per card in the debt section', async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', amount: 45000, cardId: 'card-1' })],
+      creditCards: [VISA],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-card-card-1');
+    expect(within(row).getByText('Visa CLP')).toBeTruthy();
+    expect(within(row).getByText(/\$45\.000/)).toBeTruthy();
+  });
+
+  it('combines with debts and the overdraft line in the same KPI total', async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', amount: 45000, cardId: 'card-1' })],
+      creditCards: [VISA],
+      debts: [
+        {
+          id: 'd-1',
+          name: 'Loan',
+          originalAmount: 1000000,
+          currentBalance: 500000,
+          minimumPayment: 50000,
+          interestRate: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$545.000')).toBeTruthy();
   });
 });

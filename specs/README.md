@@ -25,7 +25,7 @@ This project is built spec-first. Rules:
 | 010 | [MCP server: financial data for Claude](010-mcp-server.md) | draft |
 | 011 | [Subcategories](011-subcategories.md) | implemented |
 | 012 | [Overdraft line](012-overdraft-line.md) | implemented (amended: optional rate, criteria 16–20) |
-| 013 | [Credit cards (CLP)](013-credit-cards.md) | approved |
+| 013 | [Credit cards (CLP)](013-credit-cards.md) | implemented |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 

@@ -2,10 +2,15 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 
 import type { Transaction } from '../../transactions/types';
 import { useTransactionsStore } from '../../transactions/store';
+import { useCreditCardsStore } from '../../creditCards/store';
 import { TransactionsScreen } from '../TransactionsScreen';
 
 jest.mock('../../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
+}));
+
+jest.mock('../../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
 }));
 
 jest.mock('../../theme/useWideWeb', () => ({
@@ -24,6 +29,11 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
   };
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: typeof state) => unknown) => selector(state)
+  );
+  // No card-picker behavior is under test in this file — an empty card
+  // list keeps the picker hidden, same as a fresh account with no cards.
+  (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { cards: never[] }) => unknown) => selector({ cards: [] })
   );
   return state;
 }

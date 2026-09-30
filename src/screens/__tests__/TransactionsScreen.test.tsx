@@ -3,6 +3,8 @@ import { Platform, StyleSheet } from 'react-native';
 
 import type { Transaction } from '../../transactions/types';
 import { useTransactionsStore } from '../../transactions/store';
+import { useCreditCardsStore } from '../../creditCards/store';
+import type { CreditCard } from '../../creditCards/types';
 import { TransactionsScreen } from '../TransactionsScreen';
 import { colors } from '../../theme/tokens';
 
@@ -12,6 +14,9 @@ function flatten(style: unknown) {
 
 jest.mock('../../transactions/store', () => ({
   useTransactionsStore: jest.fn(),
+}));
+jest.mock('../../creditCards/store', () => ({
+  useCreditCardsStore: jest.fn(),
 }));
 
 function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
@@ -27,8 +32,28 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: typeof state) => unknown) => selector(state)
   );
+  // Every test in this file goes through mockStore(); defaulting the card
+  // list to empty here means only the tests about the picker itself need
+  // to call mockCreditCards([...]) afterwards to override it.
+  mockCreditCards();
   return state;
 }
+
+function mockCreditCards(cards: CreditCard[] = []) {
+  (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: { cards: CreditCard[] }) => unknown) => selector({ cards })
+  );
+}
+
+const VISA: CreditCard = {
+  id: 'card-1',
+  name: 'Visa CLP',
+  limit: 2000000,
+  minimumPayment: 100000,
+  monthlyRate: 3.45,
+  createdAt: new Date('2026-09-01'),
+  updatedAt: new Date('2026-09-01'),
+};
 
 const EXISTING: Transaction = {
   id: 'tx-1',
@@ -274,6 +299,92 @@ describe('TransactionsScreen — Add moves beside each month (spec 002 2026-09-2
 
     expect(store.addTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+    );
+  });
+});
+
+describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 amendment)', () => {
+  it('offers no card picker when there are no cards yet', async () => {
+    mockStore();
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+
+    expect(screen.queryByTestId('card-picker')).toBeNull();
+  });
+
+  it('defaults an expense to no card, and offers a picker once a card exists (criterion 16)', async () => {
+    const store = mockStore();
+    mockCreditCards([VISA]);
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '45000');
+    await fireEvent.press(screen.getByTestId('category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ cardId: null }));
+  });
+
+  it('tags the expense with the picked card (criterion 16)', async () => {
+    const store = mockStore();
+    mockCreditCards([VISA]);
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '45000');
+    await fireEvent.press(screen.getByTestId('category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('card-option-card-1'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ cardId: 'card-1' }));
+  });
+
+  it('offers no card picker on the income form, and never tags an income transaction (criterion 16)', async () => {
+    const store = mockStore();
+    mockCreditCards([VISA]);
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+    await fireEvent.press(screen.getByTestId('type-income'));
+
+    expect(screen.queryByTestId('card-picker')).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '500000');
+    await fireEvent.press(screen.getByTestId('category-chip-Income'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'income', cardId: null }));
+  });
+
+  it('clears cardId when switching from expense back to income after picking a card', async () => {
+    const store = mockStore();
+    mockCreditCards([VISA]);
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('add-transaction-button'));
+    await fireEvent.changeText(screen.getByTestId('amount-input'), '45000');
+    await fireEvent.press(screen.getByTestId('category-chip-Food'));
+    await fireEvent.press(screen.getByTestId('card-option-card-1'));
+    await fireEvent.press(screen.getByTestId('type-income'));
+    await fireEvent.press(screen.getByTestId('category-chip-Income'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'income', cardId: null }));
+  });
+
+  it('edits an existing transaction to add a card — only cardId changes (criterion 17)', async () => {
+    const store = mockStore({ transactions: [EXISTING] });
+    mockCreditCards([VISA]);
+    await render(<TransactionsScreen />);
+
+    await fireEvent.press(screen.getByTestId('transaction-row-tx-1'));
+    await fireEvent.press(screen.getByTestId('card-option-card-1'));
+    await fireEvent.press(screen.getByTestId('save-transaction-button'));
+
+    expect(store.updateTransaction).toHaveBeenCalledWith(
+      'tx-1',
+      expect.objectContaining({ amount: 45000, category: 'Food', cardId: 'card-1' })
     );
   });
 });
