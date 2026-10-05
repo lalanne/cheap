@@ -174,3 +174,19 @@ reached it.
 insets, same pattern `Screen.test.tsx` already uses) asserting the tab
 bar's `paddingTop` is at least the inset. 462 tests pass (up from 461),
 `tsc --noEmit` clean. Shipped in TestFlight build 8.
+
+### Amendment (2026-10-05, implemented): the tab bar's active indicator
+
+The 2px bottom-underline active indicator didn't read well in practice (user
+feedback after TestFlight build 8). Replaced from five options on a design
+canvas ("Tab Bar Style Options") with **option E**: a flat, transparent bar
+(no track, no line) where only the active tab's icon sits in a tight,
+solid-`colors.accent` capsule (`colors.onAccent` icon inside it); every
+inactive tab is a plain `colors.inkMuted` icon and label, nothing drawn
+around it. Each tab gained its own stroke-SVG icon (`src/components/
+TabIcon.tsx`) — the bar was text-only before.
+
+**Result:** ✅. `App.test.tsx` gained a regression test asserting exactly
+one tab's icon container (`tab-icon-${key}`) carries `colors.accent` as its
+background at a time, and that pressing a different tab moves it. 463 tests
+pass (up from 462), `tsc --noEmit` clean.
