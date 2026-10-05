@@ -13,6 +13,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
 import { OverdraftBanner } from './src/components/OverdraftBanner';
+import { TabIcon, type TabIconName } from './src/components/TabIcon';
 import { startCreditCardsSync } from './src/creditCards/store';
 import { startDebtsSync } from './src/debts/store';
 import { startOverdraftSync } from './src/overdraft/store';
@@ -31,11 +32,15 @@ import { colors, spacing, typography } from './src/theme/tokens';
 // Dashboard (deciding).
 type Tab = 'transactions' | 'overdraft' | 'manage' | 'dashboard';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'transactions', label: 'Log' },
-  { key: 'overdraft', label: 'Overdraft' },
-  { key: 'manage', label: 'Manage' },
-  { key: 'dashboard', label: 'Dashboard' },
+// Design canvas "Tab Bar Style Options", option E (chosen 2026-10-05):
+// a flat, transparent bar — no track, no underline — where only the
+// active tab's icon sits in a tight solid-accent capsule; everything
+// else about an inactive tab (icon and label) stays plain gray.
+const TABS: { key: Tab; label: string; icon: TabIconName }[] = [
+  { key: 'transactions', label: 'Log', icon: 'transactions' },
+  { key: 'overdraft', label: 'Overdraft', icon: 'overdraft' },
+  { key: 'manage', label: 'Manage', icon: 'manage' },
+  { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
 ];
 
 export default function App() {
@@ -112,16 +117,20 @@ function MainApp({
     <View testID="main-app" style={styles.root}>
       <StatusBar style="dark" />
       <View style={[styles.tabBar, { paddingTop: insets.top + spacing.sm }]} testID="tab-bar">
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            testID={`tab-${tab.key}`}
-            style={activeTab === tab.key ? styles.tabActive : styles.tab}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={activeTab === tab.key ? styles.tabLabelActive : styles.tabLabel}>{tab.label}</Text>
-          </Pressable>
-        ))}
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable key={tab.key} testID={`tab-${tab.key}`} style={styles.tab} onPress={() => setActiveTab(tab.key)}>
+              <View
+                testID={`tab-icon-${tab.key}`}
+                style={isActive ? styles.tabIconBubbleActive : styles.tabIconBubble}
+              >
+                <TabIcon name={tab.icon} color={isActive ? colors.onAccent : colors.inkMuted} />
+              </View>
+              <Text style={isActive ? styles.tabLabelActive : styles.tabLabel}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
       <OverdraftBanner onPress={() => setActiveTab('overdraft')} />
       {activeScreen}
@@ -136,33 +145,47 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm + 4,
     // paddingTop comes from MainApp (safe-area inset + spacing.sm), not here.
-    gap: spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
   },
   tab: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  tabActive: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.accent,
+  // Only the active tab's icon sits in a capsule (option E) — an inactive
+  // one gets the same padding with no fill, so the icon doesn't jump
+  // position when the active tab changes.
+  tabIconBubble: {
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.sm + 1,
+  },
+  tabIconBubbleActive: {
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.accent,
   },
   tabLabel: {
     fontFamily: typography.bodyBold,
-    fontSize: typography.size.sm,
-    color: colors.inkSecondary,
+    fontSize: typography.size.xs + 1,
+    color: colors.inkMuted,
   },
   tabLabelActive: {
     fontFamily: typography.bodyBold,
-    fontSize: typography.size.sm,
+    fontSize: typography.size.xs + 1,
     color: colors.ink,
   },
 });

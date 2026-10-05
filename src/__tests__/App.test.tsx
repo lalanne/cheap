@@ -7,6 +7,7 @@ import { startCreditCardsSync, useCreditCardsStore } from '../creditCards/store'
 import { startDebtsSync, useDebtsStore } from '../debts/store';
 import { startOverdraftSync, useOverdraftStore } from '../overdraft/store';
 import { startTransactionsSync, useTransactionsStore } from '../transactions/store';
+import { colors } from '../theme/tokens';
 import App from '../../App';
 
 jest.mock('expo-font', () => ({
@@ -209,6 +210,27 @@ describe('App', () => {
     const tabBar = screen.getByTestId('tab-bar');
     const flat = Object.assign({}, ...[].concat(tabBar.props.style as never));
     expect(flat.paddingTop).toBeGreaterThanOrEqual(mockInsets.top);
+  });
+
+  it("shows a Strava-style bubble: only the active tab's icon sits in a solid-accent capsule, the rest plain (design canvas option E)", async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    function iconBubbleStyle(tab: string) {
+      const node = screen.getByTestId(`tab-icon-${tab}`);
+      return Object.assign({}, ...[].concat(node.props.style as never));
+    }
+
+    expect(iconBubbleStyle('transactions').backgroundColor).toBe(colors.accent);
+    expect(iconBubbleStyle('overdraft').backgroundColor).not.toBe(colors.accent);
+    expect(iconBubbleStyle('manage').backgroundColor).not.toBe(colors.accent);
+    expect(iconBubbleStyle('dashboard').backgroundColor).not.toBe(colors.accent);
+
+    await fireEvent.press(screen.getByTestId('tab-manage'));
+
+    expect(iconBubbleStyle('manage').backgroundColor).toBe(colors.accent);
+    expect(iconBubbleStyle('transactions').backgroundColor).not.toBe(colors.accent);
   });
 
   it('shows exactly four tabs — Log, Overdraft, Manage, Dashboard — and switches screens (spec 009 amendment, spec 012 criterion 14)', async () => {
