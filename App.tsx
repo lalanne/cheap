@@ -6,9 +6,9 @@ import { PublicSans_400Regular } from '@expo-google-fonts/public-sans/400Regular
 import { PublicSans_600SemiBold } from '@expo-google-fonts/public-sans/600SemiBold';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from './src/auth/store';
 import { startBudgetsSync } from './src/budgets/store';
@@ -84,28 +84,49 @@ export default function App() {
       activeScreen = <TransactionsScreen />;
     }
 
-    content = (
-      <View testID="main-app" style={styles.root}>
-        <StatusBar style="dark" />
-        <View style={styles.tabBar} testID="tab-bar">
-          {TABS.map((tab) => (
-            <Pressable
-              key={tab.key}
-              testID={`tab-${tab.key}`}
-              style={activeTab === tab.key ? styles.tabActive : styles.tab}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={activeTab === tab.key ? styles.tabLabelActive : styles.tabLabel}>{tab.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <OverdraftBanner onPress={() => setActiveTab('overdraft')} />
-        {activeScreen}
-      </View>
-    );
+    content = <MainApp activeTab={activeTab} setActiveTab={setActiveTab} activeScreen={activeScreen} />;
   }
 
   return <SafeAreaProvider>{content}</SafeAreaProvider>;
+}
+
+// A separate component, not inline in App() — useSafeAreaInsets() only
+// resolves real values for a descendant of SafeAreaProvider, and App()
+// itself builds `content` as a sibling of that provider, not inside it.
+// Regression: the tab bar had no top-inset padding at all (unlike every
+// screen's own content, via the Screen primitive, spec 003's 2026-09-18
+// fix) because it sits here, above/outside every individual Screen — a
+// real device (status bar, notch, or TestFlight's own banner) covered it.
+function MainApp({
+  activeTab,
+  setActiveTab,
+  activeScreen,
+}: {
+  activeTab: Tab;
+  setActiveTab: (tab: Tab) => void;
+  activeScreen: ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View testID="main-app" style={styles.root}>
+      <StatusBar style="dark" />
+      <View style={[styles.tabBar, { paddingTop: insets.top + spacing.sm }]} testID="tab-bar">
+        {TABS.map((tab) => (
+          <Pressable
+            key={tab.key}
+            testID={`tab-${tab.key}`}
+            style={activeTab === tab.key ? styles.tabActive : styles.tab}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text style={activeTab === tab.key ? styles.tabLabelActive : styles.tabLabel}>{tab.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <OverdraftBanner onPress={() => setActiveTab('overdraft')} />
+      {activeScreen}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -116,7 +137,7 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    // paddingTop comes from MainApp (safe-area inset + spacing.sm), not here.
     gap: spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

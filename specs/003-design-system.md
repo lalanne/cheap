@@ -153,3 +153,24 @@ carried by an icon and wording, never color alone.
 
 Added to `src/theme/tokens.ts` as `colors.status.*` when spec 012 is
 implemented; no screen uses raw hex for these.
+
+### Amendment (2026-10-04, implemented): the tab bar had no top safe-area padding
+
+Found on a real device (TestFlight build 7): the top tab bar (`Log` /
+`Overdraft` / `Manage` / `Dashboard`, added by spec 009's 2026-09-23
+amendment) was covered by the status bar/TestFlight banner — the same
+class of bug this spec's 2026-09-18 amendment already fixed for every
+screen's own content via the `Screen` primitive, but the tab bar sits in
+`App.tsx` above/outside every individual `Screen`, so that fix never
+reached it.
+
+- `App.tsx`'s tab bar now gets `insets.top + spacing.sm` as its top
+  padding, read via `useSafeAreaInsets()` in a new `MainApp` component —
+  a separate component was required because the hook only resolves real
+  values for a descendant of `SafeAreaProvider`, and `App()` itself builds
+  its content as a *sibling* of that provider, not inside it.
+
+**Result:** ✅. `App.test.tsx` gained a regression test (mocked non-zero
+insets, same pattern `Screen.test.tsx` already uses) asserting the tab
+bar's `paddingTop` is at least the inset. 462 tests pass (up from 461),
+`tsc --noEmit` clean. Shipped in TestFlight build 8.

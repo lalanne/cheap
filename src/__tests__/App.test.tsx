@@ -42,6 +42,16 @@ jest.mock('../creditCards/store', () => ({
   startCreditCardsSync: jest.fn(() => () => {}),
 }));
 
+// Overrides jest.setup.js's global (zero-inset) mock with a real device's
+// top inset, so the regression below can assert against it — same pattern
+// Screen.test.tsx already uses for this library.
+const mockInsets = { top: 47, bottom: 34, left: 0, right: 0 };
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => mockInsets,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  SafeAreaProvider: ({ children }: any) => children,
+}));
+
 function mockAuthState(state: {
   status: 'initializing' | 'signedOut' | 'signedIn';
   user?: { emailVerified: boolean } | null;
@@ -189,6 +199,16 @@ describe('App', () => {
     await render(<App />);
 
     expect(startCreditCardsSync).toHaveBeenCalled();
+  });
+
+  it("pads the tab bar below the device's safe-area top inset (regression: covered by the status bar/TestFlight banner on a real device, spec 003's 2026-09-18 fix never reached this bar since it sits outside every Screen)", async () => {
+    mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
+
+    await render(<App />);
+
+    const tabBar = screen.getByTestId('tab-bar');
+    const flat = Object.assign({}, ...[].concat(tabBar.props.style as never));
+    expect(flat.paddingTop).toBeGreaterThanOrEqual(mockInsets.top);
   });
 
   it('shows exactly four tabs — Log, Overdraft, Manage, Dashboard — and switches screens (spec 009 amendment, spec 012 criterion 14)', async () => {
