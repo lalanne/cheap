@@ -21,6 +21,14 @@ jobs:
           node-version: '26'
           cache: npm
 
+      # package-lock.json is deliberately pinned to npm 10.9.8 to match
+      # EAS Build's builder (see the EAS deploy gotchas) — the runner's
+      # default npm (11.x on this Node version) resolves optional
+      # platform packages differently and fails `npm ci`'s strict
+      # lockfile check. Match the same npm version here instead of
+      # keeping two lockfile-compatible versions in sync.
+      - run: npm install -g npm@10.9.8
+
       - run: npm ci
 
       - run: npx tsc --noEmit

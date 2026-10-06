@@ -41,6 +41,15 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   gotcha already documented for this repo (`feedback-cheap-eas-deploy-
   gotchas`): matching the real toolchain avoids a class of "works here,
   fails there" drift, more valuable than always tracking the newest LTS.
+- **npm pinned to 10.9.8 in the workflow too, not just locally.**
+  `package-lock.json` is already pinned to match EAS Build's builder
+  (npm 10.9.8); GitHub's Node 26 runner image ships npm 11.x by default,
+  which resolves optional platform packages (e.g. `lightningcss-*`)
+  differently against that same lockfile and fails `npm ci`'s strict
+  consistency check — found by actually running this workflow, not
+  guessed. Fixed with `npm install -g npm@10.9.8` right after
+  `setup-node`, so CI and EAS share one npm version and one lockfile
+  instead of needing two kept in sync.
 - **Caching:** `actions/setup-node`'s built-in `cache: npm` (keyed on
   `package-lock.json`) for `node_modules`, plus caching
   `~/.cache/firebase/emulators` so the rules job doesn't redownload the
@@ -70,6 +79,7 @@ jobs:
         with:
           node-version: '26'
           cache: npm
+      - run: npm install -g npm@10.9.8
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test -- --ci
