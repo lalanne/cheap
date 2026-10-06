@@ -41,6 +41,10 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   gotcha already documented for this repo (`feedback-cheap-eas-deploy-
   gotchas`): matching the real toolchain avoids a class of "works here,
   fails there" drift, more valuable than always tracking the newest LTS.
+- **A pinned JDK (Temurin 21) via `actions/setup-java`.** `firebase-tools`
+  requires Java 21+ for the Firestore/Auth emulator and `ubuntu-latest` has
+  no usable default — found the same way, by actually running the
+  workflow, not assumed.
 - **npm pinned to 10.9.8 in the workflow too, not just locally.**
   `package-lock.json` is already pinned to match EAS Build's builder
   (npm 10.9.8); GitHub's Node 26 runner image ships npm 11.x by default,
@@ -83,6 +87,10 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test -- --ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: actions/cache@v4
         with:
           path: ~/.cache/firebase/emulators
