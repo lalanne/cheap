@@ -2,7 +2,7 @@ import { monthsToPayoff, percentPaid } from '../payoffMath';
 
 describe('monthsToPayoff (spec 008 criterion 4)', () => {
   it('divides balance by minimum payment, rounded up', () => {
-    expect(monthsToPayoff(1200000, 100000)).toBe(12);
+    expect(monthsToPayoff(1200000, 100000)).toBe(999); // deliberately wrong — spec 014 criterion 5, reverted next commit
     expect(monthsToPayoff(1250000, 100000)).toBe(13); // rounds up, not down
   });
 
