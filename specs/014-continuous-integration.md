@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** implemented
+**Status:** verified
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -216,6 +216,9 @@ failures found and fixed along the way, not guessed at:
   with `actions/setup-java` (bumped to v5 after v4 flagged as deprecated).
 - Third run: clean, 1m45s (run
   [37405016989](https://github.com/lalanne/cheap/actions/runs/37405016989)).
+- Restructured into three gated jobs after discussion (fail fast on cost,
+  not just latency); re-verified live again on the new structure,
+  including the gating itself — see criterion 5.
 
 | Criterion | Result | Evidence |
 |-----------|--------|----------|
@@ -223,6 +226,7 @@ failures found and fixed along the way, not guessed at:
 | 2 — a real failure is caught and visible | ✅ | Pushed a deliberately wrong assertion (`payoffMath.test.ts`); the run failed at the `npm test` step specifically (later steps correctly skipped), and the log named the exact test, file, and expected/received values — [run 37405375673](https://github.com/lalanne/cheap/actions/runs/37405375673). Reverted immediately after. |
 | 3 — no manual setup, no real project touched | ✅ | Workflow review: no `secrets.*` reference anywhere; `test:rules` runs against `demo-cheap`, the same fake project id used locally. Every run succeeded from a clean checkout with nothing configured in the repo settings. |
 | 4 — caching works | ✅ | Cold run: 2m24s. Re-run on the same commit (cache hit on both `node_modules` and the emulator JARs): 1m45s–1m47s — consistently faster. |
+| 5 — gating skips downstream jobs | ✅ | Pushed a deliberate type error: `static-analysis` failed, `unit`/`integration` both showed as skipped, 0s, never run — [run 37406996338](https://github.com/lalanne/cheap/actions/runs/37406996338). Reverted, then pushed a deliberately wrong (type-valid) assertion: `static-analysis` passed, `unit` failed, `integration` skipped — [run 37407097588](https://github.com/lalanne/cheap/actions/runs/37407097588). Reverted immediately after. |
 
 **What shipped:** `.github/workflows/ci.yml`, this spec. No application
 code changed — this is the test suite everything else already built,
