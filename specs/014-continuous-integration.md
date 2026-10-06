@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified
+**Status:** implemented
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -36,6 +36,28 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   `main`.** Matches how this repo actually works — a branch per change,
   PR'd into `main` (per `CLAUDE.md`'s git rule) — so a check fails on the
   branch before it's ever proposed for merge, not just at PR time.
+- **Three jobs, gated in sequence (`needs:`), not run in parallel —
+  `static-analysis` → `unit` → `integration`.** Deliberate, not the
+  default: no point spending minutes on unit tests against code that
+  doesn't even type-check, or on the emulator-backed integration suite if
+  the unit layer already failed — matches CLAUDE.md's own ordering (unit
+  is "the bulk of the suite, fastest feedback," ahead of integration). The
+  trade-off, made on purpose: a *clean* run takes about the same total
+  time as before (stages still run one after another, not concurrently),
+  in exchange for a *broken* run stopping at the first failing stage
+  instead of burning minutes on the rest, and each stage getting its own
+  named status check instead of one combined pass/fail. Pure parallel
+  jobs would finish a clean run faster but waste the later stages'
+  minutes whenever an earlier one was always going to fail — not the
+  right trade for this repo's test pyramid.
+- **No separate "acceptance" or "e2e" job.** "Acceptance" isn't a
+  distinct runnable suite in this repo — per CLAUDE.md's test layout, it's
+  a traceability label: each spec's Verification plan maps a Given/When/
+  Then criterion onto specific unit or integration tests that already run
+  in those two jobs, not a separate test runner. An `e2e` job would have
+  nothing to run — no E2E tests exist yet, deliberately (CLAUDE.md, citing
+  `da2`'s experience building one speculatively and it adding no value);
+  add that job only when a spec concretely needs the layer, not now.
 - **Node version pinned to this project's actual local version (26)**,
   not a floating LTS alias — same reasoning as the EAS npm-version
   gotcha already documented for this repo (`feedback-cheap-eas-deploy-
@@ -65,7 +87,10 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
 
 ## Requirements
 
-`.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` — three jobs, each repeating its own
+checkout/install (cheap relative to the free-minutes budget; see
+Decisions), gated with `needs:` so a later job never starts once an
+earlier one has failed:
 
 ```yaml
 name: CI
@@ -75,7 +100,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  static-analysis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,7 +111,31 @@ jobs:
       - run: npm install -g npm@10.9.8
       - run: npm ci
       - run: npx tsc --noEmit
+
+  unit:
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm install -g npm@10.9.8
+      - run: npm ci
       - run: npm test -- --ci
+
+  integration:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm install -g npm@10.9.8
+      - run: npm ci
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -97,10 +146,6 @@ jobs:
           key: firebase-emulators-${{ runner.os }}
       - run: npm run test:rules
 ```
-
-A single job, steps run in order, any failing step fails the run — no
-need for separate parallel jobs at this suite's current size (a few
-minutes total); revisit only if the combined runtime becomes annoying.
 
 ## Acceptance criteria
 
@@ -118,6 +163,10 @@ minutes total); revisit only if the combined runtime becomes annoying.
 4. **Given** repeated runs, **then** the `node_modules` and emulator-jar
    caches are reused (visibly faster on a cache hit vs. the first,
    cold run).
+5. **Given** a type error, **when** it's pushed, **then** the
+   `static-analysis` job fails and neither `unit` nor `integration` runs
+   at all (shown as skipped, not passed or failed) — and symmetrically, a
+   failing `unit` job skips `integration`.
 
 ## Out of scope
 
@@ -144,6 +193,7 @@ minutes total); revisit only if the combined runtime becomes annoying.
 | 2 — a real failure is caught and visible | Manual / CI run | Push a commit with one deliberately broken test (reverted after); confirm the workflow run fails and the failing step/test is identifiable from the UI/logs. |
 | 3 — no manual setup, no real project touched | Code review + CI run | Review the workflow for any step requiring a secret or external credential (none should exist); confirm a run succeeds from a clean checkout with nothing configured beyond the repo itself. |
 | 4 — caching works | Manual / CI run | Compare a cold run's duration/log (cache miss) against a second run on the same branch (cache hit). |
+| 5 — gating skips downstream jobs | Manual / CI run | Push a deliberate type error; confirm in the Actions UI that `unit`/`integration` show as skipped, not run. Separately, push a deliberately broken unit test with valid types; confirm `static-analysis` passes, `unit` fails, and `integration` shows as skipped. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
