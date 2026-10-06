@@ -35,6 +35,13 @@ jobs:
 
       - run: npm test -- --ci
 
+      # firebase-tools requires a JDK (21+) to run the Firestore/Auth
+      # emulators — ubuntu-latest has no usable one by default.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       # Keyed on the Firestore/Auth emulator JARs firebase-tools downloads
       # on first use — without this, every run redownloads them.
       - uses: actions/cache@v4
