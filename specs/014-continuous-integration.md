@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** draft
+**Status:** verified
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -152,4 +152,32 @@ above, same as spec 004/005's deploy-pipeline criteria.
 
 ## Verification results
 
-Not yet implemented.
+Implemented and verified 2026-10-06, against real GitHub Actions runs on
+this branch (not just a local read of the YAML) — including two real
+failures found and fixed along the way, not guessed at:
+
+- The first run failed on `npm ci`: the runner's default npm (11.x on
+  Node 26) disagreed with `package-lock.json` (pinned to npm 10.9.8 for
+  EAS Build) over optional platform packages. Fixed by pinning npm in the
+  workflow too; recorded in the EAS deploy gotchas memory as the same
+  error class hitting a second consumer.
+- The second run failed on `npm run test:rules`: `firebase-tools` needs a
+  JDK 21+ for the emulator, `ubuntu-latest` has no usable default. Fixed
+  with `actions/setup-java` (bumped to v5 after v4 flagged as deprecated).
+- Third run: clean, 1m45s (run
+  [37405016989](https://github.com/lalanne/cheap/actions/runs/37405016989)).
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 1 — all three checks run, matching local | ✅ | Clean run: `npm ci`, `tsc --noEmit`, `npm test` (467 passing), `npm run test:rules` (22 passing) all ran and passed, same counts as running them locally. |
+| 2 — a real failure is caught and visible | ✅ | Pushed a deliberately wrong assertion (`payoffMath.test.ts`); the run failed at the `npm test` step specifically (later steps correctly skipped), and the log named the exact test, file, and expected/received values — [run 37405375673](https://github.com/lalanne/cheap/actions/runs/37405375673). Reverted immediately after. |
+| 3 — no manual setup, no real project touched | ✅ | Workflow review: no `secrets.*` reference anywhere; `test:rules` runs against `demo-cheap`, the same fake project id used locally. Every run succeeded from a clean checkout with nothing configured in the repo settings. |
+| 4 — caching works | ✅ | Cold run: 2m24s. Re-run on the same commit (cache hit on both `node_modules` and the emulator JARs): 1m45s–1m47s — consistently faster. |
+
+**What shipped:** `.github/workflows/ci.yml`, this spec. No application
+code changed — this is the test suite everything else already built,
+just running automatically now.
+
+Not yet a required branch-protection check (deliberately, per Decisions)
+— a repo-settings change for the user to make when they're ready, not
+bundled into this spec.

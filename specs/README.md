@@ -26,7 +26,7 @@ This project is built spec-first. Rules:
 | 011 | [Subcategories](011-subcategories.md) | implemented |
 | 012 | [Overdraft line](012-overdraft-line.md) | implemented (amended: optional rate, criteria 16–20) |
 | 013 | [Credit cards (CLP)](013-credit-cards.md) | implemented |
-| 014 | [Continuous integration (GitHub Actions)](014-continuous-integration.md) | draft |
+| 014 | [Continuous integration (GitHub Actions)](014-continuous-integration.md) | verified |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
 
