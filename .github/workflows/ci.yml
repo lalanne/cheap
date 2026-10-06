@@ -2,16 +2,25 @@ name: CI
 
 # Spec 014 — fast feedback on every push, not a deploy pipeline. The
 # actual iOS compile stays on EAS Build's own cloud (spec 004); this
-# workflow never touches a real Firebase project (the rules job runs
-# against the local emulator under a fake project id, same as running
-# `npm run test:rules` by hand) and needs no secrets.
+# workflow never touches a real Firebase project (the integration job
+# runs against the local emulator under a fake project id, same as
+# running `npm run test:rules` by hand) and needs no secrets.
+#
+# Three jobs, gated in sequence (`needs:`) rather than run in parallel —
+# deliberately: no point spending minutes on unit tests against code
+# that doesn't even type-check, or on the emulator-backed integration
+# suite if the unit layer (CLAUDE.md's "bulk of the suite, fastest
+# feedback") already failed. Costs a little latency on a clean run (the
+# stages still run one after another) to save minutes on a broken one,
+# and each stage gets its own named status check instead of one combined
+# pass/fail.
 on:
   push:
   pull_request:
     branches: [main]
 
 jobs:
-  test:
+  static-analysis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +42,37 @@ jobs:
 
       - run: npx tsc --noEmit
 
+  unit:
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm install -g npm@10.9.8
+
+      - run: npm ci
+
       - run: npm test -- --ci
+
+  integration:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm install -g npm@10.9.8
+
+      - run: npm ci
 
       # firebase-tools requires a JDK (21+) to run the Firestore/Auth
       # emulators — ubuntu-latest has no usable one by default.
