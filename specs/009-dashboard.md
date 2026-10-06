@@ -407,3 +407,29 @@ still holds: `Overdraft` is a daily-use surface, like `Log`.
 - The dashboard's "total debt remaining" KPI includes the overdraft
   balance, and its debt section shows the line as a compact row (spec 012,
   criterion 12).
+
+### Amendment (2026-10-05, implemented): sort the donut by amount, highest first
+
+Found in use: the "Where it went" ring and its legend had no defined order
+— `computeDonutSegments` just took `Object.entries()` of whatever record
+it was given, which (via `categoryTotalsForMonth`'s walk over transactions,
+newest first) put categories in "most recently transacted," not "most
+spent." The whole point of this section is "which category is costing me
+the most" — the segment at 12 o'clock and the top legend row should be
+that category.
+
+- `computeDonutSegments` now sorts its entries by amount descending before
+  building segments, ties broken alphabetically by category name (a
+  stable order, not whatever `Object.entries()` happened to return). This
+  is the one function both the ring and its legend are built from, so
+  there's no separate place to apply the same sort twice.
+- Applies to the drilled-in subcategory ring the same way — it's the same
+  function, fed `subcategoryTotalsFor`'s output instead.
+- No change to `categoryTotalsForMonth`/`rollUpCategoryTotals` themselves,
+  and no new criterion (this sharpens criterion 7's existing "spend-by-
+  category ring" requirement, not a new behavior).
+
+**Result:** ✅. `donutSegments.test.ts` gained tests: segments and their
+colors follow amount-descending order regardless of input order; equal
+amounts tie-break alphabetically. 467 tests pass (up from 463), `tsc
+--noEmit` clean.
