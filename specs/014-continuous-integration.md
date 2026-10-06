@@ -87,7 +87,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test -- --ci
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
