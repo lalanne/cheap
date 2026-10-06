@@ -1,6 +1,9 @@
 // Spec 008 — deliberately simple: balance / minimum payment, no
 // amortization or interest compounding. See the spec's Requirements
 // section for why.
+// prettier-ignore
+const _typeErrorForCiVerification: number = "deliberately wrong — spec 014 criterion 5, reverted next commit";
+
 export function monthsToPayoff(currentBalance: number, minimumPayment: number): number {
   if (currentBalance <= 0) {
     return 0;
