@@ -455,3 +455,65 @@ same as every other field. `TransactionsScreen` gained a "Paid with" chip
 row (testID `card-picker`), shown only when `type === 'expense'` and at
 least one card exists; switching to Income clears any picked card.
 461 tests pass, `tsc --noEmit` clean.
+
+### Amendment (2026-10-08, implemented): the date field showed tomorrow's date (issue #12)
+
+Found in use: both `DatePickerField.native.tsx` and `DatePickerField.web.tsx`
+formatted the displayed date with `date.toISOString().slice(0, 10)` — UTC,
+not local time. For a negative UTC offset (Chile is UTC-3/-4), this rolls
+the displayed date into the next calendar day for roughly the second half
+of each day — any local time where UTC has already crossed midnight. Hit
+on both platforms: the default (today) was shown a day ahead once it was
+late enough locally, and on iOS, picking a specific day on the calendar
+still showed the day after it, since the picker keeps its existing
+time-of-day component and reformats through the same UTC path.
+
+**Confirmed display-only, not a data bug:** neither file's save path uses
+the buggy formatted string — `TransactionsScreen`'s save payload uses the
+raw `date` state object directly (set via `DatePickerField`'s own
+`onChange`), never anything derived from `formatDisplay`/`formatIso`. A
+transaction saved while the field displayed the wrong date was still
+saved with the *correct* date underneath; only what was shown on screen
+was wrong.
+
+- **Requirement, formalized:** a date field's displayed value is always
+  built from the `Date` object's own local getters (`getFullYear()`/
+  `getMonth()`/`getDate()`, zero-padded), never `toISOString()` or any
+  other UTC-based formatting — the same convention already followed by
+  `TransactionsScreen.tsx`'s row dates and `groupByMonth.ts`, now made
+  explicit here since it was missed twice in the two `DatePickerField`
+  variants specifically.
+- **Extracted to one shared, tested function** —
+  `src/components/formatLocalDate.ts` — rather than fixing the same
+  logic twice in two files (the exact way it broke the first time).
+  Both `DatePickerField.native.tsx` and `DatePickerField.web.tsx` import
+  and call it; neither keeps its own copy.
+- The existing `DatePickerField.test.tsx` had a case for this (asserting
+  the displayed string), but its input — `new Date('2026-09-18')`, the
+  ISO-string constructor — is itself UTC midnight, so `toISOString()`
+  trivially round-tripped and the bug never showed up. The new test for
+  `formatLocalDate` uses the local-components `Date` constructor
+  (`new Date(y, m, d, h)`, matching how `DateTimePicker`'s real
+  `onChange` and `new Date()` actually produce values) and pins
+  `process.env.TZ` to a negative-offset zone, since a CI runner in UTC
+  (offset 0) would never exercise this bug either — same reasoning
+  applies to any future date-formatting code in this app, not just this
+  one function. The native component's existing render test is extended
+  the same way to confirm the fix reaches the screen, not just the
+  function; the web variant isn't rendered directly in tests (no
+  `.web.tsx` component in this app is — React Native's test renderer
+  doesn't understand a raw DOM `<input>`), so its correctness rests on
+  calling the same tested function, same trust level as every other
+  `.web` file in this codebase.
+
+**Result:** ✅. New `formatLocalDate.test.ts` (TZ-pinned, local-components
+`Date`) failed against the real bug before the fix; `DatePickerField.test.tsx`
+extended the same way for the native component's rendered output. Fixing
+also exposed a second, same-family bug in the *test suite* itself: the
+pre-existing `DatePickerField` test used `new Date('2026-09-18')` (the
+UTC-midnight ISO-string constructor) and asserted the display equalled
+`'2026-09-18'` — true only in UTC or a positive offset; under the fixed
+(correct) local-getter formatting, that instant isn't necessarily
+"18 September" locally at all. Switched that test to the same
+local-components constructor used everywhere else. 472 tests pass (up
+from 467), `tsc --noEmit` clean.
