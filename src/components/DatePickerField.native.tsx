@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Button } from './Button';
+import { formatLocalDate } from './formatLocalDate';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type DatePickerFieldProps = {
@@ -12,10 +13,6 @@ type DatePickerFieldProps = {
   testID?: string;
 };
 
-function formatDisplay(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 export function DatePickerField({ label, value, onChange, testID }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false);
 
@@ -23,7 +20,7 @@ export function DatePickerField({ label, value, onChange, testID }: DatePickerFi
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <Pressable testID={testID} style={styles.field} onPress={() => setOpen(true)}>
-        <Text style={styles.value}>{formatDisplay(value)}</Text>
+        <Text style={styles.value}>{formatLocalDate(value)}</Text>
       </Pressable>
       {open && (
         <View style={styles.pickerWrap}>

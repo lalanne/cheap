@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { formatLocalDate } from './formatLocalDate';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type DatePickerFieldProps = {
@@ -9,10 +10,6 @@ type DatePickerFieldProps = {
   onChange: (date: Date) => void;
   testID?: string;
 };
-
-function formatIso(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 export function DatePickerField({ label, value, onChange, testID }: DatePickerFieldProps) {
   return (
@@ -23,7 +20,7 @@ export function DatePickerField({ label, value, onChange, testID }: DatePickerFi
       <input
         data-testid={testID}
         type="date"
-        value={formatIso(value)}
+        value={formatLocalDate(value)}
         onChange={(e) => {
           const raw = e.target.value;
           if (raw) {
