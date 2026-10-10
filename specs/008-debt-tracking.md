@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** implemented
+**Status:** draft (amended 2026-10-10 — criterion 8 pending; issue #17)
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
@@ -97,6 +97,11 @@ users/{uid}/debts/{debtId}
    deletes it.
 7. Firestore security rules reject any read/write to
    `users/{uidA}/debts/*` from a client authenticated as `uidB`.
+8. **Given** a debt and a month X (2026-10-10 addendum below), **then**
+   `debtBalanceAsOf(debt, transactions, X)` returns `currentBalance` plus
+   the sum of this debt's logged payments dated after the end of X, or
+   `null` when the debt's `createdAt` is after the end of X; for the
+   current month it equals `currentBalance`.
 
 ## Out of scope
 
@@ -120,6 +125,7 @@ users/{uid}/debts/{debtId}
 | 5 — payment validation | Unit | Validation function tests: zero/negative/non-integer/over-balance amounts all rejected. |
 | 6 — paid-off debt stays visible | Unit | Store test: balance reaches 0, debt remains in state until explicit delete. |
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s debts, expect denial. |
+| 8 — balance as of a month end | Unit | Pure `debtBalanceAsOf` tests: current month = `currentBalance`; payments after X added back, payments on/before X ignored; month-end boundary (last day, 23:59 local); `createdAt` after X → `null`; zero payments after X. |
 
 Unit/component tests against mocked Firebase (matching specs 002/007's
 pattern); rules tests against the local emulator, never a real project.
@@ -162,3 +168,23 @@ Implemented 2026-09-22.
 
 Staying at `implemented`, not `verified` — nothing to click through in
 the running app until spec 009 wires up navigation.
+
+### Addendum (2026-10-10, draft): balance as of a month end (spec 009, issue #17)
+
+The dashboard's month selection needs "what did I owe at the end of month
+X". A `Debt` stores only `currentBalance`, so the past is reconstructed by
+**adding back the payments logged after X**: those are the expense
+transactions this spec's `logPayment` creates in the debt's category
+(spec 008, "Logging a payment"), so no new stored data is needed.
+
+- `debtBalanceAsOf(debt, transactions, X)` =
+  `currentBalance + Σ amount of expense transactions in category debt.name
+  dated after the last day of X`; `null` if `debt.createdAt` is after the
+  end of X (the debt did not exist yet). Pure function in
+  `src/debts/payoffMath.ts`'s neighborhood, no new queries.
+- **Known approximation:** direct balance edits (criterion 3) are
+  deliberately not logged, and renaming a debt changes the category its
+  payments match. Reconstruction therefore reflects *logged payments only*;
+  a month that preceded a manual correction shows the corrected history.
+  Accepted for v1 — logging balance edits as events is the exact fix and is
+  out of scope here (it would turn `Debt` into spec 012's ledger model).

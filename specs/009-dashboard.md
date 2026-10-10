@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented
+**Status:** draft (amended 2026-10-10 — criteria 13–17 pending; issue #17)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -200,6 +200,26 @@ dividing by zero.
     unaffected — they always reflect the current month (amendment
     2026-09-25).
 
+13. **Given** a month other than the current one is selected, **when** the
+    dashboard renders, **then** the spent/saved KPIs and the budgets list
+    show that month's figures (budget spend against each limit, using
+    that month's rolled-up totals), and their labels name the month
+    (amendment 2026-10-10).
+14. **Given** a month other than the current one is selected, **then** the
+    total-debt KPI and the debt section show each debt's **balance at the
+    end of that month** (definition in the amendment below), including
+    the overdraft line and credit cards, and the section title names the
+    month.
+15. **Given** a past month is selected, **when** the user taps the current
+    month's bar, **then** every section returns to current-month data
+    (same as criterion 12's existing "way back").
+16. **Given** a selected month before any debt, card, or the overdraft
+    line existed (or with no transactions/payments at all), **then** the
+    sections show their empty states with the month named, not zeros
+    pretending to be data and never an error.
+17. **Given** a selected month, **then** the suggestions feed is
+    unaffected — it always reflects the current month.
+
 ## Out of scope
 
 - Multi-debt payoff *strategy* (avalanche/snowball ordering) — per spec
@@ -228,6 +248,11 @@ dividing by zero.
 | 9 — three tabs, not five | Component | `App.test.tsx`: assert `tab-transactions`/`tab-manage`/`tab-dashboard` exist and `tab-categories`/`tab-budgets`/`tab-debts` no longer do. |
 | 10 — Manage tab composes the three panels, responsively | Component | `ManageScreen.test.tsx` (narrow/native: stacked, no wide-row testID) + `ManageScreen.wideWeb.test.tsx` (mocked wide: three-column row testID present) — same split-file pattern as this spec's own criterion 5; `CategoriesPanel`/`BudgetsPanel`/`DebtsPanel` tests carry over their existing add/edit/delete assertions unchanged. |
 | 11 — donut hover-to-reveal (web only) | Component | `DashboardScreen.test.tsx`: `Platform.OS` set to `'web'`, `fireEvent(circle, 'mouseEnter')`/`'mouseLeave'` on a `dashboard-donut-arc-*` testID, assert the center label appears/clears with the right category and amount; a native-default test asserts no hover label ever appears (no handler attached). |
+| 13 — spent/saved KPIs and budgets follow the month | Component | `DashboardScreen.test.tsx`: select a non-current bar, assert KPI values and each budget's spend/percent come from that month (distinct from the current month's in the fixture), labels carry the month suffix. |
+| 14 — debt KPI + section show month-end balances | Unit + Component | Pure `debtBalanceAsOf`/`cardBalanceAsOf`/`overdraftBalanceAsOf` tests (see specs 008/012/013 addenda); component test asserts the KPI sum and each row use the as-of figures and the title names the month. |
+| 15 — back to the current month | Component | Select a past bar, tap the last bar, assert KPIs/budgets/debt equal their initial (current-month) values. |
+| 16 — empty states for months with no data | Component | Select a month earlier than every debt's `createdAt` and with no transactions; assert the empty-state copy renders with the month named. |
+| 17 — suggestions unaffected | Component | Select a past bar; assert the suggestions feed is identical to before selecting. |
 | 12 — tap a trend bar to retarget the donut | Component | `DashboardScreen.test.tsx`: tap a non-current `dashboard-trend-bar-*`, assert the donut legend shows that month's rolled-up amounts (not the current month's); assert budgets/KPIs unchanged; assert an active drill-down clears; tap a different bar, assert it re-targets again. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
@@ -433,3 +458,60 @@ that category.
 colors follow amount-descending order regardless of input order; equal
 amounts tie-break alphabetically. 467 tests pass (up from 463), `tsc
 --noEmit` clean.
+
+### Amendment (2026-10-10, draft): the month selection scopes the whole dashboard (issue #17)
+
+Reverses part of the 2026-09-25 amendment's "Only the donut card moves"
+decision. In use, tapping a trend bar while the debt and expense sections
+kept showing today made the screen mix two months. Now one selection drives
+every figure on the screen **except the suggestions feed**.
+
+- **Selection state is unchanged** — `{ year, month } | null`, `null` =
+  current month. One value feeds everything below; no per-section state.
+- **Follows the selected month:** the donut (already), the budgets list,
+  the spent/saved KPIs, the total-debt KPI, and the debt section.
+- **Does not follow:** the suggestions feed. Suggestions are advice about
+  *now* (debt pace at today's balance, this month's overrun vs. last
+  month); re-deriving them for a past month would produce stale advice
+  presented as current. Criterion 17.
+- **Labels:** each section title/KPI label takes the same `— {Mon}` suffix
+  the donut title already uses (`DashboardScreen.tsx`'s `monthLabels`) when
+  a non-current month is selected; "this month" wording ("Spent this
+  month", "Budgets this month") is replaced by the suffix form so it is
+  never ambiguous.
+
+#### Debt: "debt for month X" = the balance at the end of month X
+
+(Decided 2026-10-10.) Not payments made in the month — the running balance
+as of the last instant of month X. For the current month this is simply
+today's balance, so the default view is unchanged. Each debt kind
+reconstructs it from the history it already has — details in each spec's
+2026-10-10 addendum:
+
+| Kind | As-of balance | Exactness |
+|------|---------------|-----------|
+| Debt (008) | `currentBalance` + payments logged *after* month X | Approximate — see 008 addendum |
+| Overdraft line (012) | its event ledger filtered to `date ≤ end of X` | Exact |
+| Credit card (013) | tagged expenses and payments filtered to `date ≤ end of X` | Exact |
+
+The total-debt KPI is the sum of these three for the selected month.
+Entities that did not exist yet at the end of month X (a debt's
+`createdAt` after it; a card with no activity yet; a line with no events
+yet) are left out, not shown as zero.
+
+#### Empty states for past months
+
+A month with nothing to show renders the section's existing empty-state
+copy, extended with the month ("No debts recorded as of Aug."), rather
+than zeros or a blank card. Criterion 16.
+
+#### Resolved from the issue's open questions
+
+1. Debt definition → balance at month end (above).
+2. Past months with no data → empty state naming the month.
+3. Visual cue → `— {Mon}` suffix on every month-scoped section.
+4. Budgets → follow the month; suggestions → stay on the current month.
+
+**Status of this amendment:** draft, awaiting approval. Specs 008, 012, 013
+are reopened to `draft` for their addenda; none of the four moves back to
+`implemented` until criteria 13–17 (and the addenda's) pass.

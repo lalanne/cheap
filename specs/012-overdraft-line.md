@@ -1,6 +1,6 @@
 # 012 — Overdraft Line
 
-**Status:** implemented
+**Status:** draft (amended 2026-10-10 — criterion 25 pending; issue #17)
 **Depends on:** 000, 001, 002 (interest/fees create regular expense
 transactions), 003 (primitives/tokens), 008 (this is a debt with its own
 shape — see "Why not a plain Debt"), 009 (shell banner, dashboard debt KPI)
@@ -486,3 +486,15 @@ additive at `≥900px`.
 
 392 unit/component tests pass (up from 387), 19 Firestore rules tests pass
 (unaffected — no data model change), `tsc --noEmit` clean.
+
+### Addendum (2026-10-10, draft): balance as of a month end (spec 009, issue #17)
+
+**Criterion 25.** **Given** the line's events and a month X, **then**
+`balanceAsOf(events, X)` = `Σ(draw + interest + fee) − Σ(payment)` over
+events dated on or before the last day of X (exact — the balance is already
+derived from the ledger, so no approximation), `null` when no event is dated
+on or before X, and equal to `balanceOf(events)` for the current month.
+Verified by pure-function unit tests in `overdraftMath.test.ts`: mixed
+events straddling the boundary, an event on the last day (included), one on
+the first of the next month (excluded), no events yet (`null`), current
+month = `balanceOf`.

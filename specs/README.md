@@ -20,12 +20,12 @@ This project is built spec-first. Rules:
 | 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
 | 006 | [Responsive web layout](006-responsive-web-layout.md) | implemented |
 | 007 | [Category budgets](007-budgets.md) | implemented |
-| 008 | [Debt tracking](008-debt-tracking.md) | implemented |
-| 009 | [Dashboard](009-dashboard.md) | implemented |
+| 008 | [Debt tracking](008-debt-tracking.md) | draft (amended 2026-10-10: criterion 8, balance as of month end — #17) |
+| 009 | [Dashboard](009-dashboard.md) | draft (amended 2026-10-10: criteria 13–17, month selection scopes the dashboard — #17) |
 | 010 | [MCP server: financial data for Claude](010-mcp-server.md) | draft |
 | 011 | [Subcategories](011-subcategories.md) | implemented |
-| 012 | [Overdraft line](012-overdraft-line.md) | implemented (amended: optional rate, criteria 16–20) |
-| 013 | [Credit cards (CLP)](013-credit-cards.md) | implemented |
+| 012 | [Overdraft line](012-overdraft-line.md) | draft (amended 2026-10-10: criterion 25, balance as of month end — #17) |
+| 013 | [Credit cards (CLP)](013-credit-cards.md) | draft (amended 2026-10-10: criterion 10, balance as of month end — #17) |
 | 014 | [Continuous integration (GitHub Actions)](014-continuous-integration.md) | verified |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.
