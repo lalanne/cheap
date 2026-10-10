@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** draft (amended 2026-10-10 — criterion 8 pending; issue #17)
+**Status:** implemented (amended 2026-10-10: criterion 8)
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
@@ -188,3 +188,5 @@ transactions this spec's `logPayment` creates in the debt's category
   a month that preceded a manual correction shows the corrected history.
   Accepted for v1 — logging balance edits as events is the exact fix and is
   out of scope here (it would turn `Debt` into spec 012's ledger model).
+
+**Result (2026-10-10):** ✅ criterion 8 — `payoffMath.test.ts` (`debtBalanceAsOf`: payments added back, month-end boundary, other categories/income ignored, `createdAt` after the month → `null`).

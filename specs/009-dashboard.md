@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** draft (amended 2026-10-10 — criteria 13–17 pending; issue #17)
+**Status:** implemented (amended 2026-10-10: criteria 13–17)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -512,6 +512,14 @@ than zeros or a blank card. Criterion 16.
 3. Visual cue → `— {Mon}` suffix on every month-scoped section.
 4. Budgets → follow the month; suggestions → stay on the current month.
 
-**Status of this amendment:** draft, awaiting approval. Specs 008, 012, 013
-are reopened to `draft` for their addenda; none of the four moves back to
-`implemented` until criteria 13–17 (and the addenda's) pass.
+**Status of this amendment:** approved and implemented (2026-10-10). Specs 008, 012, 013 were reopened
+for their addenda and are `implemented` again with it.
+
+**Results (2026-10-10):** ✅ criteria 13–17, test-first (new tests confirmed
+failing before the code). `DashboardScreen.test.tsx` — new describe block
+covering each criterion; the 2026-09-25 criterion-12 test no longer asserts
+that budgets/KPIs stay on the current month (that decision is reversed
+above). Pure functions: `debtBalanceAsOf` (`payoffMath.test.ts`),
+`balanceAsOf` (`overdraftMath.test.ts`), `cardBalanceAsOf`
+(`creditCardMath.test.ts`), `startOfNextMonth` (`monthBounds.test.ts`).
+491 tests pass, `tsc --noEmit` clean. Not yet checked in the running app.
