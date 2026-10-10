@@ -1,6 +1,6 @@
 # 013 — Credit Cards (CLP)
 
-**Status:** implemented
+**Status:** draft (amended 2026-10-10 — criterion 10 pending; issue #17)
 **Depends on:** 000 (v1 scope — CLP only, this spec stays inside that; a
 second card in USD is an explicit future spec, not this one), 001, 002
 (this spec's 2026-09-29 amendment: an optional `cardId` on an expense),
@@ -241,3 +241,15 @@ new collections, and the dashboard's total-debt KPI/debt-section integration.
 461 unit/component tests pass, 22 Firestore rules tests pass, `tsc --noEmit`
 clean, web export builds. Staying at `implemented`, not `verified`: not yet
 exercised in the running app.
+
+### Addendum (2026-10-10, draft): balance as of a month end (spec 009, issue #17)
+
+**Criterion 10.** **Given** a card and a month X, **then**
+`cardBalanceAsOf(cardId, transactions, payments, X)` = `Σ(tagged expenses) −
+Σ(payments)` restricted to items dated on or before the last day of X
+(exact — the balance is already a live sum), `null` when the card has no
+tagged expense or payment dated on or before X, and equal to
+`creditCardBalance(...)` for the current month. Verified by pure-function
+unit tests in `creditCardMath.test.ts`: items straddling the boundary,
+last-day inclusion, other cards/untagged/income ignored, no activity yet
+(`null`), current month = the unscoped balance.
