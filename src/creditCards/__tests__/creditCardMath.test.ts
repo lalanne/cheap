@@ -1,4 +1,4 @@
-import { availableOf, creditCardBalance, creditCardStatus, usedPercent } from '../creditCardMath';
+import { availableOf, cardBalanceAsOf, creditCardBalance, creditCardStatus, usedPercent } from '../creditCardMath';
 import type { CreditCardPayment } from '../types';
 import type { Transaction } from '../../transactions/types';
 
@@ -103,5 +103,38 @@ describe('creditCardStatus (criterion 4 — no "unused" tier, exact boundaries)'
 
   it('is over-limit above the limit — a purchase there is accepted, never blocked', () => {
     expect(creditCardStatus(2000001, LIMIT)).toBe('over-limit');
+  });
+});
+
+describe('cardBalanceAsOf (spec 013 criterion 10 — balance at the end of a month)', () => {
+  const aug = { year: 2026, month: 8 };
+
+  it('sums only tagged expenses and payments dated on or before the month end', () => {
+    const transactions = [
+      expenseTx(45000, 'card-1', { date: new Date(2026, 7, 31, 23, 59) }),
+      expenseTx(12000, 'card-1', { date: new Date(2026, 8, 1, 0, 0) }),
+      expenseTx(9000, 'card-2', { date: new Date(2026, 7, 5) }),
+      expenseTx(7000, null, { date: new Date(2026, 7, 6) }),
+      expenseTx(5000, 'card-1', { type: 'income', date: new Date(2026, 7, 7) }),
+    ];
+    const payments = [
+      { ...payment(20000, 'card-1'), date: new Date(2026, 7, 20) },
+      { ...payment(8000, 'card-1'), date: new Date(2026, 8, 3) },
+    ];
+    expect(cardBalanceAsOf('card-1', transactions, payments, aug)).toBe(25000);
+  });
+
+  it('is null when the card has no activity dated on or before the month', () => {
+    const transactions = [expenseTx(12000, 'card-1', { date: new Date(2026, 8, 2) })];
+    expect(cardBalanceAsOf('card-1', transactions, [], aug)).toBeNull();
+    expect(cardBalanceAsOf('card-1', [], [], aug)).toBeNull();
+  });
+
+  it('equals creditCardBalance when nothing is dated after the month', () => {
+    const transactions = [expenseTx(45000, 'card-1', { date: new Date(2026, 7, 2) })];
+    const payments = [{ ...payment(5000, 'card-1'), date: new Date(2026, 7, 9) }];
+    expect(cardBalanceAsOf('card-1', transactions, payments, aug)).toBe(
+      creditCardBalance('card-1', transactions, payments)
+    );
   });
 });

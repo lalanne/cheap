@@ -1,5 +1,6 @@
 import {
   availableOf,
+  balanceAsOf,
   balanceHistory,
   balanceOf,
   costSummary,
@@ -353,5 +354,34 @@ describe('balanceHistory (criterion 11 — 6 month-end balances, oldest first)',
       '2026-2',
     ]);
     expect(history.every((p) => p.balance === 0)).toBe(true);
+  });
+});
+
+describe('balanceAsOf (spec 012 criterion 25 — balance at the end of a month)', () => {
+  const aug = { year: 2026, month: 8 };
+
+  it('replays only events dated on or before the last day of the month', () => {
+    const events = [
+      ev('draw', 500000, d(2026, 8, 10)),
+      ev('payment', 100000, d(2026, 8, 31, 23)),
+      ev('draw', 300000, d(2026, 9, 1, 0)),
+      ev('interest', 9000, d(2026, 10, 2)),
+    ];
+    expect(balanceAsOf(events, aug)).toBe(400000);
+  });
+
+  it('is null when no event is dated on or before the month (line not in use yet)', () => {
+    expect(balanceAsOf([ev('draw', 500000, d(2026, 9, 2))], aug)).toBeNull();
+    expect(balanceAsOf([], aug)).toBeNull();
+  });
+
+  it('is 0, not null, when events exist but net to zero by month end', () => {
+    const events = [ev('draw', 200000, d(2026, 7, 3)), ev('payment', 200000, d(2026, 8, 5))];
+    expect(balanceAsOf(events, aug)).toBe(0);
+  });
+
+  it('equals balanceOf when no event is dated after the month', () => {
+    const events = [ev('draw', 200000, d(2026, 7, 3)), ev('fee', 1000, d(2026, 8, 5))];
+    expect(balanceAsOf(events, aug)).toBe(balanceOf(events));
   });
 });

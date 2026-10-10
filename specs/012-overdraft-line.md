@@ -1,6 +1,6 @@
 # 012 — Overdraft Line
 
-**Status:** draft (amended 2026-10-10 — criterion 25 pending; issue #17)
+**Status:** implemented (amended 2026-10-10: criterion 25)
 **Depends on:** 000, 001, 002 (interest/fees create regular expense
 transactions), 003 (primitives/tokens), 008 (this is a debt with its own
 shape — see "Why not a plain Debt"), 009 (shell banner, dashboard debt KPI)
@@ -498,3 +498,5 @@ Verified by pure-function unit tests in `overdraftMath.test.ts`: mixed
 events straddling the boundary, an event on the last day (included), one on
 the first of the next month (excluded), no events yet (`null`), current
 month = `balanceOf`.
+
+**Result (2026-10-10):** ✅ criterion 25 — `overdraftMath.test.ts` (`balanceAsOf`: boundary, `null` before first event, nets to 0, equals `balanceOf`).

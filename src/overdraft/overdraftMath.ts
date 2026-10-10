@@ -1,3 +1,4 @@
+import { startOfNextMonth, type MonthRef } from '../dashboard/monthBounds';
 import type { OverdraftEvent } from './types';
 
 // Spec 012 — pure derivations over the event ledger. Nothing here is stored.
@@ -20,6 +21,14 @@ function replayOrder(events: OverdraftEvent[]): OverdraftEvent[] {
 
 export function balanceOf(events: OverdraftEvent[]): number {
   return events.reduce((sum, e) => sum + signed(e), 0);
+}
+
+// Spec 012 criterion 25 — ledger balance at the end of `month`; `null` when
+// no event is dated on or before it (the line wasn't in use yet).
+export function balanceAsOf(events: OverdraftEvent[], month: MonthRef): number | null {
+  const end = startOfNextMonth(month);
+  const upTo = events.filter((e) => e.date < end);
+  return upTo.length === 0 ? null : balanceOf(upTo);
 }
 
 export function availableOf(balance: number, limit: number): number {

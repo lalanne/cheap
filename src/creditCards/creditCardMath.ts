@@ -1,3 +1,4 @@
+import { startOfNextMonth, type MonthRef } from '../dashboard/monthBounds';
 import type { Transaction } from '../transactions/types';
 import type { CreditCardPayment } from './types';
 
@@ -16,6 +17,22 @@ export function creditCardBalance(
     .reduce((sum, t) => sum + t.amount, 0);
   const paid = payments.filter((p) => p.cardId === cardId).reduce((sum, p) => sum + p.amount, 0);
   return charged - paid;
+}
+
+// Spec 013 criterion 10 — the same live sum restricted to items dated before
+// the end of `month`; `null` when the card has no activity by then.
+export function cardBalanceAsOf(
+  cardId: string,
+  transactions: Transaction[],
+  payments: CreditCardPayment[],
+  month: MonthRef
+): number | null {
+  const end = startOfNextMonth(month);
+  const txs = transactions.filter((t) => t.date < end);
+  const pays = payments.filter((p) => p.date < end);
+  const hasActivity =
+    txs.some((t) => t.type === 'expense' && t.cardId === cardId) || pays.some((p) => p.cardId === cardId);
+  return hasActivity ? creditCardBalance(cardId, txs, pays) : null;
 }
 
 export function availableOf(balance: number, limit: number): number {

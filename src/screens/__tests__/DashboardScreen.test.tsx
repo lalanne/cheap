@@ -333,7 +333,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
 });
 
 describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 2026-09-25 amendment)', () => {
-  it("shows the tapped month's rolled-up totals in the donut, leaving budgets/KPIs on the current month (criterion 12)", async () => {
+  it("shows the tapped month's rolled-up totals in the donut (criterion 12)", async () => {
     const now = new Date();
     const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
     mockStores({
@@ -354,9 +354,8 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
 
     expect(within(screen.getByTestId('dashboard-donut-legend-Housing')).getByText(/\$90\.000/)).toBeTruthy();
     expect(screen.queryByTestId('dashboard-donut-legend-Food')).toBeNull();
-    // Budgets/KPIs untouched — still the current month's numbers.
-    expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/20%/)).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$20\.000/)).toBeTruthy();
+    // Budgets/KPIs follow the month too (2026-10-10 amendment, criterion 13)
+    // — covered in depth in the whole-dashboard describe block below.
   });
 
   it('marks the tapped bar as selected and re-targets again on a second tap', async () => {
@@ -538,5 +537,150 @@ describe('DashboardScreen — credit cards (spec 013 criterion 8)', () => {
     await render(<DashboardScreen />);
 
     expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$545.000')).toBeTruthy();
+  });
+});
+
+describe('DashboardScreen — the month selection scopes the whole dashboard (spec 009 2026-10-10 amendment, #17)', () => {
+  const now = new Date();
+  const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+  const afterTwoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 1, 10);
+  // Mid-year-agnostic label for the selected month, matching the screen's own.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const pastLabel = MONTHS[twoMonthsAgo.getMonth()];
+  const longAgo = new Date(now.getFullYear() - 1, 0, 1);
+
+  const LOAN: Debt = {
+    id: 'd-1',
+    name: 'Loan',
+    originalAmount: 1000000,
+    currentBalance: 500000,
+    minimumPayment: 50000,
+    interestRate: null,
+    createdAt: longAgo,
+    updatedAt: longAgo,
+  };
+  const VISA: CreditCard = {
+    id: 'card-1',
+    name: 'Visa CLP',
+    limit: 2000000,
+    minimumPayment: 100000,
+    monthlyRate: 3.45,
+    createdAt: longAgo,
+    updatedAt: longAgo,
+  };
+  const LINE: OverdraftLine = {
+    limit: 2000000,
+    monthlyRate: 1.9,
+    plannedMonthlyPayment: 300000,
+    createdAt: longAgo,
+    updatedAt: longAgo,
+  };
+
+  function fixture() {
+    mockStores({
+      budgets: [{ id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now }],
+      transactions: [
+        // current month
+        tx({ id: 'c1', category: 'Food', amount: 20000, date: now }),
+        // the selected (two months ago) month
+        tx({ id: 'p1', category: 'Food', amount: 50000, date: twoMonthsAgo }),
+        tx({ id: 'p2', type: 'income', category: 'Salary', amount: 300000, date: twoMonthsAgo }),
+        tx({ id: 'p3', category: 'Misc', amount: 25000, date: twoMonthsAgo, cardId: 'card-1' }),
+        // a Loan payment made AFTER the selected month -> added back
+        tx({ id: 'p4', category: 'Loan', amount: 40000, date: afterTwoMonthsAgo }),
+      ],
+      debts: [LOAN],
+      creditCards: [VISA],
+      overdraftLine: LINE,
+      overdraftEvents: [
+        { id: 'e1', type: 'draw', amount: 200000, date: twoMonthsAgo, note: null, transactionId: null, createdAt: twoMonthsAgo },
+        { id: 'e2', type: 'payment', amount: 50000, date: now, note: null, transactionId: null, createdAt: now },
+      ],
+    });
+  }
+
+  it('re-scopes spent/saved KPIs and budgets to the selected month, labelled with it (criterion 13)', async () => {
+    fixture();
+    await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    // 50.000 Food + 25.000 Misc spent; 300.000 income -> 225.000 saved.
+    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$75\.000/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-kpi-saved')).getByText(/\$225\.000/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/50%/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(new RegExp(pastLabel))).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-budgets')).getByText(new RegExp(pastLabel))).toBeTruthy();
+  });
+
+  it('shows month-end debt balances in the KPI and rows, labelled with the month (criterion 14)', async () => {
+    fixture();
+    await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    // Loan 500.000 + 40.000 paid later = 540.000; Visa 25.000; overdraft 200.000.
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$765.000')).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-card-card-1')).getByText(/\$25\.000/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-overdraft-row')).getByText(/\$200\.000/)).toBeTruthy();
+    // 46% paid = (1.000.000 - 540.000) / 1.000.000
+    expect(within(screen.getByTestId('dashboard-debt-d-1')).getByText(/46% paid/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-debts')).getByText(new RegExp(pastLabel))).toBeTruthy();
+  });
+
+  it('returns every section to current-month data when the current bar is tapped (criterion 15)', async () => {
+    fixture();
+    await render(<DashboardScreen />);
+    const spentBefore = within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$20\.000/);
+    expect(spentBefore).toBeTruthy();
+    const debtBefore = within(screen.getByTestId('dashboard-kpi-debt')).queryByText('$765.000');
+    expect(debtBefore).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-5'));
+
+    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$20\.000/)).toBeTruthy();
+    // Loan 500.000 + Visa 25.000 (tagged expense) + overdraft 150.000.
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$675.000')).toBeTruthy();
+  });
+
+  it('shows month-named empty states when nothing existed yet (criterion 16)', async () => {
+    mockStores({
+      transactions: [tx({ id: 'c1', category: 'Food', amount: 20000, date: now })],
+      debts: [{ ...LOAN, createdAt: now }],
+      creditCards: [VISA],
+      overdraftLine: LINE,
+      overdraftEvents: [
+        { id: 'e2', type: 'draw', amount: 50000, date: now, note: null, transactionId: null, createdAt: now },
+      ],
+    });
+    await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    expect(screen.getByTestId('dashboard-debts-empty')).toHaveTextContent(`No debts recorded as of ${pastLabel}.`);
+    expect(screen.queryByTestId('dashboard-debt-d-1')).toBeNull();
+    expect(screen.queryByTestId('dashboard-card-card-1')).toBeNull();
+    expect(screen.queryByTestId('dashboard-overdraft-row')).toBeNull();
+    expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$0')).toBeTruthy();
+  });
+
+  it('leaves the suggestions feed on the current month (criterion 17)', async () => {
+    const overBudget = [
+      tx({ id: 'c1', category: 'Entertainment', amount: 95000, date: now }),
+      tx({ id: 'p1', category: 'Entertainment', amount: 1000, date: twoMonthsAgo }),
+    ];
+    mockStores({
+      transactions: overBudget,
+      budgets: [{ id: 'b-1', category: 'Entertainment', monthlyLimit: 60000, createdAt: now, updatedAt: now }],
+      debts: [LOAN],
+    });
+    await render(<DashboardScreen />);
+    expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-debt-d-1')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
+    expect(screen.getByTestId('suggestion-debt-d-1')).toBeTruthy();
+    // ...while the budget bar itself now shows the selected month (2%).
+    expect(within(screen.getByTestId('dashboard-budget-Entertainment')).getByText(/2%/)).toBeTruthy();
   });
 });

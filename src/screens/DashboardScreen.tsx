@@ -5,13 +5,13 @@ import Svg, { Circle } from 'react-native-svg';
 import { Screen } from '../components/Screen';
 import { useBudgetsStore } from '../budgets/store';
 import { computeCategorySpend } from '../budgets/computeCategorySpend';
-import { creditCardBalance } from '../creditCards/creditCardMath';
+import { cardBalanceAsOf, creditCardBalance } from '../creditCards/creditCardMath';
 import { useCreditCardsStore } from '../creditCards/store';
 import { useDebtsStore } from '../debts/store';
 import { formatCLP as formatOverdraftCLP } from '../overdraft/format';
-import { balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
+import { balanceAsOf, balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
 import { useOverdraftStore } from '../overdraft/store';
-import { percentPaid } from '../debts/payoffMath';
+import { debtBalanceAsOf, percentPaid } from '../debts/payoffMath';
 import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
 import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
@@ -129,21 +129,37 @@ export function DashboardScreen() {
   const donutSegments = computeDonutSegments(donutTotals, DONUT_RADIUS);
   // Spec 012 criterion 12 — a line with a balance counts as debt and gets a
   // compact row; an unused or absent line changes nothing here.
-  const overdraftBalance = overdraftLine ? balanceOf(overdraftEvents) : 0;
+  // Spec 009's 2026-10-10 amendment (#17): one selection scopes every figure
+  // but the suggestions feed. A past month shows balances as of its end.
+  const viewMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const viewTotals = isCurrentMonthSelected ? thisMonth : monthlyTotals(transactions, donutReferenceDate);
+  const asOf = selectedMonth;
+  const overdraftBalance = overdraftLine
+    ? (asOf ? balanceAsOf(overdraftEvents, asOf) ?? 0 : balanceOf(overdraftEvents))
+    : 0;
   const showOverdraft = overdraftLine !== null && overdraftBalance > 0;
+  const debtRows = debts.flatMap((d) => {
+    const balance = asOf ? debtBalanceAsOf(d, transactions, asOf) : d.currentBalance;
+    return balance === null ? [] : [{ debt: d, balance }];
+  });
+  const cardRows = creditCards.flatMap((c) => {
+    const balance = asOf
+      ? cardBalanceAsOf(c.id, transactions, creditCardPayments, asOf)
+      : creditCardBalance(c.id, transactions, creditCardPayments);
+    return balance === null ? [] : [{ card: c, balance }];
+  });
   // Spec 013 criterion 8 — each card's balance (a live sum over tagged
   // transactions and payments, see creditCardMath) counts as debt too.
-  const totalCreditCardBalance = creditCards.reduce(
-    (sum, c) => sum + creditCardBalance(c.id, transactions, creditCardPayments),
-    0
-  );
+  const totalCreditCardBalance = cardRows.reduce((sum, r) => sum + r.balance, 0);
   const totalDebtRemaining =
-    debts.reduce((sum, d) => sum + d.currentBalance, 0) +
+    debtRows.reduce((sum, r) => sum + r.balance, 0) +
     (showOverdraft ? overdraftBalance : 0) +
     totalCreditCardBalance;
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const effectiveSelectedMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const effectiveSelectedMonth = viewMonth;
+  // " — Aug" when a past month is selected, '' for the current month.
+  const monthSuffix = selectedMonth === null ? '' : ` — ${monthLabels[selectedMonth.month - 1]}`;
 
   function handleSelectMonth(m: MonthExpense) {
     setSelectedMonth({ year: m.year, month: m.month });
@@ -169,7 +185,7 @@ export function DashboardScreen() {
 
   const budgetsSection = (
     <View style={styles.card} testID="dashboard-budgets">
-      <Text style={styles.cardTitle}>Budgets this month</Text>
+      <Text style={styles.cardTitle}>{selectedMonth === null ? 'Budgets this month' : `Budgets${monthSuffix}`}</Text>
       {budgets.length === 0 ? (
         <Text style={styles.emptyText} testID="dashboard-budgets-empty">
           No budgets set yet.
@@ -177,7 +193,7 @@ export function DashboardScreen() {
       ) : (
         <View style={styles.barList}>
           {budgets.map((b) => {
-            const spend = rolledUpTotals[b.category] ?? 0;
+            const spend = donutRolledUpTotals[b.category] ?? 0;
             const percent = b.monthlyLimit > 0 ? spend / b.monthlyLimit : 0;
             const over = percent > 1;
             return (
@@ -207,17 +223,17 @@ export function DashboardScreen() {
   const kpiStack = (
     <View style={styles.kpiStack}>
       <View style={styles.kpiTile} testID="dashboard-kpi-spent">
-        <Text style={styles.kpiLabel}>Spent this month</Text>
-        <Text style={styles.kpiValue}>{formatCLP(thisMonth.expense)}</Text>
+        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Spent this month' : `Spent${monthSuffix}`}</Text>
+        <Text style={styles.kpiValue}>{formatCLP(viewTotals.expense)}</Text>
       </View>
       <View style={styles.kpiTile} testID="dashboard-kpi-saved">
-        <Text style={styles.kpiLabel}>Saved this month</Text>
+        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Saved this month' : `Saved${monthSuffix}`}</Text>
         <Text style={[styles.kpiValue, { color: colors.success }]}>
-          {formatCLP(thisMonth.income - thisMonth.expense)}
+          {formatCLP(viewTotals.income - viewTotals.expense)}
         </Text>
       </View>
       <View style={styles.kpiTile} testID="dashboard-kpi-debt">
-        <Text style={styles.kpiLabel}>Total debt remaining</Text>
+        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Total debt remaining' : `Total debt${monthSuffix}`}</Text>
         <Text style={styles.kpiValue}>{formatCLP(totalDebtRemaining)}</Text>
       </View>
     </View>
@@ -349,17 +365,20 @@ export function DashboardScreen() {
 
   const debtsCard = (
     <View style={styles.card} testID="dashboard-debts">
-      <Text style={styles.cardTitle}>Debt payoff</Text>
+      <Text style={styles.cardTitle}>{`Debt payoff${monthSuffix}`}</Text>
       {showOverdraft && overdraftLine ? (
         <View style={styles.barList} testID="dashboard-overdraft-row">
           <View style={styles.barLabelRow}>
             <Text style={styles.barLabel}>Overdraft line</Text>
-            <Text style={styles.barValue}>{overdraftRowValue(overdraftBalance, overdraftLine.monthlyRate, overdraftLine.plannedMonthlyPayment)}</Text>
+            <Text style={styles.barValue}>
+              {selectedMonth === null
+                ? overdraftRowValue(overdraftBalance, overdraftLine.monthlyRate, overdraftLine.plannedMonthlyPayment)
+                : formatOverdraftCLP(overdraftBalance)}
+            </Text>
           </View>
         </View>
       ) : null}
-      {creditCards.map((c) => {
-        const balance = creditCardBalance(c.id, transactions, creditCardPayments);
+      {cardRows.map(({ card: c, balance }) => {
         return (
           <View key={c.id} testID={`dashboard-card-${c.id}`} style={styles.barList}>
             <View style={styles.barLabelRow}>
@@ -369,16 +388,18 @@ export function DashboardScreen() {
           </View>
         );
       })}
-      {debts.length === 0 ? (
-        showOverdraft || creditCards.length > 0 ? null : (
+      {debtRows.length === 0 ? (
+        showOverdraft || cardRows.length > 0 ? null : (
           <Text style={styles.emptyText} testID="dashboard-debts-empty">
-            No debts tracked yet.
+            {selectedMonth === null
+              ? 'No debts tracked yet.'
+              : `No debts recorded as of ${monthLabels[selectedMonth.month - 1]}.`}
           </Text>
         )
       ) : (
         <View style={styles.barList}>
-          {debts.map((d) => {
-            const percent = percentPaid(d.originalAmount, d.currentBalance);
+          {debtRows.map(({ debt: d, balance }) => {
+            const percent = percentPaid(d.originalAmount, balance);
             return (
               <View key={d.id} testID={`dashboard-debt-${d.id}`}>
                 <View style={styles.barLabelRow}>

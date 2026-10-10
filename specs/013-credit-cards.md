@@ -1,6 +1,6 @@
 # 013 — Credit Cards (CLP)
 
-**Status:** draft (amended 2026-10-10 — criterion 10 pending; issue #17)
+**Status:** implemented (amended 2026-10-10: criterion 10)
 **Depends on:** 000 (v1 scope — CLP only, this spec stays inside that; a
 second card in USD is an explicit future spec, not this one), 001, 002
 (this spec's 2026-09-29 amendment: an optional `cardId` on an expense),
@@ -253,3 +253,5 @@ tagged expense or payment dated on or before X, and equal to
 unit tests in `creditCardMath.test.ts`: items straddling the boundary,
 last-day inclusion, other cards/untagged/income ignored, no activity yet
 (`null`), current month = the unscoped balance.
+
+**Result (2026-10-10):** ✅ criterion 10 — `creditCardMath.test.ts` (`cardBalanceAsOf`: boundary, other cards/untagged/income ignored, `null` with no activity, equals `creditCardBalance`).
