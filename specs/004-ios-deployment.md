@@ -317,9 +317,7 @@ involved, and the crash is iOS/native-specific — the web build uses
 entirely separate code paths, per spec 001/002's platform-split files).
 
 **Still open:**
-- Criterion 1 (OTA update) — not exercised yet; needs a JS-only change
-  pushed via `eas update --channel preview` after a working build is
-  installed.
+- ~~Criterion 1 (OTA update)~~ — verified 2026-10-11, see below.
 - Criteria 2 (full install), 3 (native Google sign-in), 4 (email/password
   flow) — blocked on resolving the launch crash first.
 - The launch crash itself — next step when work resumes is deciding
@@ -327,3 +325,18 @@ entirely separate code paths, per spec 001/002's platform-split files).
   register the test device for a local/ad-hoc build (`eas device:create`,
   interactive), then actually run the build-7 bisection that never got
   to execute.
+
+**Criterion 1 verified (2026-10-11).** Published a JS-only change
+(commit `9711475`, dashboard month selection) with `eas update --channel
+preview --environment preview` (update group
+`886adaaf-588c-4ec9-a3a8-ef3eafdbdfc1`, runtime `0.1.0`, iOS + Android).
+After two launches of the installed TestFlight build on the test iPhone,
+the new code was running. Spec status is unchanged: criteria 2–4 are not
+re-recorded here.
+
+Notes from running it:
+- An OTA update never appears as a new TestFlight build — it is fetched by
+  the already-installed binary (launch once to download, again to apply).
+- `eas update` in `--non-interactive` mode requires `--environment`.
+- `eas update` bundles at publish time, so the `EXPO_PUBLIC_FIREBASE_*`
+  values must be present in the shell or in the EAS `preview` environment.
