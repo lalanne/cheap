@@ -10,19 +10,19 @@ financial decisions (what to cut, what's trending up), not just record-keeping.
 
 ## Spec-Driven Development — the core rule
 
-This repo follows SDD strictly. **Do not write feature code without an
-approved spec.** The process, defined in `specs/README.md`:
+This repo follows SDD strictly: **do not write feature code without an
+approved spec**, and specs are the source of truth — edit the spec first
+when requirements change. See the `spec-first` skill (`core-practices`
+plugin, from the shared `eng-standards` marketplace) for the general
+discipline; the specifics below are cheap's own, not covered by the skill:
 
 1. Every feature has a numbered spec in `specs/` (requirements, data model,
-   Given/When/Then acceptance criteria).
-2. Specs are the source of truth — when requirements change, edit the spec
-   first, then the code.
-3. A feature is done only when all its acceptance criteria pass; specs move
-   `draft → approved → implemented → verified`, tracked in the index table in
-   `specs/README.md` (keep it updated).
-4. Implement one spec at a time, in numbered order (they declare
-   dependencies).
-5. **Discuss on the spec, not in chat and not in code.** When scope or
+   Given/When/Then acceptance criteria), tracked in the index table in
+   `specs/README.md` with the lifecycle `draft → approved → implemented →
+   verified` (keep it updated).
+2. Implement one spec at a time, in numbered order — they declare
+   dependencies.
+3. **Discuss on the spec, not in chat and not in code.** When scope or
    behavior is being decided, edit the relevant spec doc and talk through
    the diff there.
 
@@ -31,13 +31,11 @@ scope/out-of-scope table, and cross-cutting constraints.
 
 ## Test-first — how every change is made
 
-This applies to **every** change — a new feature, a bug fix, a cosmetic
-fix, anything. Not optional, not just for "important" changes.
-
 **Hard rule: no implementation code without a test that fails first and
-covers it.** Write the test(s), run them, confirm they fail for the right
-reason, then write the minimum code to make them pass. This applies at
-whichever of the four layers below the change actually needs.
+covers it** — a new feature, a bug fix, a cosmetic fix, anything, not just
+"important" changes. See the `tdd-change` skill (`core-practices` plugin)
+for the general discipline. Cheap-specific: which of the four layers below
+a change needs, and the test layout under [Test layout](#test-layout).
 
 1. **Unit** — pure logic in isolation, mocked Firebase/network: validation,
    formatters, store actions, category/aggregation math. The bulk of the
@@ -91,5 +89,8 @@ what a spec/CLAUDE.md/test layout should look like here.
 
 ## Git
 
-Not yet a git repository. Once initialized: never commit feature work
-directly to `main` — branch, push, open a PR for review.
+Never commit or push feature work directly to `main` — branch, commit,
+push, open a PR for review. See the `open-pr` skill (`core-practices`
+plugin), backed by that plugin's branch-guard hook, which blocks `git
+commit`/`git push` to `main` regardless. Remote:
+`git@github-lalanne:lalanne/cheap.git`.
