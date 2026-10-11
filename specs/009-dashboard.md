@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–23 **approved**, not yet implemented, issue #15)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amended 2026-10-11: criteria 18–23, budgeted vs. income, issue #15)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -552,7 +552,7 @@ above). Pure functions: `debtBalanceAsOf` (`payoffMath.test.ts`),
 (`creditCardMath.test.ts`), `startOfNextMonth` (`monthBounds.test.ts`).
 491 tests pass, `tsc --noEmit` clean. Not yet checked in the running app.
 
-### Amendment (2026-10-11, approved): total budgeted vs. monthly income (issue #15)
+### Amendment (2026-10-11, implemented): total budgeted vs. monthly income (issue #15)
 
 New aggregate the per-category bars can't answer: "how much of my income
 have I committed across all budgets combined?" One row at the top of the
@@ -595,5 +595,17 @@ budgets card; the per-category list below is unchanged.
    Out of scope, not deferred to a follow-up.
 
 **Status of this amendment:** approved 2026-10-11 (visual reviewed on the
-design canvas: normal, over income, zero income, past month). Not yet
-implemented — next step is the failing tests from the verification plan.
+design canvas: normal, over income, zero income, past month) and
+implemented the same day.
+
+**Results (2026-10-11):** ✅ criteria 18–23, test-first (the 12 new tests
+confirmed failing — `budgetedVsIncome` did not exist — before any code;
+criterion 21 passed from the start, being unchanged behavior). Pure
+function `budgetedVsIncome` in `src/dashboard/aggregation.ts`
+(`aggregation.test.ts`: total and rounding, no clamp above 100%, null
+percent on zero income, no budgets, parent/child skip, orphan child still
+counted). `DashboardScreen.test.tsx` — new describe block, one test per
+criterion 18–23. The criterion 13 test's month-label assertion was narrowed
+to the exact card title (`Budgets — {Mon}`), since the new row legitimately
+names the month too. 504 tests pass, `tsc --noEmit` clean. Not yet checked
+in the running app.

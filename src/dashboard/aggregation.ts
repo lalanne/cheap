@@ -1,4 +1,5 @@
-import type { Transaction } from '../transactions/types';
+import type { Budget } from '../budgets/types';
+import type { Category, Transaction } from '../transactions/types';
 
 function isSameMonth(date: Date, reference: Date): boolean {
   return date.getFullYear() === reference.getFullYear() && date.getMonth() === reference.getMonth();
@@ -66,4 +67,31 @@ export function last6MonthsExpense(transactions: Transaction[], reference: Date 
   }
 
   return months;
+}
+
+// Spec 009 2026-10-11 amendment (#15): how much of the month's income all
+// budgets together commit. A parent's budget is compared against rolled-up
+// spend (spec 011), so a subcategory budget under a budgeted parent is
+// already inside the parent's limit and is skipped rather than counted twice.
+// `percent` is null when income is 0 — callers show "no income", never
+// Infinity/NaN.
+export function budgetedVsIncome(
+  budgets: Budget[],
+  categories: Category[],
+  income: number
+): { totalBudgeted: number; income: number; percent: number | null } {
+  const budgeted = new Set(budgets.map((b) => b.category));
+  let totalBudgeted = 0;
+  for (const b of budgets) {
+    const parent = categories.find((c) => c.name === b.category)?.parentCategory ?? null;
+    if (parent !== null && budgeted.has(parent)) {
+      continue;
+    }
+    totalBudgeted += b.monthlyLimit;
+  }
+  return {
+    totalBudgeted,
+    income,
+    percent: income > 0 ? Math.round((totalBudgeted / income) * 100) : null,
+  };
 }

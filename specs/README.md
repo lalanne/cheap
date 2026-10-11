@@ -21,7 +21,7 @@ This project is built spec-first. Rules:
 | 006 | [Responsive web layout](006-responsive-web-layout.md) | implemented |
 | 007 | [Category budgets](007-budgets.md) | implemented |
 | 008 | [Debt tracking](008-debt-tracking.md) | implemented (amended 2026-10-10: criterion 8, balance as of month end) |
-| 009 | [Dashboard](009-dashboard.md) | implemented (amended 2026-10-10: criteria 13–17, month selection scopes the dashboard; 2026-10-11 approved, not yet implemented: criteria 18–23, budgeted vs. income, issue #15) |
+| 009 | [Dashboard](009-dashboard.md) | implemented (amended 2026-10-10: criteria 13–17, month selection scopes the dashboard; 2026-10-11: criteria 18–23, budgeted vs. income, issue #15) |
 | 010 | [MCP server: financial data for Claude](010-mcp-server.md) | draft |
 | 011 | [Subcategories](011-subcategories.md) | implemented |
 | 012 | [Overdraft line](012-overdraft-line.md) | implemented (amended 2026-10-10: criterion 25, balance as of month end) |

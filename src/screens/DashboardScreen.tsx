@@ -12,7 +12,7 @@ import { formatCLP as formatOverdraftCLP } from '../overdraft/format';
 import { balanceAsOf, balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
 import { useOverdraftStore } from '../overdraft/store';
 import { debtBalanceAsOf, percentPaid } from '../debts/payoffMath';
-import { categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
+import { budgetedVsIncome, categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
 import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
@@ -183,9 +183,48 @@ export function DashboardScreen() {
     </View>
   );
 
+  // Spec 009 2026-10-11 amendment (#15): all limits combined vs. the viewed
+  // month's income. Zero income has no meaningful ratio — say so, no bar.
+  const committed = budgetedVsIncome(budgets, categories, viewTotals.income);
+  const overCommitted = committed.percent !== null && committed.percent > 100;
+  const budgetedRow = (
+    <View style={styles.budgetedRow} testID="dashboard-budgeted-vs-income">
+      <View style={styles.barLabelRow}>
+        <Text style={styles.budgetedLabel}>{selectedMonth === null ? 'Budgeted' : `Budgeted${monthSuffix}`}</Text>
+        <Text style={[styles.budgetedValue, overCommitted && { color: colors.chart[1] }]}>
+          {committed.percent === null ? formatCLP(committed.totalBudgeted) : `${committed.percent}% of income`}
+        </Text>
+      </View>
+      {committed.percent === null ? (
+        <Text style={styles.budgetedCaption}>
+          No income recorded in {monthLabels[viewMonth.month - 1]}
+        </Text>
+      ) : (
+        <>
+          <View style={styles.budgetedTrack}>
+            <View
+              testID="dashboard-budgeted-bar"
+              style={[
+                styles.barFill,
+                {
+                  width: `${Math.min(committed.percent / 100, 1) * 100}%`,
+                  backgroundColor: overCommitted ? colors.chart[1] : colors.accent,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.budgetedCaption}>
+            {formatCLP(committed.totalBudgeted)} budgeted · {formatCLP(committed.income)} income
+          </Text>
+        </>
+      )}
+    </View>
+  );
+
   const budgetsSection = (
     <View style={styles.card} testID="dashboard-budgets">
       <Text style={styles.cardTitle}>{selectedMonth === null ? 'Budgets this month' : `Budgets${monthSuffix}`}</Text>
+      {budgets.length > 0 && budgetedRow}
       {budgets.length === 0 ? (
         <Text style={styles.emptyText} testID="dashboard-budgets-empty">
           No budgets set yet.
@@ -523,6 +562,33 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   barValue: {
+    fontFamily: typography.body,
+    fontSize: typography.size.xs,
+    color: colors.inkSecondary,
+  },
+  budgetedRow: {
+    gap: spacing.xs,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  budgetedLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm,
+    color: colors.ink,
+  },
+  budgetedValue: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm,
+    color: colors.accent,
+  },
+  budgetedTrack: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  budgetedCaption: {
     fontFamily: typography.body,
     fontSize: typography.size.xs,
     color: colors.inkSecondary,

@@ -609,7 +609,7 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     expect(within(screen.getByTestId('dashboard-kpi-saved')).getByText(/\$225\.000/)).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/50%/)).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(new RegExp(pastLabel))).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-budgets')).getByText(new RegExp(pastLabel))).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-budgets')).getByText(`Budgets — ${pastLabel}`)).toBeTruthy();
   });
 
   it('shows month-end debt balances in the KPI and rows, labelled with the month (criterion 14)', async () => {
@@ -682,5 +682,101 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     expect(screen.getByTestId('suggestion-debt-d-1')).toBeTruthy();
     // ...while the budget bar itself now shows the selected month (2%).
     expect(within(screen.getByTestId('dashboard-budget-Entertainment')).getByText(/2%/)).toBeTruthy();
+  });
+});
+
+describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 amendment, #15)', () => {
+  const now = new Date();
+  const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const budgets: Budget[] = [
+    { id: 'b-1', category: 'Rent', monthlyLimit: 900000, createdAt: now, updatedAt: now },
+    { id: 'b-2', category: 'Food', monthlyLimit: 450000, createdAt: now, updatedAt: now },
+  ];
+
+  it('shows total budgeted, income and the percentage, with a proportional bar (criterion 18)', async () => {
+    mockStores({
+      budgets,
+      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-budgeted-vs-income');
+    expect(within(row).getByText(/75% of income/)).toBeTruthy();
+    expect(within(row).getByText(/\$1\.350\.000 budgeted/)).toBeTruthy();
+    expect(within(row).getByText(/\$1\.800\.000 income/)).toBeTruthy();
+    const fill = flatten(screen.getByTestId('dashboard-budgeted-bar').props.style);
+    expect(fill.width).toBe('75%');
+    expect(fill.backgroundColor).toBe(colors.accent);
+  });
+
+  it('shows the real percentage over 100% with a full bar in the over color (criterion 19)', async () => {
+    mockStores({
+      budgets,
+      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-budgeted-vs-income');
+    expect(within(row).getByText(/135% of income/)).toBeTruthy();
+    const fill = flatten(screen.getByTestId('dashboard-budgeted-bar').props.style);
+    expect(fill.width).toBe('100%');
+    expect(fill.backgroundColor).toBe(colors.chart[1]);
+  });
+
+  it('says there is no income and shows no percentage or bar when income is zero (criterion 20)', async () => {
+    mockStores({ budgets, transactions: [] });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-budgeted-vs-income');
+    expect(within(row).getByText(new RegExp(`No income recorded in ${MONTHS[now.getMonth()]}`))).toBeTruthy();
+    expect(within(row).getByText(/\$1\.350\.000/)).toBeTruthy();
+    expect(within(row).queryByText(/%/)).toBeNull();
+    expect(screen.queryByTestId('dashboard-budgeted-bar')).toBeNull();
+  });
+
+  it('is absent with no budgets, leaving the existing empty state (criterion 21)', async () => {
+    mockStores({
+      budgets: [],
+      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    expect(screen.queryByTestId('dashboard-budgeted-vs-income')).toBeNull();
+    expect(screen.getByTestId('dashboard-budgets-empty')).toBeTruthy();
+  });
+
+  it('uses the selected month\'s income and names the month (criterion 22)', async () => {
+    mockStores({
+      budgets,
+      transactions: [
+        tx({ id: 'i-now', type: 'income', category: 'Salary', amount: 1800000, date: now }),
+        tx({ id: 'i-past', type: 'income', category: 'Salary', amount: 2700000, date: twoMonthsAgo }),
+      ],
+    });
+    await render(<DashboardScreen />);
+    expect(within(screen.getByTestId('dashboard-budgeted-vs-income')).getByText(/75% of income/)).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
+
+    const row = screen.getByTestId('dashboard-budgeted-vs-income');
+    expect(within(row).getByText(/50% of income/)).toBeTruthy();
+    expect(within(row).getByText(new RegExp(MONTHS[twoMonthsAgo.getMonth()]))).toBeTruthy();
+  });
+
+  it('does not double-count a subcategory budget under a budgeted parent (criterion 23)', async () => {
+    mockStores({
+      budgets: [
+        { id: 'b-1', category: 'Food', monthlyLimit: 400000, createdAt: now, updatedAt: now },
+        { id: 'b-2', category: 'Restaurants', monthlyLimit: 100000, createdAt: now, updatedAt: now },
+      ],
+      categories: [{ id: 'c-1', name: 'Restaurants', type: 'expense', parentCategory: 'Food' }],
+      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-budgeted-vs-income');
+    expect(within(row).getByText(/\$400\.000 budgeted/)).toBeTruthy();
+    expect(within(row).getByText(/40% of income/)).toBeTruthy();
   });
 });
