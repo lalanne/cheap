@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–23 is **draft**, issue #15)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–23 **approved**, not yet implemented, issue #15)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -552,7 +552,7 @@ above). Pure functions: `debtBalanceAsOf` (`payoffMath.test.ts`),
 (`creditCardMath.test.ts`), `startOfNextMonth` (`monthBounds.test.ts`).
 491 tests pass, `tsc --noEmit` clean. Not yet checked in the running app.
 
-### Amendment (2026-10-11, draft): total budgeted vs. monthly income (issue #15)
+### Amendment (2026-10-11, approved): total budgeted vs. monthly income (issue #15)
 
 New aggregate the per-category bars can't answer: "how much of my income
 have I committed across all budgets combined?" One row at the top of the
@@ -583,17 +583,17 @@ budgets card; the per-category list below is unchanged.
 - **No schema, repository, rule, or store change.** Read-only, computed
   in memory from stores already loaded.
 
-#### Open questions for review
+#### Resolved in review (2026-10-11)
 
-1. **Double-count rule (criterion 23).** "Skip a budget if an ancestor is
-   also budgeted" vs. "just sum everything and document it". Recommended:
-   skip — it keeps the percentage honest. Cost: a child budget stricter
-   than its parent's limit is invisible in this number.
-2. **Over-100% color.** Reuse `colors.chart[1]` (the over-limit color),
-   as drafted, or a warning tone since exceeding income is a different
-   kind of problem than exceeding one category's limit?
-3. **Suggestions.** Out of scope as drafted: no new suggestion rule
-   ("you've budgeted more than you earn"). Worth a follow-up issue?
+1. **Double-count rule (criterion 23)** → skip a budget whose ancestor is
+   also budgeted. Accepted as recommended; the cost (a stricter child
+   budget is invisible in this number) is understood.
+2. **Over-100% color** → keep the existing over-limit color
+   (`colors.chart[1]`, orange), as in the approved mockup's "Over income"
+   board. No separate warning tone.
+3. **Suggestions** → no new "you've budgeted more than you earn" rule.
+   Out of scope, not deferred to a follow-up.
 
-**Status of this amendment:** draft — awaiting review; no code until
-approved.
+**Status of this amendment:** approved 2026-10-11 (visual reviewed on the
+design canvas: normal, over income, zero income, past month). Not yet
+implemented — next step is the failing tests from the verification plan.
