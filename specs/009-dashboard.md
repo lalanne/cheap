@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–22 is **draft**, issue #15)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–23 is **draft**, issue #15)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
