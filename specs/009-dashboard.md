@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amendment 2026-10-11 criteria 18–22 is **draft**, issue #15)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -219,6 +219,28 @@ dividing by zero.
     pretending to be data and never an error.
 17. **Given** a selected month, **then** the suggestions feed is
     unaffected — it always reflects the current month.
+18. **Given** one or more budgets and income in the viewed month, **then**
+    the budgets card shows, above the per-category list, a "Budgeted" row:
+    the total of all budget limits, that month's income, and
+    `round(totalBudgeted / income × 100)%`, with a progress bar sized like
+    the per-category bars (`min(percent, 1)` of the track).
+19. **Given** total budgeted exceeds income, **then** the percentage shows
+    its real value (e.g. 112%), the bar is full, and it renders in the
+    over color — the same treatment as an over-limit category bar.
+20. **Given** budgets exist but the viewed month has zero income, **then**
+    the row shows the budgeted total and "No income recorded in {month}",
+    with no percentage and no bar — never a division by zero, `Infinity%`
+    or `NaN%`.
+21. **Given** no budgets, **then** the row is absent and the card's
+    existing "No budgets set yet." empty state is unchanged.
+22. **Given** a month other than the current one is selected, **then** the
+    row uses that month's income against the budget limits as they are
+    today, and its label names the month (criterion 13's `— {Mon}`
+    convention).
+23. **Given** budgets on both a parent category and one of its
+    subcategories, **then** the total counts only the parent's limit for
+    that subtree (its rolled-up spend already includes the subcategory),
+    so a commitment is never counted twice.
 
 ## Out of scope
 
@@ -253,6 +275,12 @@ dividing by zero.
 | 15 — back to the current month | Component | Select a past bar, tap the last bar, assert KPIs/budgets/debt equal their initial (current-month) values. |
 | 16 — empty states for months with no data | Component | Select a month earlier than every debt's `createdAt` and with no transactions; assert the empty-state copy renders with the month named. |
 | 17 — suggestions unaffected | Component | Select a past bar; assert the suggestions feed is identical to before selecting. |
+| 18 — budgeted vs. income row | Unit + Component | Pure `budgetedVsIncome(budgets, categories, income)` test (total, percent rounding); `DashboardScreen.test.tsx`: assert `dashboard-budgeted-vs-income` shows total, income, percent, and bar width. |
+| 19 — over 100% | Unit + Component | Pure test: 112% not clamped; component asserts bar width is full and the over color is applied. |
+| 20 — zero income | Unit + Component | Pure test returns "no income" (no percent); component asserts the "No income recorded" copy and no percent text/bar. |
+| 21 — no budgets | Component | Render with empty budgets; row testID absent, `dashboard-budgets-empty` still present. |
+| 22 — follows the selected month | Component | Select a past bar whose income differs from the current month's; assert the row's income/percent change and the label carries the month suffix. |
+| 23 — no parent/child double-count | Unit | Pure test: budgets on "Food" and "Food > Restaurants" count only Food's limit; an unrelated category still adds. |
 | 12 — tap a trend bar to retarget the donut | Component | `DashboardScreen.test.tsx`: tap a non-current `dashboard-trend-bar-*`, assert the donut legend shows that month's rolled-up amounts (not the current month's); assert budgets/KPIs unchanged; assert an active drill-down clears; tap a different bar, assert it re-targets again. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
@@ -523,3 +551,49 @@ above). Pure functions: `debtBalanceAsOf` (`payoffMath.test.ts`),
 `balanceAsOf` (`overdraftMath.test.ts`), `cardBalanceAsOf`
 (`creditCardMath.test.ts`), `startOfNextMonth` (`monthBounds.test.ts`).
 491 tests pass, `tsc --noEmit` clean. Not yet checked in the running app.
+
+### Amendment (2026-10-11, draft): total budgeted vs. monthly income (issue #15)
+
+New aggregate the per-category bars can't answer: "how much of my income
+have I committed across all budgets combined?" One row at the top of the
+budgets card; the per-category list below is unchanged.
+
+- **What it shows:** `Σ monthlyLimit` over `Budget` documents, the viewed
+  month's income (`monthlyTotals(...).income`, already computed as
+  `viewTotals`), and their ratio as a percentage plus a progress bar —
+  same track + fill `View` pattern as the existing bars, no new dependency.
+- **Placement:** inside the existing budgets card (title "Budgets this
+  month" / "Budgets — Aug"), above the per-category list. Not a fourth KPI
+  tile: the KPI stack is spent / saved / debt *outcomes*; this is a
+  *plan*, and sits with the other plan data.
+- **Follows the month selection** (#17, criterion 22): income is the viewed
+  month's. Limits are not versioned per month — a `Budget` has one
+  `monthlyLimit` — so a past month is compared against today's limits.
+  This is the same simplification the per-category bars already make.
+- **Pure function** `budgetedVsIncome(budgets, categories, income)` in
+  `src/dashboard/aggregation.ts` returns `{ totalBudgeted, income,
+  percent | null }` (`percent` null when income is 0); the component only
+  formats it, so the edge cases are unit-tested rather than inferred from
+  rendering.
+- **Subcategories (criterion 23):** a parent budget is compared against
+  rolled-up spend (spec 011), so a child budget under it is already
+  inside the parent's limit. Summing both would overstate the commitment.
+  Rule: skip a budget whose category has an ancestor that also has a
+  budget.
+- **No schema, repository, rule, or store change.** Read-only, computed
+  in memory from stores already loaded.
+
+#### Open questions for review
+
+1. **Double-count rule (criterion 23).** "Skip a budget if an ancestor is
+   also budgeted" vs. "just sum everything and document it". Recommended:
+   skip — it keeps the percentage honest. Cost: a child budget stricter
+   than its parent's limit is invisible in this number.
+2. **Over-100% color.** Reuse `colors.chart[1]` (the over-limit color),
+   as drafted, or a warning tone since exceeding income is a different
+   kind of problem than exceeding one category's limit?
+3. **Suggestions.** Out of scope as drafted: no new suggestion rule
+   ("you've budgeted more than you earn"). Worth a follow-up issue?
+
+**Status of this amendment:** draft — awaiting review; no code until
+approved.
