@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -90,6 +90,15 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   guessed. Fixed with `npm install -g npm@10.9.8` right after
   `setup-node`, so CI and EAS share one npm version and one lockfile
   instead of needing two kept in sync.
+- **Shared setup in a local composite action.** *(Amended 2026-10-13,
+  issue #22.)* `.github/actions/setup/action.yml` holds `setup-node`
+  (Node 26, `cache: npm`), the `npm install -g npm@10.9.8` pin, and
+  `npm ci`; each job runs `actions/checkout@v4` then
+  `uses: ./.github/actions/setup`. The checkout stays in the job because
+  a local action can only be resolved once the repo is on disk. This
+  leaves the npm pin (and Node version) in exactly one file instead of
+  three. Job names, `needs:` gating and the integration job's extra
+  Java/emulator-cache steps are unchanged.
 - **Caching:** `actions/setup-node`'s built-in `cache: npm` (keyed on
   `package-lock.json`) for `node_modules`, plus caching
   `~/.cache/firebase/emulators` so the rules job doesn't redownload the
@@ -127,12 +136,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: npm
-      - run: npm install -g npm@10.9.8
-      - run: npm ci
+      - uses: ./.github/actions/setup
       - run: npx tsc --noEmit
 
   unit:
@@ -141,12 +145,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: npm
-      - run: npm install -g npm@10.9.8
-      - run: npm ci
+      - uses: ./.github/actions/setup
       - run: npm test -- --ci
 
   integration:
@@ -155,12 +154,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: npm
-      - run: npm install -g npm@10.9.8
-      - run: npm ci
+      - uses: ./.github/actions/setup
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -170,6 +164,24 @@ jobs:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}
       - run: npm run test:rules
+```
+
+The shared step, `.github/actions/setup/action.yml`:
+
+```yaml
+name: Setup
+description: Node 26, npm 10.9.8 (matches EAS Build's lockfile), npm ci
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '26'
+        cache: npm
+    - run: npm install -g npm@10.9.8
+      shell: bash
+    - run: npm ci
+      shell: bash
 ```
 
 ## Acceptance criteria
@@ -200,6 +212,12 @@ jobs:
 8. **Given** the workflow file, **then** it declares top-level
    `permissions: contents: read` and no job widens it.
 9. **Given** the workflow file, **then** every job sets `timeout-minutes`.
+10. **Given** the repo, **then** the string `npm@10.9.8` (and the Node
+    version) appears only in `.github/actions/setup/action.yml`, and every
+    job in `ci.yml` uses that action instead of repeating the steps.
+11. **Given** the refactor, **when** CI runs, **then** the three jobs keep
+    their names (`static-analysis`, `unit`, `integration`), gating and
+    pass/fail behavior, and caches still hit.
 
 ## Out of scope
 
@@ -231,6 +249,8 @@ jobs:
 | 7 — one run per commit | Manual / CI run | Open a PR, push a commit; confirm the Actions tab shows exactly one run for it (event `pull_request`). After merge, confirm one `push` run on `main`. |
 | 8 — least-privilege token | Code review | Inspect `ci.yml`: top-level `permissions: contents: read`, no job-level override. |
 | 9 — job timeouts | Code review | Inspect `ci.yml`: all three jobs set `timeout-minutes`. |
+| 10 — single source for setup | Code review | `grep -rn "npm@10.9.8" .github` returns only the composite action; each job has `uses: ./.github/actions/setup`. |
+| 11 — behavior unchanged | Manual / CI run | PR run shows the same three job names, sequential gating, a green result, and cache-hit install on a re-run. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own

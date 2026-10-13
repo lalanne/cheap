@@ -1,0 +1,24 @@
+name: Setup
+description: Node 26, npm 10.9.8 (matches EAS Build's lockfile), npm ci
+
+# Spec 014. Run after actions/checkout — a local action can only be
+# resolved once the repo is on disk.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '26'
+        cache: npm
+
+    # package-lock.json is deliberately pinned to npm 10.9.8 to match
+    # EAS Build's builder (see the EAS deploy gotchas) — the runner's
+    # default npm (11.x on this Node version) resolves optional
+    # platform packages differently and fails `npm ci`'s strict
+    # lockfile check. Match the same npm version here instead of
+    # keeping two lockfile-compatible versions in sync.
+    - run: npm install -g npm@10.9.8
+      shell: bash
+
+    - run: npm ci
+      shell: bash
