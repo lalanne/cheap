@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24 — **draft, awaiting approval**; criteria 1–13 stay verified)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -130,6 +130,44 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   `package-lock.json`) for `node_modules`, plus caching
   `~/.cache/firebase/emulators` so the rules job doesn't redownload the
   Firestore/Auth emulator JARs on every run.
+- **Unit coverage report, published as an artifact.** *(Amended
+  2026-10-13, issue #24.)* The `unit` job runs `npm test -- --ci
+  --coverage` and uploads `coverage/` with `actions/upload-artifact@v4`
+  as `coverage-report`, kept 7 days (long enough to look at during a
+  PR's review, short enough not to pile up storage). Details:
+  - **Unit suite only.** The `integration` job exercises
+    `firestore.rules` via `jest.rules.config.js`, not app code — its
+    "coverage" would measure the test harness, not anything worth
+    tracking. `jest.rules.config.js` is untouched.
+  - **Measured over all of `src/`, not just imported files.**
+    `collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/__tests__/**']`
+    in `jest.config.js`. Jest's default counts only files some test
+    imports, so an entirely untested file is invisible and the
+    percentage reads high; the point of this amendment is an honest
+    baseline. Root-level wiring (`App.tsx`, `index.ts`) is excluded —
+    entry-point glue, not logic.
+  - **Reporters: `text-summary`, `lcov`, `json-summary`.** The one-line
+    summary lands in the job log, so the number is visible without a
+    download; `lcov` produces the browsable HTML report
+    (`coverage/lcov-report/index.html`); `json-summary` is a small,
+    machine-readable total for a later threshold or PR-comment step to
+    read. Set in `jest.config.js` so `npm test -- --coverage` locally
+    produces the same report CI does.
+  - **Uploaded even when tests fail** (`if: ${{ !cancelled() }}`) — a red
+    run is exactly when the report is most useful. Skipped on cancel
+    (superseded run, nothing to look at). If jest crashes before writing
+    any report, the upload warns instead of failing
+    (`if-no-files-found: warn`), so the job's red status stays the test
+    failure, not a secondary upload error.
+  - **No threshold — coverage never fails CI.** No `coverageThreshold`.
+    The baseline is recorded in this spec's Verification results and the
+    PR; whether to set a floor (and where) is a follow-up decision, made
+    with a real number in hand, not guessed now.
+  - **Cost:** coverage instrumentation slows the unit run somewhat; the
+    real delta is recorded in Verification results. The existing 10-min
+    `timeout-minutes` stays unless that number says otherwise.
+  - `coverage/` is added to `.gitignore` so a local coverage run leaves
+    no untracked files.
 - **Not a required branch-protection check yet.** `gh pr merge` would
   need to respect it either way, and wiring that up is a GitHub repo
   setting, not a code change — do it once this has run successfully a
@@ -189,7 +227,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: npm test -- --ci
+      - run: npm test -- --ci --coverage
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: warn
 
   integration:
     needs: unit
@@ -225,6 +270,14 @@ runs:
       shell: bash
     - run: npm ci
       shell: bash
+```
+
+`jest.config.js` gains the coverage settings (they apply only when
+`--coverage` is passed; a plain `npm test` is unchanged):
+
+```js
+collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/__tests__/**'],
+coverageReporters: ['text-summary', 'lcov', 'json-summary'],
 ```
 
 ## Acceptance criteria
@@ -270,6 +323,18 @@ runs:
     passes, and `unit` / `integration` are skipped. Symmetrically, a type
     error fails `static-analysis`, `web-export` still runs, and `unit` is
     skipped.
+14. **Given** a pull request into `main` whose unit tests pass, **when**
+    CI runs, **then** the run has a downloadable `coverage-report`
+    artifact (retention 7 days) containing a browsable HTML report, the
+    `unit` job log prints the coverage summary, and the job passes
+    regardless of the coverage percentage.
+15. **Given** a change that breaks a unit test, **when** it's pushed,
+    **then** `unit` fails on the test step (not the upload) and the run
+    still has a `coverage-report` artifact.
+16. **Given** a source file under `src/` that no test imports, **when**
+    coverage is collected, **then** it appears in the report at 0%
+    rather than being omitted, and nothing under `src/**/__tests__/`
+    appears in the report.
 
 ## Out of scope
 
@@ -286,6 +351,10 @@ runs:
 - **Required branch-protection status checks** — see Decisions; a
   follow-up repo-settings step once this has proven stable.
 - **Linting** — this repo has no lint script today; not introduced here.
+- **A coverage threshold, PR coverage comment, or third-party coverage
+  service (Codecov etc.)** — issue #24 deliberately starts with just the
+  artifact and a recorded baseline; a floor is a follow-up decision.
+  Coverage of the rules suite is out of scope too (see Decisions).
 - **Matrix builds / multiple Node or OS versions** — one pinned version,
   one OS, matching Decisions' reasoning.
 
@@ -306,6 +375,9 @@ runs:
 | 11 — behavior unchanged | Manual / CI run | PR run shows the same three job names, sequential gating, a green result, and cache-hit install on a re-run. |
 | 12 — export runs, no secrets | Code review + CI run | `ci.yml` step has only placeholder `env` values and no `secrets.*`; the PR run passes. |
 | 13 — broken web import fails CI | Manual / CI run | Push a deliberately unresolvable import on a web path; confirm `web-export` fails (`static-analysis` green) and `unit`/`integration` skip; also confirm `static-analysis` and `web-export` start at the same time. Revert after. |
+| 14 — coverage artifact on a green run | Code review + CI run | `ci.yml`: upload step present, no `coverageThreshold` in `jest.config.js`. On the PR run: `coverage-report` listed under Artifacts with 7-day retention, `lcov-report/index.html` opens, summary visible in the `unit` log. Record the baseline (statements/branches/functions/lines) and the unit job's duration vs. the previous run. |
+| 15 — artifact still uploaded on a red run | Manual / CI run | On a throwaway draft PR, push a deliberately wrong assertion; confirm `unit` fails at `npm test`, the upload step runs green, and the run lists `coverage-report`. Close unmerged. |
+| 16 — untested files counted, tests excluded | Local run + CI artifact | `npm test -- --coverage` locally: a known-untested `src/` file is listed at 0%; no `__tests__` path appears in `coverage/coverage-summary.json`. Same check against the CI artifact. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
