@@ -1,0 +1,13 @@
+# Spec 015: Prettier formats code and JSON only.
+node_modules/
+coverage/
+dist/
+web-build/
+.expo/
+.firebase/
+/ios
+/android
+package-lock.json
+*.md
+*.yml
+*.yaml
