@@ -1,6 +1,6 @@
 # 015 — Linting and formatting (ESLint + Prettier + pre-commit hook)
 
-**Status:** draft
+**Status:** approved
 **Depends on:** 014 (CI — adds jobs to its workflow and gating), 000 (stack)
 
 ## Purpose
