@@ -11,8 +11,8 @@ underlying EAS Build/Submit pipeline, much smaller blast radius.
 
 ## Decisions
 
-- **Apple Developer Program:** team `XS3AAHNCSL`, Apple ID
-  `lalanne.c@icloud.com` — chosen explicitly (this machine also has
+- **Apple Developer Program:** team `XS3AAHNCSL`, under the personal
+  iCloud-based Apple ID (not the work or free-team identities) — chosen explicitly (this machine also has
   identities for a work Apple ID and a separate free personal team; using
   the wrong one would scatter App Store Connect resources across accounts,
   same class of mistake `da2`'s `CLAUDE.md` documents for GitHub remotes).
