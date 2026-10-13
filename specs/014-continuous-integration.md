@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24 — implemented, CI verification of 14–15 pending; criteria 1–13 stay verified)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16 verified)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -392,7 +392,7 @@ and, applying to every run, `testTimeout: 15000`.
 | 13 — broken web import fails CI | Manual / CI run | Push a deliberately unresolvable import on a web path; confirm `web-export` fails (`static-analysis` green) and `unit`/`integration` skip; also confirm `static-analysis` and `web-export` start at the same time. Revert after. |
 | 14 — coverage artifact on a green run | Code review + CI run | `ci.yml`: upload step present, no `coverageThreshold` in `jest.config.js`. On the PR run: `coverage-report` listed under Artifacts with 7-day retention, `lcov-report/index.html` opens, summary visible in the `unit` log. Record the baseline (statements/branches/functions/lines) and the unit job's duration vs. the previous run. |
 | 15 — artifact still uploaded on a red run | Manual / CI run | On a throwaway draft PR, push a deliberately wrong assertion; confirm `unit` fails at `npm test`, the upload step runs green, and the run lists `coverage-report`. Close unmerged. |
-| 16 — untested files counted, tests excluded | Local run + CI artifact | `npm test -- --coverage` locally: a known-untested `src/` file is listed at 0%; no `__tests__` path appears in `coverage/coverage-summary.json`. Same check against the CI artifact. |
+| 16 — untested files counted, tests excluded | Local run + CI artifact | `npm test -- --coverage` locally: a known-untested `src/` file is listed at 0%; no `__tests__` path appears in `coverage/coverage-summary.json`. Same check against the CI artifact. Same on the CI artifact (PR #44): 78 files, 0 `__tests__` paths, 16 at 0%. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
@@ -450,13 +450,13 @@ are for the final layout.
 
 ### Amendment 2026-10-13 — unit coverage artifact (issue #24)
 
-Local results (CI evidence for 14–15 to be added once the PR run exists):
+Local and CI results:
 
 | Criterion | Result | Evidence |
 |-----------|--------|----------|
-| 14 — artifact on a green run | ⏳ | Local: `npm test -- --ci --coverage` passes (504 tests) and writes `coverage/lcov-report/index.html`; no `coverageThreshold`; workflow YAML parses with the `upload-artifact` step. PR-run artifact, retention and log summary: pending. |
-| 15 — uploaded on a red run | ⏳ | Pending the throwaway draft PR run. |
-| 16 — untested files counted, tests excluded | ✅ (local) | Report covers all 78 non-test `src/` files, 16 of them at 0%, and 0 `__tests__` paths. Before the change only 58 files were reported (the untested ones were invisible). |
+| 14 — artifact on a green run | ✅ | PR #44 run [38426297069](https://github.com/lalanne/cheap/actions/runs/38426297069), all four jobs green: `coverage-report` listed (315,162 bytes, expires 7 days after creation), downloaded zip contains `lcov-report/index.html`, `lcov.info`, `coverage-summary.json`; the `unit` log prints the summary and `504 passed`; no `coverageThreshold`. Baseline on CI matches local exactly: statements 71.42%, branches 69.34%, functions 69.98%, lines 70.97%. `unit` took 84s vs 66–85s on the three previous `main` runs — no measurable slowdown, so the 10-min timeout stays. |
+| 15 — uploaded on a red run | ✅ | Deliberately wrong assertion (`payoffMath.test.ts`, expected 999 received 12) on throwaway draft PR #45: `unit` failed at `npm test`, `Run actions/upload-artifact@v4` still succeeded, `coverage-report` (315,147 bytes) listed, `integration` skipped — [run 38428360323](https://github.com/lalanne/cheap/actions/runs/38428360323). PR closed unmerged, branch deleted. |
+| 16 — untested files counted, tests excluded | ✅ | Report covers all 78 non-test `src/` files, 16 of them at 0%, and 0 `__tests__` paths. Before the change only 58 files were reported (the untested ones were invisible). Same on the CI artifact (PR #44): 78 files, 0 `__tests__` paths, 16 at 0%. |
 
 **Baseline (local, 8 cores):** statements 71.42%, branches 69.34%,
 functions 69.98%, lines 70.97%. Previously Jest reported 88.38% lines
