@@ -31,6 +31,27 @@ export function rollUpCategoryTotals(
   return result;
 }
 
+// Spend lookup for budgets (spec 011 criterion 9): rolled-up totals, plus
+// each valid subcategory's own unrolled total under its own name. A budget
+// on a parent must see parent + children (criterion 8), but a budget on a
+// subcategory must see that subcategory's own spend — rollUpCategoryTotals
+// drops the subcategory key, so looking it up there gave $0 (#34, #35).
+// A lookup table only, never summed: the donut keeps using
+// rollUpCategoryTotals so nothing is counted twice.
+export function budgetSpendTotals(
+  totals: Record<string, number>,
+  categories: Category[]
+): Record<string, number> {
+  const result = rollUpCategoryTotals(totals, categories);
+  for (const [categoryName, amount] of Object.entries(totals)) {
+    const parent = categories.find((c) => c.name === categoryName)?.parentCategory ?? null;
+    if (parent && isValidParentName(parent, categories)) {
+      result[categoryName] = amount;
+    }
+  }
+  return result;
+}
+
 // Just the given parent's direct subcategories and their raw (unrolled)
 // amounts — the input to the drilled-in donut ring.
 export function subcategoryTotalsFor(

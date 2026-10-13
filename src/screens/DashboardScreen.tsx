@@ -13,7 +13,7 @@ import { balanceAsOf, balanceOf, overdraftPayoff } from '../overdraft/overdraftM
 import { useOverdraftStore } from '../overdraft/store';
 import { debtBalanceAsOf, percentPaid } from '../debts/payoffMath';
 import { budgetedVsIncome, categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
-import { rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
+import { budgetSpendTotals, rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
 import { useTransactionsStore } from '../transactions/store';
@@ -98,12 +98,14 @@ export function DashboardScreen() {
   // contradictory numbers for the same category on the same screen.
   const categorySpend = categoryTotalsForMonth(transactions, now);
   const rolledUpTotals = rollUpCategoryTotals(categorySpend, categories);
+  // Budgets also need a subcategory's own spend (spec 011 criterion 9).
+  const budgetSpend = budgetSpendTotals(categorySpend, categories);
   const thisMonth = monthlyTotals(transactions, now);
   const lastMonth = monthlyTotals(transactions, lastMonthDate);
   const trend = last6MonthsExpense(transactions, now);
   const suggestions = computeSuggestions({
     budgets,
-    categorySpend: rolledUpTotals,
+    categorySpend: budgetSpend,
     debts,
     thisMonth,
     lastMonth,
@@ -123,6 +125,7 @@ export function DashboardScreen() {
   const donutRolledUpTotals = isCurrentMonthSelected
     ? rolledUpTotals
     : rollUpCategoryTotals(donutCategorySpend, categories);
+  const donutBudgetSpend = isCurrentMonthSelected ? budgetSpend : budgetSpendTotals(donutCategorySpend, categories);
   const donutTotals = drilledCategory
     ? subcategoryTotalsFor(donutCategorySpend, categories, drilledCategory)
     : donutRolledUpTotals;
@@ -232,7 +235,7 @@ export function DashboardScreen() {
       ) : (
         <View style={styles.barList}>
           {budgets.map((b) => {
-            const spend = donutRolledUpTotals[b.category] ?? 0;
+            const spend = donutBudgetSpend[b.category] ?? 0;
             const percent = b.monthlyLimit > 0 ? spend / b.monthlyLimit : 0;
             const over = percent > 1;
             return (

@@ -330,6 +330,37 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
     expect(within(bar).getByText(/117%/)).toBeTruthy();
     expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
   });
+
+  it("shows a subcategory's own spend for a budget set directly on it, and fires its overrun suggestion (criterion 9 — #34, #35)", async () => {
+    mockStores({
+      categories: SUBCATEGORIES,
+      budgets: [{ id: 'b-2', category: 'Groceries', monthlyLimit: 30000, createdAt: now, updatedAt: now }],
+      transactions: [tx({ id: 't1', category: 'Groceries', amount: 40000, date: now })],
+    });
+    await render(<DashboardScreen />);
+
+    const bar = screen.getByTestId('dashboard-budget-Groceries');
+    expect(within(bar).getByText(/133%/)).toBeTruthy();
+    expect(screen.getByTestId('suggestion-budget-b-2')).toBeTruthy();
+  });
+
+  it('keeps the parent budget rolled up while its subcategory has its own budget (criterion 9)', async () => {
+    mockStores({
+      categories: SUBCATEGORIES,
+      budgets: [
+        { id: 'b-1', category: 'Food', monthlyLimit: 60000, createdAt: now, updatedAt: now },
+        { id: 'b-2', category: 'Groceries', monthlyLimit: 50000, createdAt: now, updatedAt: now },
+      ],
+      transactions: [
+        tx({ id: 't1', category: 'Food', amount: 30000, date: now }),
+        tx({ id: 't2', category: 'Groceries', amount: 40000, date: now }),
+      ],
+    });
+    await render(<DashboardScreen />);
+
+    expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/117%/)).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-budget-Groceries')).getByText(/80%/)).toBeTruthy();
+  });
 });
 
 describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 2026-09-25 amendment)', () => {
