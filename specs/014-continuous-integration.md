@@ -350,9 +350,13 @@ bundled into this spec.
 
 ### Amendment 2026-10-13 — web export check (issue #23)
 
+Revised mid-review from a step in `static-analysis` to its own `web-export`
+job, parallel to `static-analysis`, with `unit` needing both. Results below
+are for the final layout.
+
 | Criterion | Result | Evidence |
 |-----------|--------|----------|
-| 12 — export runs, no secrets | ✅ | `ci.yml` step uses only placeholder `EXPO_PUBLIC_*` env values, no `secrets.*`; also verified locally with `.env.local` moved aside. PR run green on all three jobs — [run 38340257591](https://github.com/lalanne/cheap/actions/runs/38340257591). |
-| 13 — broken web import fails CI | ✅ | Pushed an unresolvable import (`@ts-ignore`d so `tsc` still passed) in `index.ts`: `static-analysis` failed at the export step with `Unable to resolve module this-module-does-not-exist-web-only`, `unit`/`integration` skipped — [run 38340615753](https://github.com/lalanne/cheap/actions/runs/38340615753). Reverted in the next commit. |
+| 12 — parallel `web-export`, no secrets | ✅ | `static-analysis` and `web-export` both started at 03:19:30Z; `unit` started at 03:21:02Z, after both finished; all four jobs green — [run 38341158355](https://github.com/lalanne/cheap/actions/runs/38341158355). Step uses only placeholder `EXPO_PUBLIC_*` env values, no `secrets.*`; also verified locally with `.env.local` moved aside. |
+| 13 — broken web import fails CI | ✅ | Unresolvable import (`@ts-ignore`d so `tsc` passed): `web-export` failed, `static-analysis` passed, `unit`/`integration` skipped — [run 38342428786](https://github.com/lalanne/cheap/actions/runs/38342428786). Reverse case, a type error only: `static-analysis` failed, `web-export` still ran and passed, `unit`/`integration` skipped — [run 38342561793](https://github.com/lalanne/cheap/actions/runs/38342561793). Both on a throwaway draft PR (#42), closed unmerged. |
 
 `expo-doctor` was split out to issue #39 (fails on `main` today).
