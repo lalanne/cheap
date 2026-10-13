@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -25,22 +25,30 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   "never a real project" rule as running it by hand), plus the web
   export check below. No `eas build`/`eas submit` trigger — see Out of
   scope.
-- **Web export check in `static-analysis`.** *(Amended 2026-10-13, issue
-  #23.)* `npx expo export -p web` runs right after `tsc`, so a broken
+- **Web export check in its own `web-export` job.** *(Amended 2026-10-13,
+  issue #23; first a step in `static-analysis`, then split out on review.)*
+  `npx expo export -p web` runs in a job of its own, so a broken
   web bundle (e.g. a web-only import that fails to resolve) fails CI
   instead of surfacing at deploy time (spec 005), and it validates the
   artifact a later web-deploy job would ship. It runs with fake
   `EXPO_PUBLIC_FIREBASE_*` / `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
   placeholders set in the step's `env` — the bundle only inlines them,
   nothing connects to Firebase — so it still needs no secrets. Output goes
-  to a throwaway directory. Measured locally at ~4s. The step stays in the
-  existing `static-analysis` job rather than a new one, so job names and
-  gating don't change.
+  to a throwaway directory. Measured locally at ~4s. A separate job gets its own named status check
+  (a red `web-export` is distinguishable from a type error) and can be
+  re-run alone, at the price of a repeated checkout + install. It runs
+  **in parallel with `static-analysis`** (neither `needs:` the other), and
+  `unit` has `needs: [static-analysis, web-export]` — so unit tests start
+  only when both are green, and a failure in either skips `unit` and
+  `integration`. Cost vs. fully sequential: a broken run may spend the
+  other parallel job's minutes before it's cancelled/finished, accepted
+  because the clean-run wall-clock time is unchanged and the export job is
+  short.
 - **`expo-doctor` deliberately not added here.** It already fails on
   `main` (duplicate `expo-font`, major/patch version mismatches, an
   unused `app.json`), and fixing those is native-module work needing its
   own spec and a device build. Tracked in issue #39; add it to
-  `static-analysis` once it passes.
+  the gating jobs (likely `web-export`) once it passes.
 - **Cost: effectively free.** The repo is private, so runs draw from
   GitHub's monthly free Actions minutes (2,000 on Free, 3,000 on Pro),
   billed at the cheapest (Linux, 1×) rate — no macOS/Windows multiplier.
@@ -67,8 +75,10 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   can't burn the free-minutes budget until GitHub's 6-hour default:
   10 for `static-analysis` and `unit`, 15 for `integration` (a clean run
   is ~2 min total; these are generous ceilings, not targets).
-- **Three jobs, gated in sequence (`needs:`), not run in parallel —
-  `static-analysis` → `unit` → `integration`.** Deliberate, not the
+- **Gated stages (`needs:`): (`static-analysis` ∥ `web-export`) → `unit`
+  → `integration`.** *(Amended 2026-10-13: `web-export` added as a
+  parallel peer of `static-analysis`.)* Apart from that one parallel
+  pair, stages run in sequence, not in parallel. Deliberate, not the
   default: no point spending minutes on unit tests against code that
   doesn't even type-check, or on the emulator-backed integration suite if
   the unit layer already failed — matches CLAUDE.md's own ordering (unit
@@ -127,7 +137,7 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
 
 ## Requirements
 
-`.github/workflows/ci.yml` — three jobs, each repeating its own
+`.github/workflows/ci.yml` — four jobs, each repeating its own
 checkout/install (cheap relative to the free-minutes budget; see
 Decisions), gated with `needs:` so a later job never starts once an
 earlier one has failed:
@@ -155,6 +165,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - run: npx tsc --noEmit
+
+  web-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - run: npx expo export -p web --output-dir "$RUNNER_TEMP/web-export"
         env:
           EXPO_PUBLIC_FIREBASE_API_KEY: ci-placeholder
@@ -166,7 +183,7 @@ jobs:
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
 
   unit:
-    needs: static-analysis
+    needs: [static-analysis, web-export]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -241,15 +258,18 @@ runs:
 10. **Given** the repo, **then** the string `npm@10.9.8` (and the Node
     version) appears only in `.github/actions/setup/action.yml`, and every
     job in `ci.yml` uses that action instead of repeating the steps.
-11. **Given** the refactor, **when** CI runs, **then** the three jobs keep
+11. **Given** the refactor, **when** CI runs, **then** the jobs keep
     their names (`static-analysis`, `unit`, `integration`), gating and
     pass/fail behavior, and caches still hit.
-12. **Given** a clean checkout, **when** CI runs, **then** `static-analysis`
-    runs `expo export -p web` with placeholder env values and no secrets,
+12. **Given** a clean checkout, **when** CI runs, **then** a `web-export`
+    job, parallel to `static-analysis` (neither waits on the other), runs
+    `expo export -p web` with placeholder env values and no secrets,
     and passes.
 13. **Given** a deliberately broken web-only import, **when** it's pushed,
-    **then** `static-analysis` fails at the export step and `unit` /
-    `integration` are skipped.
+    **then** `web-export` fails at the export step while `static-analysis`
+    passes, and `unit` / `integration` are skipped. Symmetrically, a type
+    error fails `static-analysis`, `web-export` still runs, and `unit` is
+    skipped.
 
 ## Out of scope
 
@@ -281,11 +301,11 @@ runs:
 | 6 — newer push cancels older run | Manual / CI run | Push two commits in quick succession to a PR branch; confirm the first run shows as cancelled. |
 | 7 — one run per commit | Manual / CI run | Open a PR, push a commit; confirm the Actions tab shows exactly one run for it (event `pull_request`). After merge, confirm one `push` run on `main`. |
 | 8 — least-privilege token | Code review | Inspect `ci.yml`: top-level `permissions: contents: read`, no job-level override. |
-| 9 — job timeouts | Code review | Inspect `ci.yml`: all three jobs set `timeout-minutes`. |
+| 9 — job timeouts | Code review | Inspect `ci.yml`: every job sets `timeout-minutes`. |
 | 10 — single source for setup | Code review | `grep -rn "npm@10.9.8" .github` returns only the composite action; each job has `uses: ./.github/actions/setup`. |
 | 11 — behavior unchanged | Manual / CI run | PR run shows the same three job names, sequential gating, a green result, and cache-hit install on a re-run. |
 | 12 — export runs, no secrets | Code review + CI run | `ci.yml` step has only placeholder `env` values and no `secrets.*`; the PR run passes. |
-| 13 — broken web import fails CI | Manual / CI run | Push a deliberately unresolvable import on a web path; confirm `static-analysis` fails at the export step (`tsc` passing) and later jobs skip. Revert after. |
+| 13 — broken web import fails CI | Manual / CI run | Push a deliberately unresolvable import on a web path; confirm `web-export` fails (`static-analysis` green) and `unit`/`integration` skip; also confirm `static-analysis` and `web-export` start at the same time. Revert after. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own

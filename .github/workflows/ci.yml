@@ -42,6 +42,15 @@ jobs:
 
       - run: npx tsc --noEmit
 
+  # Runs in parallel with static-analysis; unit waits for both.
+  web-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
       # Catches a broken web bundle before deploy (spec 005). The
       # EXPO_PUBLIC_* values are inlined, never used to connect, so
       # placeholders are enough — no secrets.
@@ -56,7 +65,7 @@ jobs:
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
 
   unit:
-    needs: static-analysis
+    needs: [static-analysis, web-export]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
