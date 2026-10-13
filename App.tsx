@@ -189,3 +189,5 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
 });
+
+export const tmpTypeError: number = "not a number";
