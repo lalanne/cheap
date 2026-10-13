@@ -82,7 +82,7 @@ describe('firestoreOverdraftRepository (native)', () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
     await expect(
-      firestoreOverdraftRepository.logDraw({ amount: 150000, date: DATE, note: null })
+      firestoreOverdraftRepository.logDraw({ amount: 150000, date: DATE, note: null }),
     ).rejects.toThrow('No signed-in user');
     expect(mockAddDoc).not.toHaveBeenCalled();
     expect(mockRunTransaction).not.toHaveBeenCalled();
@@ -102,7 +102,11 @@ describe('firestoreOverdraftRepository (native)', () => {
       expect(t.set).toHaveBeenCalledTimes(1);
       expect(t.set).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ limit: 2000000, monthlyRate: 1.9, plannedMonthlyPayment: 300000 })
+        expect.objectContaining({
+          limit: 2000000,
+          monthlyRate: 1.9,
+          plannedMonthlyPayment: 300000,
+        }),
       );
     });
 
@@ -113,7 +117,7 @@ describe('firestoreOverdraftRepository (native)', () => {
 
       expect(t.set).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ plannedMonthlyPayment: null })
+        expect.objectContaining({ plannedMonthlyPayment: null }),
       );
     });
 
@@ -137,7 +141,7 @@ describe('firestoreOverdraftRepository (native)', () => {
           amount: 1240000,
           note: 'Opening balance',
           transactionId: null,
-        })
+        }),
       );
     });
 
@@ -145,16 +149,26 @@ describe('firestoreOverdraftRepository (native)', () => {
       const t = stubTransaction();
 
       await firestoreOverdraftRepository.saveLine({ limit: 2000000, monthlyRate: null });
-      expect(t.set).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ monthlyRate: null }));
+      expect(t.set).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ monthlyRate: null }),
+      );
 
       await firestoreOverdraftRepository.saveLine({ limit: 2000000, monthlyRate: 0 });
-      expect(t.set).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ monthlyRate: 0 }));
+      expect(t.set).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ monthlyRate: 0 }),
+      );
     });
 
     it('writes no event when there is no opening balance', async () => {
       const t = stubTransaction();
 
-      await firestoreOverdraftRepository.saveLine({ limit: 2000000, monthlyRate: 1.9, openingBalance: null });
+      await firestoreOverdraftRepository.saveLine({
+        limit: 2000000,
+        monthlyRate: 1.9,
+        openingBalance: null,
+      });
 
       expect(t.set).toHaveBeenCalledTimes(1);
     });
@@ -162,12 +176,19 @@ describe('firestoreOverdraftRepository (native)', () => {
 
   describe('updateLine (criterion 15)', () => {
     it('updates only the line doc — no event, no transaction', async () => {
-      await firestoreOverdraftRepository.updateLine({ monthlyRate: 2.1, plannedMonthlyPayment: 350000 });
+      await firestoreOverdraftRepository.updateLine({
+        monthlyRate: 2.1,
+        plannedMonthlyPayment: 350000,
+      });
 
       expect(docPaths()).toContain('users/uid-1/overdraft/line');
       expect(mockUpdateDoc).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ monthlyRate: 2.1, plannedMonthlyPayment: 350000, updatedAt: 'server-timestamp' })
+        expect.objectContaining({
+          monthlyRate: 2.1,
+          plannedMonthlyPayment: 350000,
+          updatedAt: 'server-timestamp',
+        }),
       );
       expect(mockAddDoc).not.toHaveBeenCalled();
       expect(mockRunTransaction).not.toHaveBeenCalled();
@@ -180,7 +201,7 @@ describe('firestoreOverdraftRepository (native)', () => {
 
       expect(mockUpdateDoc).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ monthlyRate: null })
+        expect.objectContaining({ monthlyRate: null }),
       );
       expect(mockAddDoc).not.toHaveBeenCalled();
     });
@@ -190,7 +211,9 @@ describe('firestoreOverdraftRepository (native)', () => {
     function deliver(data: Record<string, unknown> | undefined) {
       const callback = jest.fn();
       firestoreOverdraftRepository.subscribeLine(callback);
-      const onAuth = mockOnAuthStateChanged.mock.calls[0][1] as (user: { uid: string } | null) => void;
+      const onAuth = mockOnAuthStateChanged.mock.calls[0][1] as (
+        user: { uid: string } | null,
+      ) => void;
       onAuth({ uid: 'uid-1' });
       const onSnap = mockOnSnapshot.mock.calls[0][1] as (snap: { data: () => unknown }) => void;
       onSnap({ data: () => data });
@@ -200,25 +223,36 @@ describe('firestoreOverdraftRepository (native)', () => {
     it('reads a line doc with no monthlyRate field as an unknown (null) rate', () => {
       const callback = deliver({ limit: 2000000, plannedMonthlyPayment: null });
 
-      expect(callback).toHaveBeenCalledWith(expect.objectContaining({ limit: 2000000, monthlyRate: null }));
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 2000000, monthlyRate: null }),
+      );
     });
 
     it('keeps a numeric rate, including 0, as is', () => {
       expect(deliver({ limit: 2000000, monthlyRate: 1.9 })).toHaveBeenCalledWith(
-        expect.objectContaining({ monthlyRate: 1.9 })
+        expect.objectContaining({ monthlyRate: 1.9 }),
       );
     });
   });
 
   describe('draws and payments (criterion 5)', () => {
     it('logs a draw as one event under the uid and touches no transaction', async () => {
-      await firestoreOverdraftRepository.logDraw({ amount: 150000, date: DATE, note: 'Auto top-up' });
+      await firestoreOverdraftRepository.logDraw({
+        amount: 150000,
+        date: DATE,
+        note: 'Auto top-up',
+      });
 
       expect(collectionPaths()).toContain('users/uid-1/overdraftEvents');
       expect(mockAddDoc).toHaveBeenCalledTimes(1);
       expect(mockAddDoc).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ type: 'draw', amount: 150000, note: 'Auto top-up', transactionId: null })
+        expect.objectContaining({
+          type: 'draw',
+          amount: 150000,
+          note: 'Auto top-up',
+          transactionId: null,
+        }),
       );
       expect(collectionPaths()).not.toContain('users/uid-1/transactions');
       expect(mockRunTransaction).not.toHaveBeenCalled();
@@ -229,7 +263,12 @@ describe('firestoreOverdraftRepository (native)', () => {
 
       expect(mockAddDoc).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ type: 'payment', amount: 300000, note: null, transactionId: null })
+        expect.objectContaining({
+          type: 'payment',
+          amount: 300000,
+          note: null,
+          transactionId: null,
+        }),
       );
       expect(collectionPaths()).not.toContain('users/uid-1/transactions');
       expect(mockRunTransaction).not.toHaveBeenCalled();
@@ -240,32 +279,45 @@ describe('firestoreOverdraftRepository (native)', () => {
     it.each([
       ['interest', 23560],
       ['fee', 4990],
-    ] as const)('logs %s atomically: the event and a linked expense, in one Firestore transaction', async (type, amount) => {
-      const t = stubTransaction();
+    ] as const)(
+      'logs %s atomically: the event and a linked expense, in one Firestore transaction',
+      async (type, amount) => {
+        const t = stubTransaction();
 
-      await firestoreOverdraftRepository.logCharge(type, { amount, date: DATE, note: 'August statement' });
+        await firestoreOverdraftRepository.logCharge(type, {
+          amount,
+          date: DATE,
+          note: 'August statement',
+        });
 
-      expect(mockRunTransaction).toHaveBeenCalledTimes(1);
-      expect(t.set).toHaveBeenCalledTimes(2);
+        expect(mockRunTransaction).toHaveBeenCalledTimes(1);
+        expect(t.set).toHaveBeenCalledTimes(2);
 
-      const expenseCall = t.set.mock.calls.find(([, data]) => (data as { type: string }).type === 'expense');
-      const eventCall = t.set.mock.calls.find(([, data]) => (data as { type: string }).type === type);
-      expect(expenseCall).toBeDefined();
-      expect(eventCall).toBeDefined();
+        const expenseCall = t.set.mock.calls.find(
+          ([, data]) => (data as { type: string }).type === 'expense',
+        );
+        const eventCall = t.set.mock.calls.find(
+          ([, data]) => (data as { type: string }).type === type,
+        );
+        expect(expenseCall).toBeDefined();
+        expect(eventCall).toBeDefined();
 
-      expect(expenseCall![1]).toMatchObject({
-        type: 'expense',
-        amount,
-        category: OVERDRAFT_CHARGES_CATEGORY,
-        note: 'August statement',
-      });
-      expect(eventCall![1]).toMatchObject({ type, amount, note: 'August statement' });
-      // The event points at the exact expense doc written in the same transaction.
-      expect((eventCall![1] as { transactionId: string }).transactionId).toBe((expenseCall![0] as { id: string }).id);
-      expect(collectionPaths()).toEqual(
-        expect.arrayContaining(['users/uid-1/transactions', 'users/uid-1/overdraftEvents'])
-      );
-    });
+        expect(expenseCall![1]).toMatchObject({
+          type: 'expense',
+          amount,
+          category: OVERDRAFT_CHARGES_CATEGORY,
+          note: 'August statement',
+        });
+        expect(eventCall![1]).toMatchObject({ type, amount, note: 'August statement' });
+        // The event points at the exact expense doc written in the same transaction.
+        expect((eventCall![1] as { transactionId: string }).transactionId).toBe(
+          (expenseCall![0] as { id: string }).id,
+        );
+        expect(collectionPaths()).toEqual(
+          expect.arrayContaining(['users/uid-1/transactions', 'users/uid-1/overdraftEvents']),
+        );
+      },
+    );
 
     it('writes neither half when the transaction aborts', async () => {
       const t = { get: jest.fn(), set: jest.fn(), update: jest.fn(), delete: jest.fn() };
@@ -275,7 +327,7 @@ describe('firestoreOverdraftRepository (native)', () => {
       });
 
       await expect(
-        firestoreOverdraftRepository.logCharge('interest', { amount: 23560, date: DATE })
+        firestoreOverdraftRepository.logCharge('interest', { amount: 23560, date: DATE }),
       ).rejects.toThrow('aborted');
       // Both halves were only ever staged inside the transaction; nothing was written outside it.
       expect(mockAddDoc).not.toHaveBeenCalled();
@@ -293,7 +345,10 @@ describe('firestoreOverdraftRepository (native)', () => {
 
       expect(mockRunTransaction).toHaveBeenCalledTimes(1);
       expect(docPaths()).toEqual(
-        expect.arrayContaining(['users/uid-1/overdraftEvents/event-1', 'users/uid-1/transactions/tx-9'])
+        expect.arrayContaining([
+          'users/uid-1/overdraftEvents/event-1',
+          'users/uid-1/transactions/tx-9',
+        ]),
       );
       expect(t.delete).toHaveBeenCalledTimes(2);
     });
@@ -313,7 +368,9 @@ describe('firestoreOverdraftRepository (native)', () => {
     it('rejects when the event is not found, deleting nothing', async () => {
       const t = stubTransaction(async () => ({ data: () => undefined }));
 
-      await expect(firestoreOverdraftRepository.deleteEvent('missing')).rejects.toThrow('Event not found');
+      await expect(firestoreOverdraftRepository.deleteEvent('missing')).rejects.toThrow(
+        'Event not found',
+      );
       expect(t.delete).not.toHaveBeenCalled();
     });
   });

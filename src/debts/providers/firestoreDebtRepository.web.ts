@@ -54,9 +54,12 @@ export const firestoreDebtRepository: DebtRepository = {
         callback([]);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(collection(firestore, `users/${user.uid}/debts`), (snapshot) => {
-        callback(snapshot.docs.map((d) => toDebt(d.id, d.data())));
-      });
+      unsubscribeSnapshot = onSnapshot(
+        collection(firestore, `users/${user.uid}/debts`),
+        (snapshot) => {
+          callback(snapshot.docs.map((d) => toDebt(d.id, d.data())));
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();

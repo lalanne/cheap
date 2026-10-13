@@ -1,5 +1,13 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, updateDoc, type DocumentData } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  updateDoc,
+  type DocumentData,
+} from 'firebase/firestore';
 
 import { auth } from '../../auth/providers/firebaseApp';
 import type { Category, CategoryRepository } from '../types';
@@ -25,9 +33,12 @@ export const firestoreCategoryRepository: CategoryRepository = {
         callback([]);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(collection(firestore, `users/${user.uid}/categories`), (snapshot) => {
-        callback(snapshot.docs.map((d) => toCategory(d.id, d.data())));
-      });
+      unsubscribeSnapshot = onSnapshot(
+        collection(firestore, `users/${user.uid}/categories`),
+        (snapshot) => {
+          callback(snapshot.docs.map((d) => toCategory(d.id, d.data())));
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();
@@ -40,7 +51,11 @@ export const firestoreCategoryRepository: CategoryRepository = {
       throw new Error('Firestore is not configured.');
     }
     const uid = requireUid();
-    const ref = await addDoc(collection(db, `users/${uid}/categories`), { name, type, parentCategory });
+    const ref = await addDoc(collection(db, `users/${uid}/categories`), {
+      name,
+      type,
+      parentCategory,
+    });
     return { id: ref.id, name, type, parentCategory };
   },
 

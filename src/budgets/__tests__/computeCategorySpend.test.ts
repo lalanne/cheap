@@ -35,7 +35,13 @@ describe('computeCategorySpend (spec 007 criterion 3)', () => {
       // wrong month
       tx({ id: '4', category: 'Food', amount: 99999, date: localDate(2026, 8, 31) }),
       // income, not expense
-      tx({ id: '5', category: 'Food', type: 'income', amount: 99999, date: localDate(2026, 9, 10) }),
+      tx({
+        id: '5',
+        category: 'Food',
+        type: 'income',
+        amount: 99999,
+        date: localDate(2026, 9, 10),
+      }),
     ];
 
     const total = computeCategorySpend(transactions, 'Food', localDate(2026, 9, 17));

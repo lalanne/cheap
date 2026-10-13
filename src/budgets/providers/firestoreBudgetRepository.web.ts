@@ -61,7 +61,7 @@ export const firestoreBudgetRepository: BudgetRepository = {
         collection(firestore, `users/${user.uid}/budgets`),
         (snapshot) => {
           callback(snapshot.docs.map((d) => toBudget(d.id, d.data())));
-        }
+        },
       );
     });
     return () => {
@@ -110,7 +110,9 @@ export const firestoreBudgetRepository: BudgetRepository = {
       throw new Error('Firestore is not configured.');
     }
     const uid = requireUid();
-    const matching = await getDocs(query(collection(db, `users/${uid}/budgets`), where('category', '==', oldName)));
+    const matching = await getDocs(
+      query(collection(db, `users/${uid}/budgets`), where('category', '==', oldName)),
+    );
     if (matching.empty) {
       return;
     }

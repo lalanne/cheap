@@ -76,7 +76,7 @@ describe('firestoreDebtRepository (native)', () => {
         currentBalance: 2000000,
         minimumPayment: 100000,
         interestRate: null,
-      })
+      }),
     ).rejects.toThrow('No signed-in user');
     expect(mockAddDoc).not.toHaveBeenCalled();
   });
@@ -86,7 +86,10 @@ describe('firestoreDebtRepository (native)', () => {
 
     await firestoreDebtRepository.updateBalance('debt-1', 1800000);
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/debts/debt-1');
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ currentBalance: 1800000 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ currentBalance: 1800000 }),
+    );
 
     await firestoreDebtRepository.delete('debt-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
@@ -94,7 +97,9 @@ describe('firestoreDebtRepository (native)', () => {
 
   it('logs a payment atomically: a linked expense transaction and the decreased balance, in one Firestore transaction (criterion 2)', async () => {
     mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
-    const mockGet = jest.fn().mockResolvedValue({ data: () => ({ name: 'Credit Card', currentBalance: 1200000 }) });
+    const mockGet = jest
+      .fn()
+      .mockResolvedValue({ data: () => ({ name: 'Credit Card', currentBalance: 1200000 }) });
     const mockSet = jest.fn();
     const mockUpdate = jest.fn();
     mockRunTransaction.mockImplementation(async (_db, updateFn) => {
@@ -107,11 +112,11 @@ describe('firestoreDebtRepository (native)', () => {
     expect(mockGet).toHaveBeenCalled();
     expect(mockSet).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ type: 'expense', amount: 50000, category: 'Credit Card' })
+      expect.objectContaining({ type: 'expense', amount: 50000, category: 'Credit Card' }),
     );
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ currentBalance: 1150000 })
+      expect.objectContaining({ currentBalance: 1150000 }),
     );
   });
 
@@ -124,7 +129,9 @@ describe('firestoreDebtRepository (native)', () => {
       await updateFn({ get: mockGet, set: mockSet, update: mockUpdate });
     });
 
-    await expect(firestoreDebtRepository.logPayment('debt-1', 50000)).rejects.toThrow('Debt not found');
+    await expect(firestoreDebtRepository.logPayment('debt-1', 50000)).rejects.toThrow(
+      'Debt not found',
+    );
     expect(mockSet).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
   });

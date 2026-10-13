@@ -89,7 +89,9 @@ export default function App() {
       activeScreen = <TransactionsScreen />;
     }
 
-    content = <MainApp activeTab={activeTab} setActiveTab={setActiveTab} activeScreen={activeScreen} />;
+    content = (
+      <MainApp activeTab={activeTab} setActiveTab={setActiveTab} activeScreen={activeScreen} />
+    );
   }
 
   return <SafeAreaProvider>{content}</SafeAreaProvider>;
@@ -120,7 +122,12 @@ function MainApp({
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
-            <Pressable key={tab.key} testID={`tab-${tab.key}`} style={styles.tab} onPress={() => setActiveTab(tab.key)}>
+            <Pressable
+              key={tab.key}
+              testID={`tab-${tab.key}`}
+              style={styles.tab}
+              onPress={() => setActiveTab(tab.key)}
+            >
               <View
                 testID={`tab-icon-${tab.key}`}
                 style={isActive ? styles.tabIconBubbleActive : styles.tabIconBubble}

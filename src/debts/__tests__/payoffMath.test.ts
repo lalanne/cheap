@@ -44,10 +44,22 @@ describe('debtBalanceAsOf (spec 008 criterion 8 — balance at the end of a mont
     updatedAt: new Date(2026, 9, 1),
   };
   let n = 1;
-  function pay(amount: number, date: Date, category = 'Credit Card', type: 'expense' | 'income' = 'expense'): Transaction {
+  function pay(
+    amount: number,
+    date: Date,
+    category = 'Credit Card',
+    type: 'expense' | 'income' = 'expense',
+  ): Transaction {
     return {
-      id: `t${n++}`, type, amount, category, date, note: null, cardId: null,
-      createdAt: date, updatedAt: date,
+      id: `t${n++}`,
+      type,
+      amount,
+      category,
+      date,
+      note: null,
+      cardId: null,
+      createdAt: date,
+      updatedAt: date,
     };
   }
 
@@ -63,7 +75,10 @@ describe('debtBalanceAsOf (spec 008 criterion 8 — balance at the end of a mont
   });
 
   it("ignores other categories and income in this debt's category", () => {
-    const txs = [pay(40000, new Date(2026, 8, 5), 'Groceries'), pay(40000, new Date(2026, 8, 6), 'Credit Card', 'income')];
+    const txs = [
+      pay(40000, new Date(2026, 8, 5), 'Groceries'),
+      pay(40000, new Date(2026, 8, 6), 'Credit Card', 'income'),
+    ];
     expect(debtBalanceAsOf(debt, txs, aug)).toBe(1200000);
   });
 

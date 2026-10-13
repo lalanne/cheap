@@ -7,7 +7,10 @@
 
 // null when the rate is unknown — deliberately not 0, so the UI can ask for
 // the rate instead of claiming the balance costs nothing to carry.
-export function projectedMonthlyInterest(balance: number, monthlyRate: number | null): number | null {
+export function projectedMonthlyInterest(
+  balance: number,
+  monthlyRate: number | null,
+): number | null {
   if (monthlyRate === null) {
     return null;
   }
@@ -35,7 +38,7 @@ export type RevolvingPayoff =
 export function revolvingPayoff(
   balance: number,
   monthlyRate: number | null,
-  plannedPayment: number | null
+  plannedPayment: number | null,
 ): RevolvingPayoff {
   if (balance <= 0) {
     return { kind: 'done' };

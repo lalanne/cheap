@@ -24,15 +24,15 @@ function mockCreditCardsStore(overrides: Partial<Record<string, unknown>> = {}) 
     deletePayment: jest.fn(),
     ...overrides,
   };
-  (useCreditCardsStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof state) => unknown) =>
-    selector(state)
+  (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
 
 function mockTransactions(transactions: Transaction[] = []) {
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { transactions: Transaction[] }) => unknown) => selector({ transactions })
+    (selector: (s: { transactions: Transaction[] }) => unknown) => selector({ transactions }),
   );
 }
 
@@ -110,9 +110,7 @@ describe('CreditCardsPanel — adding a card (criterion 1)', () => {
     await fireEvent.changeText(screen.getByTestId('card-rate-input'), '3.45');
     await fireEvent.press(screen.getByTestId('save-card-button'));
 
-    expect(store.addCard).toHaveBeenCalledWith(
-      expect.objectContaining({ monthlyRate: 3.45 })
-    );
+    expect(store.addCard).toHaveBeenCalledWith(expect.objectContaining({ monthlyRate: 3.45 }));
   });
 
   it('rejects a blank name', async () => {
@@ -147,8 +145,24 @@ describe('CreditCardsPanel — adding a card (criterion 1)', () => {
 
 describe('CreditCardsPanel — a card row (criteria 3, 4, 7)', () => {
   it('shows balance derived live from tagged transactions and payments, plus available room', async () => {
-    mockCreditCardsStore({ payments: [{ id: 'p-1', cardId: 'card-1', amount: 20000, date: new Date(), note: null, createdAt: new Date() }], cards: [VISA] });
-    mockTransactions([expenseTx(45000, 'card-1'), expenseTx(12000, 'card-1'), expenseTx(9000, 'card-2')]);
+    mockCreditCardsStore({
+      payments: [
+        {
+          id: 'p-1',
+          cardId: 'card-1',
+          amount: 20000,
+          date: new Date(),
+          note: null,
+          createdAt: new Date(),
+        },
+      ],
+      cards: [VISA],
+    });
+    mockTransactions([
+      expenseTx(45000, 'card-1'),
+      expenseTx(12000, 'card-1'),
+      expenseTx(9000, 'card-2'),
+    ]);
     await render(<CreditCardsPanel />);
 
     const row = screen.getByTestId('card-row-card-1');
@@ -170,7 +184,9 @@ describe('CreditCardsPanel — a card row (criteria 3, 4, 7)', () => {
     mockTransactions([expenseTx(1600000, 'card-1')]);
     await render(<CreditCardsPanel />);
 
-    expect(within(screen.getByTestId('card-row-card-1')).getByTestId('card-status-card-1')).toBeTruthy();
+    expect(
+      within(screen.getByTestId('card-row-card-1')).getByTestId('card-status-card-1'),
+    ).toBeTruthy();
   });
 
   it('shows the payoff estimate at the minimum payment', async () => {
@@ -194,7 +210,7 @@ describe('CreditCardsPanel — logging a payment (criterion 5)', () => {
     await fireEvent.press(screen.getByTestId('confirm-card-payment-button'));
 
     expect(store.logPayment).toHaveBeenCalledWith(
-      expect.objectContaining({ cardId: 'card-1', amount: 50000 })
+      expect.objectContaining({ cardId: 'card-1', amount: 50000 }),
     );
   });
 

@@ -51,7 +51,7 @@ describe('firestoreBudgetRepository (native)', () => {
     expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/budgets');
     expect(mockAddDoc).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ category: 'Food', monthlyLimit: 250000 })
+      expect.objectContaining({ category: 'Food', monthlyLimit: 250000 }),
     );
     expect(created).toMatchObject({ id: 'budget-1', category: 'Food', monthlyLimit: 250000 });
   });
@@ -60,7 +60,7 @@ describe('firestoreBudgetRepository (native)', () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
     await expect(firestoreBudgetRepository.create('Food', 250000)).rejects.toThrow(
-      'No signed-in user'
+      'No signed-in user',
     );
     expect(mockAddDoc).not.toHaveBeenCalled();
   });
@@ -70,7 +70,10 @@ describe('firestoreBudgetRepository (native)', () => {
 
     await firestoreBudgetRepository.update('budget-1', 300000);
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/budgets/budget-1');
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ monthlyLimit: 300000 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ monthlyLimit: 300000 }),
+    );
 
     await firestoreBudgetRepository.delete('budget-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
@@ -84,7 +87,10 @@ describe('firestoreBudgetRepository (native)', () => {
     await firestoreBudgetRepository.renameCategoryInBudgets('Uber Eats', 'Food Delivery');
 
     expect(mockWhere).toHaveBeenCalledWith('category', '==', 'Uber Eats');
-    expect(mockBatchUpdate).toHaveBeenCalledWith(budgetDoc.ref, expect.objectContaining({ category: 'Food Delivery' }));
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      budgetDoc.ref,
+      expect.objectContaining({ category: 'Food Delivery' }),
+    );
     expect(mockBatchCommit).toHaveBeenCalled();
   });
 

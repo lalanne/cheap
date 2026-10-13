@@ -28,12 +28,12 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   // No card-picker behavior is under test in this file — an empty card
   // list keeps the picker hidden, same as a fresh account with no cards.
   (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { cards: never[] }) => unknown) => selector({ cards: [] })
+    (selector: (s: { cards: never[] }) => unknown) => selector({ cards: [] }),
   );
   return state;
 }
@@ -91,7 +91,7 @@ describe('TransactionsScreen (wide web, spec 006)', () => {
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
     expect(store.addTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' }),
     );
   });
 });
@@ -121,7 +121,10 @@ describe('TransactionsScreen — month rail (wide web, spec 006 2026-09-25 amend
 
     const rail = screen.getByTestId('month-rail');
     const items = within(rail).getAllByTestId(/^month-rail-item-/);
-    expect(items.map((el) => el.props.testID)).toEqual(['month-rail-item-2026-9', 'month-rail-item-2026-8']);
+    expect(items.map((el) => el.props.testID)).toEqual([
+      'month-rail-item-2026-9',
+      'month-rail-item-2026-8',
+    ]);
     expect(within(items[0]).getByText(/\$4\.500/)).toBeTruthy();
     expect(within(items[1]).getByText(/\$350\.000/)).toBeTruthy();
   });

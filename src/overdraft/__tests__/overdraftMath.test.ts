@@ -20,7 +20,7 @@ function ev(
   type: OverdraftEventType,
   amount: number,
   date: Date,
-  overrides: Partial<OverdraftEvent> = {}
+  overrides: Partial<OverdraftEvent> = {},
 ): OverdraftEvent {
   return {
     id: `e-${nextId++}`,
@@ -246,15 +246,31 @@ describe('overdraftPayoff (criterion 9)', () => {
   });
 
   it('is ⌈B/P⌉ months with no remaining interest at a zero rate', () => {
-    expect(overdraftPayoff(900000, 0, 300000)).toEqual({ kind: 'clears', months: 3, remainingInterest: 0 });
-    expect(overdraftPayoff(900000, 0, 250000)).toEqual({ kind: 'clears', months: 4, remainingInterest: 0 });
+    expect(overdraftPayoff(900000, 0, 300000)).toEqual({
+      kind: 'clears',
+      months: 3,
+      remainingInterest: 0,
+    });
+    expect(overdraftPayoff(900000, 0, 250000)).toEqual({
+      kind: 'clears',
+      months: 4,
+      remainingInterest: 0,
+    });
   });
 
   it('amortizes at a monthly rate: months rounded up, interest from the unrounded month count', () => {
     // n′ = −ln(1 − r·B/P) / ln(1 + r) = 4.3454… → 5 months;
     // remaining interest = round(P·n′ − B) = 63.630
-    expect(overdraftPayoff(1240000, 1.9, 300000)).toEqual({ kind: 'clears', months: 5, remainingInterest: 63630 });
-    expect(overdraftPayoff(1240000, 1.9, 400000)).toEqual({ kind: 'clears', months: 4, remainingInterest: 50122 });
+    expect(overdraftPayoff(1240000, 1.9, 300000)).toEqual({
+      kind: 'clears',
+      months: 5,
+      remainingInterest: 63630,
+    });
+    expect(overdraftPayoff(1240000, 1.9, 400000)).toEqual({
+      kind: 'clears',
+      months: 4,
+      remainingInterest: 50122,
+    });
   });
 
   it('gives an interest-free lower bound of ⌈B/P⌉ months when the rate is unknown (amendment, criterion 18)', () => {
@@ -272,7 +288,11 @@ describe('overdraftPayoff (criterion 9)', () => {
   });
 
   it('clears in one month when the payment covers the balance plus a month of interest', () => {
-    expect(overdraftPayoff(100000, 1.9, 200000)).toEqual({ kind: 'clears', months: 1, remainingInterest: 1430 });
+    expect(overdraftPayoff(100000, 1.9, 200000)).toEqual({
+      kind: 'clears',
+      months: 1,
+      remainingInterest: 1430,
+    });
   });
 });
 

@@ -14,7 +14,7 @@ describe('Screen', () => {
     await render(
       <Screen>
         <Text>Transactions</Text>
-      </Screen>
+      </Screen>,
     );
 
     expect(screen.getByText('Transactions')).toBeTruthy();
@@ -24,14 +24,14 @@ describe('Screen', () => {
     await render(
       <Screen>
         <Text>Transactions</Text>
-      </Screen>
+      </Screen>,
     );
 
     const scrollView = screen.getByTestId('screen-scroll-view');
     const contentStyle = [].concat(scrollView.props.contentContainerStyle);
     const paddingTop = contentStyle.reduce(
       (found: number | undefined, s: { paddingTop?: number }) => s?.paddingTop ?? found,
-      undefined
+      undefined,
     );
     expect(paddingTop).toBeGreaterThanOrEqual(mockInsets.top);
   });
@@ -40,14 +40,14 @@ describe('Screen', () => {
     await render(
       <Screen>
         <Text>Transactions</Text>
-      </Screen>
+      </Screen>,
     );
 
     const scrollView = screen.getByTestId('screen-scroll-view');
     const contentStyle = [].concat(scrollView.props.contentContainerStyle);
     const paddingBottom = contentStyle.reduce(
       (found: number | undefined, s: { paddingBottom?: number }) => s?.paddingBottom ?? found,
-      undefined
+      undefined,
     );
     expect(paddingBottom).toBeGreaterThanOrEqual(mockInsets.bottom);
   });
@@ -56,7 +56,7 @@ describe('Screen', () => {
     await render(
       <Screen>
         <Text>Transactions</Text>
-      </Screen>
+      </Screen>,
     );
 
     const scrollView = screen.getByTestId('screen-scroll-view');
@@ -71,7 +71,7 @@ describe('Screen', () => {
       await render(
         <Screen>
           <Text>Transactions</Text>
-        </Screen>
+        </Screen>,
       );
 
       const scrollView = screen.getByTestId('screen-scroll-view');
@@ -92,7 +92,7 @@ describe('Screen', () => {
       await render(
         <Screen wide>
           <Text>Transactions</Text>
-        </Screen>
+        </Screen>,
       );
 
       const scrollView = screen.getByTestId('screen-scroll-view');

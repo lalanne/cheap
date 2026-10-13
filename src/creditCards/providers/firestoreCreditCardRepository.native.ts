@@ -46,9 +46,12 @@ export const firestoreCreditCardRepository: CreditCardRepository = {
         callback([]);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(collection(getFirestore(), `users/${user.uid}/creditCards`), (snapshot) => {
-        callback(snapshot.docs.map((d) => toCard(d.id, d.data())));
-      });
+      unsubscribeSnapshot = onSnapshot(
+        collection(getFirestore(), `users/${user.uid}/creditCards`),
+        (snapshot) => {
+          callback(snapshot.docs.map((d) => toCard(d.id, d.data())));
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();

@@ -12,8 +12,18 @@ import { formatCLP as formatOverdraftCLP } from '../overdraft/format';
 import { balanceAsOf, balanceOf, overdraftPayoff } from '../overdraft/overdraftMath';
 import { useOverdraftStore } from '../overdraft/store';
 import { debtBalanceAsOf, percentPaid } from '../debts/payoffMath';
-import { budgetedVsIncome, categoryTotalsForMonth, last6MonthsExpense, monthlyTotals, type MonthExpense } from '../dashboard/aggregation';
-import { budgetSpendTotals, rollUpCategoryTotals, subcategoryTotalsFor } from '../dashboard/categoryRollup';
+import {
+  budgetedVsIncome,
+  categoryTotalsForMonth,
+  last6MonthsExpense,
+  monthlyTotals,
+  type MonthExpense,
+} from '../dashboard/aggregation';
+import {
+  budgetSpendTotals,
+  rollUpCategoryTotals,
+  subcategoryTotalsFor,
+} from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
 import { useTransactionsStore } from '../transactions/store';
@@ -37,10 +47,17 @@ const HoverableCircle = Circle as unknown as ComponentType<
 >;
 
 function formatCLP(amount: number): string {
-  return `$${Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  return `$${Math.round(amount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
-function suggestionCopy(s: Suggestion): { title: string; detail: string; highlight: string; color: string } {
+function suggestionCopy(s: Suggestion): {
+  title: string;
+  detail: string;
+  highlight: string;
+  color: string;
+} {
   if (s.kind === 'budget-overrun') {
     return {
       title: `${s.category} is ${Math.round((s.percent - 1) * 100)}% over budget this month`,
@@ -67,7 +84,11 @@ function suggestionCopy(s: Suggestion): { title: string; detail: string; highlig
   };
 }
 
-function overdraftRowValue(balance: number, monthlyRate: number | null, planned: number | null): string {
+function overdraftRowValue(
+  balance: number,
+  monthlyRate: number | null,
+  planned: number | null,
+): string {
   const payoff = overdraftPayoff(balance, monthlyRate, planned);
   const owed = formatOverdraftCLP(balance);
   return payoff.kind === 'clears' ? `${owed} · ~${payoff.months} mo` : owed;
@@ -125,7 +146,9 @@ export function DashboardScreen() {
   const donutRolledUpTotals = isCurrentMonthSelected
     ? rolledUpTotals
     : rollUpCategoryTotals(donutCategorySpend, categories);
-  const donutBudgetSpend = isCurrentMonthSelected ? budgetSpend : budgetSpendTotals(donutCategorySpend, categories);
+  const donutBudgetSpend = isCurrentMonthSelected
+    ? budgetSpend
+    : budgetSpendTotals(donutCategorySpend, categories);
   const donutTotals = drilledCategory
     ? subcategoryTotalsFor(donutCategorySpend, categories, drilledCategory)
     : donutRolledUpTotals;
@@ -135,10 +158,14 @@ export function DashboardScreen() {
   // Spec 009's 2026-10-10 amendment (#17): one selection scopes every figure
   // but the suggestions feed. A past month shows balances as of its end.
   const viewMonth = selectedMonth ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
-  const viewTotals = isCurrentMonthSelected ? thisMonth : monthlyTotals(transactions, donutReferenceDate);
+  const viewTotals = isCurrentMonthSelected
+    ? thisMonth
+    : monthlyTotals(transactions, donutReferenceDate);
   const asOf = selectedMonth;
   const overdraftBalance = overdraftLine
-    ? (asOf ? balanceAsOf(overdraftEvents, asOf) ?? 0 : balanceOf(overdraftEvents))
+    ? asOf
+      ? (balanceAsOf(overdraftEvents, asOf) ?? 0)
+      : balanceOf(overdraftEvents)
     : 0;
   const showOverdraft = overdraftLine !== null && overdraftBalance > 0;
   const debtRows = debts.flatMap((d) => {
@@ -159,7 +186,20 @@ export function DashboardScreen() {
     (showOverdraft ? overdraftBalance : 0) +
     totalCreditCardBalance;
   const maxTrend = Math.max(1, ...trend.map((m) => m.total));
-  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthLabels = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const effectiveSelectedMonth = viewMonth;
   // " — Aug" when a past month is selected, '' for the current month.
   const monthSuffix = selectedMonth === null ? '' : ` — ${monthLabels[selectedMonth.month - 1]}`;
@@ -174,12 +214,18 @@ export function DashboardScreen() {
       {suggestions.map((s) => {
         const copy = suggestionCopy(s);
         return (
-          <View key={s.id} testID={`suggestion-${s.id}`} style={[styles.suggestionCard, { borderLeftColor: copy.color }]}>
+          <View
+            key={s.id}
+            testID={`suggestion-${s.id}`}
+            style={[styles.suggestionCard, { borderLeftColor: copy.color }]}
+          >
             <View style={styles.suggestionText}>
               <Text style={styles.suggestionTitle}>{copy.title}</Text>
               <Text style={styles.suggestionDetail}>{copy.detail}</Text>
             </View>
-            <Text style={[styles.suggestionHighlight, { color: copy.color }]}>{copy.highlight}</Text>
+            <Text style={[styles.suggestionHighlight, { color: copy.color }]}>
+              {copy.highlight}
+            </Text>
           </View>
         );
       })}
@@ -193,9 +239,13 @@ export function DashboardScreen() {
   const budgetedRow = (
     <View style={styles.budgetedRow} testID="dashboard-budgeted-vs-income">
       <View style={styles.barLabelRow}>
-        <Text style={styles.budgetedLabel}>{selectedMonth === null ? 'Budgeted' : `Budgeted${monthSuffix}`}</Text>
+        <Text style={styles.budgetedLabel}>
+          {selectedMonth === null ? 'Budgeted' : `Budgeted${monthSuffix}`}
+        </Text>
         <Text style={[styles.budgetedValue, overCommitted && { color: colors.chart[1] }]}>
-          {committed.percent === null ? formatCLP(committed.totalBudgeted) : `${committed.percent}% of income`}
+          {committed.percent === null
+            ? formatCLP(committed.totalBudgeted)
+            : `${committed.percent}% of income`}
         </Text>
       </View>
       {committed.percent === null ? (
@@ -226,7 +276,9 @@ export function DashboardScreen() {
 
   const budgetsSection = (
     <View style={styles.card} testID="dashboard-budgets">
-      <Text style={styles.cardTitle}>{selectedMonth === null ? 'Budgets this month' : `Budgets${monthSuffix}`}</Text>
+      <Text style={styles.cardTitle}>
+        {selectedMonth === null ? 'Budgets this month' : `Budgets${monthSuffix}`}
+      </Text>
       {budgets.length > 0 && budgetedRow}
       {budgets.length === 0 ? (
         <Text style={styles.emptyText} testID="dashboard-budgets-empty">
@@ -250,7 +302,10 @@ export function DashboardScreen() {
                   <View
                     style={[
                       styles.barFill,
-                      { width: `${Math.min(percent, 1) * 100}%`, backgroundColor: over ? colors.chart[1] : colors.accent },
+                      {
+                        width: `${Math.min(percent, 1) * 100}%`,
+                        backgroundColor: over ? colors.chart[1] : colors.accent,
+                      },
                     ]}
                   />
                 </View>
@@ -265,17 +320,23 @@ export function DashboardScreen() {
   const kpiStack = (
     <View style={styles.kpiStack}>
       <View style={styles.kpiTile} testID="dashboard-kpi-spent">
-        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Spent this month' : `Spent${monthSuffix}`}</Text>
+        <Text style={styles.kpiLabel}>
+          {selectedMonth === null ? 'Spent this month' : `Spent${monthSuffix}`}
+        </Text>
         <Text style={styles.kpiValue}>{formatCLP(viewTotals.expense)}</Text>
       </View>
       <View style={styles.kpiTile} testID="dashboard-kpi-saved">
-        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Saved this month' : `Saved${monthSuffix}`}</Text>
+        <Text style={styles.kpiLabel}>
+          {selectedMonth === null ? 'Saved this month' : `Saved${monthSuffix}`}
+        </Text>
         <Text style={[styles.kpiValue, { color: colors.success }]}>
           {formatCLP(viewTotals.income - viewTotals.expense)}
         </Text>
       </View>
       <View style={styles.kpiTile} testID="dashboard-kpi-debt">
-        <Text style={styles.kpiLabel}>{selectedMonth === null ? 'Total debt remaining' : `Total debt${monthSuffix}`}</Text>
+        <Text style={styles.kpiLabel}>
+          {selectedMonth === null ? 'Total debt remaining' : `Total debt${monthSuffix}`}
+        </Text>
         <Text style={styles.kpiValue}>{formatCLP(totalDebtRemaining)}</Text>
       </View>
     </View>
@@ -326,9 +387,15 @@ export function DashboardScreen() {
               ))}
             </Svg>
             {hoveredCategory && (
-              <View style={styles.donutCenterOverlay} pointerEvents="none" testID="dashboard-donut-hover-label">
+              <View
+                style={styles.donutCenterOverlay}
+                pointerEvents="none"
+                testID="dashboard-donut-hover-label"
+              >
                 <Text style={styles.donutCenterCategory}>{hoveredCategory}</Text>
-                <Text style={styles.donutCenterAmount}>{formatCLP(donutTotals[hoveredCategory] ?? 0)}</Text>
+                <Text style={styles.donutCenterAmount}>
+                  {formatCLP(donutTotals[hoveredCategory] ?? 0)}
+                </Text>
               </View>
             )}
           </View>
@@ -383,7 +450,8 @@ export function DashboardScreen() {
       <Text style={styles.cardTitle}>Spend, last 6 months</Text>
       <View style={styles.trendRow}>
         {trend.map((m, i) => {
-          const isSelected = m.year === effectiveSelectedMonth.year && m.month === effectiveSelectedMonth.month;
+          const isSelected =
+            m.year === effectiveSelectedMonth.year && m.month === effectiveSelectedMonth.month;
           return (
             <Pressable
               key={`${m.year}-${m.month}`}
@@ -391,7 +459,9 @@ export function DashboardScreen() {
               testID={`dashboard-trend-bar-${i}`}
               onPress={() => handleSelectMonth(m)}
             >
-              <View style={[styles.trendBar, { height: Math.max(4, (m.total / maxTrend) * 100) }]} />
+              <View
+                style={[styles.trendBar, { height: Math.max(4, (m.total / maxTrend) * 100) }]}
+              />
               <Text
                 style={[styles.trendLabel, isSelected && styles.trendLabelSelected]}
                 testID={`dashboard-trend-bar-${i}-label`}
@@ -414,7 +484,11 @@ export function DashboardScreen() {
             <Text style={styles.barLabel}>Overdraft line</Text>
             <Text style={styles.barValue}>
               {selectedMonth === null
-                ? overdraftRowValue(overdraftBalance, overdraftLine.monthlyRate, overdraftLine.plannedMonthlyPayment)
+                ? overdraftRowValue(
+                    overdraftBalance,
+                    overdraftLine.monthlyRate,
+                    overdraftLine.plannedMonthlyPayment,
+                  )
                 : formatOverdraftCLP(overdraftBalance)}
             </Text>
           </View>
@@ -449,7 +523,12 @@ export function DashboardScreen() {
                   <Text style={styles.barValue}>{Math.round(percent * 100)}% paid</Text>
                 </View>
                 <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: `${percent * 100}%`, backgroundColor: colors.chart[0] }]} />
+                  <View
+                    style={[
+                      styles.barFill,
+                      { width: `${percent * 100}%`, backgroundColor: colors.chart[0] },
+                    ]}
+                  />
                 </View>
               </View>
             );

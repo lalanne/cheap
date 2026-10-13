@@ -5,9 +5,7 @@ import { Input } from '../Input';
 describe('Input', () => {
   it('renders its label and reports text changes', async () => {
     const onChangeText = jest.fn();
-    await render(
-      <Input label="Email" value="" onChangeText={onChangeText} testID="input" />
-    );
+    await render(<Input label="Email" value="" onChangeText={onChangeText} testID="input" />);
 
     await fireEvent.changeText(screen.getByTestId('input'), 'jane@example.com');
 
@@ -17,12 +15,7 @@ describe('Input', () => {
 
   it('shows a validation error when given one', async () => {
     await render(
-      <Input
-        label="Password"
-        value=""
-        onChangeText={jest.fn()}
-        error="At least 8 characters."
-      />
+      <Input label="Password" value="" onChangeText={jest.fn()} error="At least 8 characters." />,
     );
 
     expect(screen.getByText('At least 8 characters.')).toBeTruthy();
@@ -39,11 +32,11 @@ describe('Input', () => {
       <>
         <Input label="Email" value="" onChangeText={jest.fn()} testID="input-a" />
         <Input label="Name" value="Jane" onChangeText={jest.fn()} testID="input-b" />
-      </>
+      </>,
     );
 
     expect(screen.getByTestId('input-a').props.style).toEqual(
-      screen.getByTestId('input-b').props.style
+      screen.getByTestId('input-b').props.style,
     );
   });
 });

@@ -65,7 +65,12 @@ function createMockRepos() {
   };
 }
 
-const PAYMENT: LogCardPaymentInput = { cardId: 'card-1', amount: 50000, date: new Date('2026-09-24'), note: null };
+const PAYMENT: LogCardPaymentInput = {
+  cardId: 'card-1',
+  amount: 50000,
+  date: new Date('2026-09-24'),
+  note: null,
+};
 
 describe('creditCardsStore', () => {
   it('does not touch the repositories until startSync is called', () => {
@@ -126,9 +131,15 @@ describe('creditCardsStore', () => {
     const { useCreditCardsStore, startSync } = createCreditCardsStore(repos);
     startSync();
 
-    await useCreditCardsStore.getState().addCard({ name: 'Visa CLP', limit: 2000000, minimumPayment: 100000 });
+    await useCreditCardsStore
+      .getState()
+      .addCard({ name: 'Visa CLP', limit: 2000000, minimumPayment: 100000 });
 
-    expect(repos.cards.create).toHaveBeenCalledWith({ name: 'Visa CLP', limit: 2000000, minimumPayment: 100000 });
+    expect(repos.cards.create).toHaveBeenCalledWith({
+      name: 'Visa CLP',
+      limit: 2000000,
+      minimumPayment: 100000,
+    });
     expect(useCreditCardsStore.getState().cards).toHaveLength(1);
   });
 

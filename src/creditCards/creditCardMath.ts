@@ -10,7 +10,7 @@ import type { CreditCardPayment } from './types';
 export function creditCardBalance(
   cardId: string,
   transactions: Transaction[],
-  payments: CreditCardPayment[]
+  payments: CreditCardPayment[],
 ): number {
   const charged = transactions
     .filter((t) => t.type === 'expense' && t.cardId === cardId)
@@ -25,13 +25,14 @@ export function cardBalanceAsOf(
   cardId: string,
   transactions: Transaction[],
   payments: CreditCardPayment[],
-  month: MonthRef
+  month: MonthRef,
 ): number | null {
   const end = startOfNextMonth(month);
   const txs = transactions.filter((t) => t.date < end);
   const pays = payments.filter((p) => p.date < end);
   const hasActivity =
-    txs.some((t) => t.type === 'expense' && t.cardId === cardId) || pays.some((p) => p.cardId === cardId);
+    txs.some((t) => t.type === 'expense' && t.cardId === cardId) ||
+    pays.some((p) => p.cardId === cardId);
   return hasActivity ? creditCardBalance(cardId, txs, pays) : null;
 }
 

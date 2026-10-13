@@ -1,9 +1,19 @@
-import { availableOf, cardBalanceAsOf, creditCardBalance, creditCardStatus, usedPercent } from '../creditCardMath';
+import {
+  availableOf,
+  cardBalanceAsOf,
+  creditCardBalance,
+  creditCardStatus,
+  usedPercent,
+} from '../creditCardMath';
 import type { CreditCardPayment } from '../types';
 import type { Transaction } from '../../transactions/types';
 
 let nextTxId = 1;
-function expenseTx(amount: number, cardId: string | null, overrides: Partial<Transaction> = {}): Transaction {
+function expenseTx(
+  amount: number,
+  cardId: string | null,
+  overrides: Partial<Transaction> = {},
+): Transaction {
   return {
     id: `tx-${nextTxId++}`,
     type: 'expense',
@@ -32,7 +42,11 @@ function payment(amount: number, cardId: string): CreditCardPayment {
 
 describe('creditCardBalance (spec 013 criterion 3 — a live sum, not stored)', () => {
   it('is the sum of expenses tagged with the card minus payments against it', () => {
-    const transactions = [expenseTx(45000, 'card-1'), expenseTx(12000, 'card-1'), expenseTx(9000, 'card-2')];
+    const transactions = [
+      expenseTx(45000, 'card-1'),
+      expenseTx(12000, 'card-1'),
+      expenseTx(9000, 'card-2'),
+    ];
     const payments = [payment(20000, 'card-1')];
 
     expect(creditCardBalance('card-1', transactions, payments)).toBe(37000);
@@ -134,7 +148,7 @@ describe('cardBalanceAsOf (spec 013 criterion 10 — balance at the end of a mon
     const transactions = [expenseTx(45000, 'card-1', { date: new Date(2026, 7, 2) })];
     const payments = [{ ...payment(5000, 'card-1'), date: new Date(2026, 7, 9) }];
     expect(cardBalanceAsOf('card-1', transactions, payments, aug)).toBe(
-      creditCardBalance('card-1', transactions, payments)
+      creditCardBalance('card-1', transactions, payments),
     );
   });
 });

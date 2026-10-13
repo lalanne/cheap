@@ -21,7 +21,9 @@ describe('rollUpCategoryTotals (spec 011 criterion 3)', () => {
   });
 
   it('treats a subcategory whose parent no longer exists as its own top-level entry (criterion 6)', () => {
-    const orphan: Category[] = [{ id: 'c9', name: 'Old Sub', type: 'both', parentCategory: 'Deleted Parent' }];
+    const orphan: Category[] = [
+      { id: 'c9', name: 'Old Sub', type: 'both', parentCategory: 'Deleted Parent' },
+    ];
     const totals = { 'Old Sub': 75 };
 
     expect(rollUpCategoryTotals(totals, orphan)).toEqual({ 'Old Sub': 75 });
@@ -69,9 +71,13 @@ describe('budgetSpendTotals (spec 011 criterion 9)', () => {
   });
 
   it('matches rollUpCategoryTotals for top-level categories and dangling parents', () => {
-    const orphan: Category[] = [{ id: 'c9', name: 'Old Sub', type: 'both', parentCategory: 'Deleted Parent' }];
+    const orphan: Category[] = [
+      { id: 'c9', name: 'Old Sub', type: 'both', parentCategory: 'Deleted Parent' },
+    ];
 
-    expect(budgetSpendTotals({ Gym: 50, 'Old Sub': 75 }, [...FOOD_SUBCATEGORIES, ...orphan])).toEqual({
+    expect(
+      budgetSpendTotals({ Gym: 50, 'Old Sub': 75 }, [...FOOD_SUBCATEGORIES, ...orphan]),
+    ).toEqual({
       Gym: 50,
       'Old Sub': 75,
     });

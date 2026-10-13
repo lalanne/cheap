@@ -24,10 +24,10 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { categories: unknown[] }) => unknown) => selector({ categories: [] })
+    (selector: (s: { categories: unknown[] }) => unknown) => selector({ categories: [] }),
   );
   return state;
 }
@@ -70,7 +70,9 @@ describe('BudgetsPanel (spec 009 amendment: Manage tab, not its own screen)', ()
     await fireEvent.press(screen.getByTestId('save-budget-button'));
 
     expect(store.setBudget).not.toHaveBeenCalled();
-    expect(screen.getByText('Enter a whole number in pesos — no decimals or symbols.')).toBeTruthy();
+    expect(
+      screen.getByText('Enter a whole number in pesos — no decimals or symbols.'),
+    ).toBeTruthy();
   });
 
   it('edits an existing budget in place, prefilled (criterion 2)', async () => {

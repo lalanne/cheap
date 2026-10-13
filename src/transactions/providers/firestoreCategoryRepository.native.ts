@@ -40,7 +40,7 @@ export const firestoreCategoryRepository: CategoryRepository = {
         collection(getFirestore(), `users/${user.uid}/categories`),
         (snapshot) => {
           callback(snapshot.docs.map((d) => toCategory(d.id, d.data())));
-        }
+        },
       );
     });
     return () => {

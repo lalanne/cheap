@@ -8,7 +8,7 @@ describe('Card', () => {
     await render(
       <Card testID="card">
         <Text>Balance this month</Text>
-      </Card>
+      </Card>,
     );
 
     expect(screen.getByText('Balance this month')).toBeTruthy();
@@ -23,7 +23,7 @@ describe('Card', () => {
         <Card testID="card-b">
           <Text>Something longer</Text>
         </Card>
-      </>
+      </>,
     );
 
     const a = screen.getByTestId('card-a');

@@ -52,7 +52,10 @@ export const firestoreTransactionRepository: TransactionRepository = {
         callback([]);
         return;
       }
-      const q = query(collection(firestore, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
+      const q = query(
+        collection(firestore, `users/${user.uid}/transactions`),
+        orderBy('date', 'desc'),
+      );
       unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
         callback(snapshot.docs.map((d) => toTransaction(d.id, d.data())));
       });
@@ -124,7 +127,9 @@ export const firestoreTransactionRepository: TransactionRepository = {
       throw new Error('Firestore is not configured.');
     }
     const uid = requireUid();
-    const matching = await getDocs(query(collection(db, `users/${uid}/transactions`), where('category', '==', oldName)));
+    const matching = await getDocs(
+      query(collection(db, `users/${uid}/transactions`), where('category', '==', oldName)),
+    );
     if (matching.empty) {
       return;
     }

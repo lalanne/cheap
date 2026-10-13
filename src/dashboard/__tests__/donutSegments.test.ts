@@ -46,7 +46,7 @@ describe('computeDonutSegments (spec 009 criterion 7)', () => {
   it('orders segments by amount descending regardless of input order (2026-10-05 amendment)', () => {
     const segments = computeDonutSegments(
       { Entertainment: 95000, Housing: 450000, Food: 120000 },
-      100
+      100,
     );
 
     expect(segments.map((s) => s.category)).toEqual(['Housing', 'Food', 'Entertainment']);

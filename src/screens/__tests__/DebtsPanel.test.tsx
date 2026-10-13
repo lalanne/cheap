@@ -18,7 +18,7 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useDebtsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -59,7 +59,7 @@ describe('DebtsPanel (spec 009 amendment: Manage tab, not its own screen)', () =
         originalAmount: 2000000,
         currentBalance: 2000000,
         minimumPayment: 100000,
-      })
+      }),
     );
   });
 

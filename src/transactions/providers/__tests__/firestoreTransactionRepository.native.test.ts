@@ -75,7 +75,7 @@ describe('firestoreTransactionRepository (native)', () => {
     expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/transactions');
     expect(mockAddDoc).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' }),
     );
   });
 
@@ -89,7 +89,10 @@ describe('firestoreTransactionRepository (native)', () => {
       note: null,
     });
 
-    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: null }));
+    expect(mockAddDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cardId: null }),
+    );
   });
 
   it('writes the given cardId when the expense was paid with a card', async () => {
@@ -103,19 +106,28 @@ describe('firestoreTransactionRepository (native)', () => {
       cardId: 'card-1',
     });
 
-    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: 'card-1' }));
+    expect(mockAddDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cardId: 'card-1' }),
+    );
   });
 
   it('updates cardId only when it is included in the update, same as any other field', async () => {
     mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
     await firestoreTransactionRepository.update('tx-1', { cardId: 'card-2' });
 
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cardId: 'card-2' }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cardId: 'card-2' }),
+    );
 
     mockUpdateDoc.mockClear();
     await firestoreTransactionRepository.update('tx-1', { amount: 5000 });
 
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.not.objectContaining({ cardId: expect.anything() }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.not.objectContaining({ cardId: expect.anything() }),
+    );
   });
 
   it('throws a clear error instead of silently doing nothing when nobody is signed in', async () => {
@@ -128,7 +140,7 @@ describe('firestoreTransactionRepository (native)', () => {
         category: 'Food',
         date: new Date(),
         note: null,
-      })
+      }),
     ).rejects.toThrow('No signed-in user');
     expect(mockAddDoc).not.toHaveBeenCalled();
   });
@@ -138,7 +150,10 @@ describe('firestoreTransactionRepository (native)', () => {
 
     await firestoreTransactionRepository.update('tx-1', { amount: 5000 });
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/transactions/tx-1');
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ amount: 5000 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amount: 5000 }),
+    );
 
     await firestoreTransactionRepository.delete('tx-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
@@ -153,8 +168,14 @@ describe('firestoreTransactionRepository (native)', () => {
     await firestoreTransactionRepository.renameCategoryInTransactions('Uber Eats', 'Food Delivery');
 
     expect(mockWhere).toHaveBeenCalledWith('category', '==', 'Uber Eats');
-    expect(mockBatchUpdate).toHaveBeenCalledWith(doc1.ref, expect.objectContaining({ category: 'Food Delivery' }));
-    expect(mockBatchUpdate).toHaveBeenCalledWith(doc2.ref, expect.objectContaining({ category: 'Food Delivery' }));
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      doc1.ref,
+      expect.objectContaining({ category: 'Food Delivery' }),
+    );
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      doc2.ref,
+      expect.objectContaining({ category: 'Food Delivery' }),
+    );
     expect(mockBatchCommit).toHaveBeenCalled();
   });
 

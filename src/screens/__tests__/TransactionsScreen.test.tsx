@@ -30,7 +30,7 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   // Every test in this file goes through mockStore(); defaulting the card
   // list to empty here means only the tests about the picker itself need
@@ -41,7 +41,7 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
 
 function mockCreditCards(cards: CreditCard[] = []) {
   (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { cards: CreditCard[] }) => unknown) => selector({ cards })
+    (selector: (s: { cards: CreditCard[] }) => unknown) => selector({ cards }),
   );
 }
 
@@ -77,7 +77,7 @@ describe('TransactionsScreen', () => {
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
     expect(store.addTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' }),
     );
   });
 
@@ -90,7 +90,9 @@ describe('TransactionsScreen', () => {
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
     expect(store.addTransaction).not.toHaveBeenCalled();
-    expect(screen.getByText('Enter a whole number in pesos — no decimals or symbols.')).toBeTruthy();
+    expect(
+      screen.getByText('Enter a whole number in pesos — no decimals or symbols.'),
+    ).toBeTruthy();
   });
 
   it('edits an existing transaction in place (criterion 3)', async () => {
@@ -103,7 +105,7 @@ describe('TransactionsScreen', () => {
 
     expect(store.updateTransaction).toHaveBeenCalledWith(
       EXISTING.id,
-      expect.objectContaining({ amount: 50000 })
+      expect.objectContaining({ amount: 50000 }),
     );
   });
 
@@ -128,7 +130,9 @@ describe('TransactionsScreen', () => {
 
   it('shows an error instead of failing silently when save throws (regression: native Firestore split-brain auth bug)', async () => {
     const store = mockStore({
-      addTransaction: jest.fn().mockRejectedValue(new Error('No signed-in user — cannot access transactions.')),
+      addTransaction: jest
+        .fn()
+        .mockRejectedValue(new Error('No signed-in user — cannot access transactions.')),
     });
     await render(<TransactionsScreen />);
 
@@ -149,18 +153,28 @@ describe('TransactionsScreen', () => {
 
     await fireEvent.press(screen.getByTestId('add-transaction-button'));
 
-    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).toBe(colors.accent);
-    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).not.toBe(colors.accent);
+    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).toBe(
+      colors.accent,
+    );
+    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).not.toBe(
+      colors.accent,
+    );
 
     await fireEvent.press(screen.getByTestId('type-income'));
 
-    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).toBe(colors.accent);
-    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).not.toBe(colors.accent);
+    expect(flatten(screen.getByTestId('type-income').props.style).backgroundColor).toBe(
+      colors.accent,
+    );
+    expect(flatten(screen.getByTestId('type-expense').props.style).backgroundColor).not.toBe(
+      colors.accent,
+    );
   });
 
   it('creates a custom category and makes it selectable (criterion 6)', async () => {
     const store = mockStore({
-      addCategory: jest.fn().mockResolvedValue({ id: 'cat-1', name: 'Pets', type: 'both', parentCategory: null }),
+      addCategory: jest
+        .fn()
+        .mockResolvedValue({ id: 'cat-1', name: 'Pets', type: 'both', parentCategory: null }),
     });
     await render(<TransactionsScreen />);
 
@@ -216,7 +230,9 @@ describe('TransactionsScreen — grouped by month (spec 002 2026-09-25 amendment
     mockStore({ transactions: [septTx, augTx] });
     await render(<TransactionsScreen />);
 
-    const testIDs = screen.getAllByTestId(/^transaction-(month-header|row)-/).map((el) => el.props.testID);
+    const testIDs = screen
+      .getAllByTestId(/^transaction-(month-header|row)-/)
+      .map((el) => el.props.testID);
     expect(testIDs).toEqual([
       'transaction-month-header-2026-9',
       'transaction-row-tx-sep',
@@ -241,7 +257,9 @@ describe('TransactionsScreen — grouped by month (spec 002 2026-09-25 amendment
       mockStore({ transactions: [septTx] });
       await render(<TransactionsScreen />);
 
-      expect(flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position).toBe('sticky');
+      expect(
+        flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position,
+      ).toBe('sticky');
     } finally {
       Platform.OS = originalOS;
     }
@@ -251,7 +269,9 @@ describe('TransactionsScreen — grouped by month (spec 002 2026-09-25 amendment
     mockStore({ transactions: [septTx] });
     await render(<TransactionsScreen />);
 
-    expect(flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position).not.toBe('sticky');
+    expect(
+      flatten(screen.getByTestId('transaction-month-header-2026-9').props.style).position,
+    ).not.toBe('sticky');
   });
 });
 
@@ -298,7 +318,7 @@ describe('TransactionsScreen — Add moves beside each month (spec 002 2026-09-2
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
     expect(store.addTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' })
+      expect.objectContaining({ type: 'expense', amount: 45000, category: 'Food' }),
     );
   });
 });
@@ -337,7 +357,9 @@ describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 
     await fireEvent.press(screen.getByTestId('card-option-card-1'));
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
-    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ cardId: 'card-1' }));
+    expect(store.addTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ cardId: 'card-1' }),
+    );
   });
 
   it('offers no card picker on the income form, and never tags an income transaction (criterion 16)', async () => {
@@ -354,7 +376,9 @@ describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 
     await fireEvent.press(screen.getByTestId('category-chip-Income'));
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
-    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'income', cardId: null }));
+    expect(store.addTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'income', cardId: null }),
+    );
   });
 
   it('clears cardId when switching from expense back to income after picking a card', async () => {
@@ -370,7 +394,9 @@ describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 
     await fireEvent.press(screen.getByTestId('category-chip-Income'));
     await fireEvent.press(screen.getByTestId('save-transaction-button'));
 
-    expect(store.addTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'income', cardId: null }));
+    expect(store.addTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'income', cardId: null }),
+    );
   });
 
   it('edits an existing transaction to add a card — only cardId changes (criterion 17)', async () => {
@@ -384,7 +410,7 @@ describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 
 
     expect(store.updateTransaction).toHaveBeenCalledWith(
       'tx-1',
-      expect.objectContaining({ amount: 45000, category: 'Food', cardId: 'card-1' })
+      expect.objectContaining({ amount: 45000, category: 'Food', cardId: 'card-1' }),
     );
   });
 });

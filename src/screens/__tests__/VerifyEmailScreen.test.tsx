@@ -15,8 +15,8 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     signOut: jest.fn(),
     ...overrides,
   };
-  (useAuthStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof state) => unknown) =>
-    selector(state)
+  (useAuthStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }

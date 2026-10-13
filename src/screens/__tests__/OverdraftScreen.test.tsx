@@ -28,7 +28,7 @@ function ev(
   type: OverdraftEventType,
   amount: number,
   date: Date,
-  createdAtOffsetMs = 0
+  createdAtOffsetMs = 0,
 ): OverdraftEvent {
   return {
     id,
@@ -67,8 +67,8 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     deleteEvent: jest.fn(),
     ...overrides,
   };
-  (useOverdraftStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof state) => unknown) =>
-    selector(state)
+  (useOverdraftStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -130,7 +130,9 @@ describe('OverdraftScreen — first-run setup (spec 012 criterion 1)', () => {
     await fireEvent.press(screen.getByTestId('save-overdraft-line-button'));
 
     expect(store.setupLine).not.toHaveBeenCalled();
-    expect(screen.getByText('Enter a whole number in pesos — no decimals or symbols.')).toBeTruthy();
+    expect(
+      screen.getByText('Enter a whole number in pesos — no decimals or symbols.'),
+    ).toBeTruthy();
   });
 
   it('labels the rate field as optional and says it can be added later (addendum, criterion 21)', async () => {
@@ -232,7 +234,9 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
     expect(within(month).getByText('$28.550')).toBeTruthy();
     expect(within(month).getByText('Interest $23.560')).toBeTruthy();
     expect(within(month).getByText('Fees $4.990')).toBeTruthy();
-    expect(within(screen.getByTestId('overdraft-cost-carrying')).getByText('$23.560 / mo')).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-cost-carrying')).getByText('$23.560 / mo'),
+    ).toBeTruthy();
     expect(within(screen.getByTestId('overdraft-cost-total')).getByText('$48.550')).toBeTruthy();
   });
 
@@ -244,7 +248,9 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
     expect(within(road).getByText('$1.240.000')).toBeTruthy();
     expect(within(road).getByText('22% cleared from the $1.600.000 peak')).toBeTruthy();
     expect(within(road).getByText('$300.000 / month')).toBeTruthy();
-    expect(within(road).getByText('Clears in about 5 months, paying ≈ $63.630 more in interest.')).toBeTruthy();
+    expect(
+      within(road).getByText('Clears in about 5 months, paying ≈ $63.630 more in interest.'),
+    ).toBeTruthy();
     expect(flat('overdraft-cleared-fill').width).toBe('22%');
   });
 
@@ -252,7 +258,9 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
     mockStore({ line: { ...LINE, plannedMonthlyPayment: 20000 }, events: busyEvents() });
     await render(<OverdraftScreen />);
 
-    expect(within(screen.getByTestId('overdraft-road')).getByText(/doesn.t cover the interest/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-road')).getByText(/doesn.t cover the interest/),
+    ).toBeTruthy();
   });
 
   it('prompts for a planned payment when none is set, and the prompt opens the settings form (criterion 15)', async () => {
@@ -266,7 +274,10 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
 
   it('says so when the balance is back at zero', async () => {
     mockStore({
-      events: [ev('d', 'draw', 100000, monthsAgo(2, 3)), ev('p', 'payment', 100000, monthsAgo(1, 3))],
+      events: [
+        ev('d', 'draw', 100000, monthsAgo(2, 3)),
+        ev('p', 'payment', 100000, monthsAgo(1, 3)),
+      ],
     });
     await render(<OverdraftScreen />);
 
@@ -293,9 +304,15 @@ describe('OverdraftScreen — the visual sections (criterion 11)', () => {
       'overdraft-event-payment',
       'overdraft-event-draw',
     ]);
-    expect(within(screen.getByTestId('overdraft-event-draw')).getByText('+$1.600.000')).toBeTruthy();
-    expect(within(screen.getByTestId('overdraft-event-payment')).getByText('−$408.550')).toBeTruthy();
-    expect(within(screen.getByTestId('overdraft-event-interest')).getByText('+$23.560')).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-event-draw')).getByText('+$1.600.000'),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-event-payment')).getByText('−$408.550'),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-event-interest')).getByText('+$23.560'),
+    ).toBeTruthy();
   });
 
   it('deletes an event through the store', async () => {
@@ -353,7 +370,9 @@ describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () =>
     await render(<OverdraftScreen />);
 
     const road = screen.getByTestId('overdraft-road');
-    expect(within(road).getByText('Clears in at least 5 months, not counting interest.')).toBeTruthy();
+    expect(
+      within(road).getByText('Clears in at least 5 months, not counting interest.'),
+    ).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('add-rate-button'));
     expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
@@ -363,7 +382,9 @@ describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () =>
     mockStore({ line: { ...UNKNOWN_RATE, plannedMonthlyPayment: 20000 }, events: busyEvents() });
     await render(<OverdraftScreen />);
 
-    expect(within(screen.getByTestId('overdraft-road')).queryByText(/doesn.t cover the interest/)).toBeNull();
+    expect(
+      within(screen.getByTestId('overdraft-road')).queryByText(/doesn.t cover the interest/),
+    ).toBeNull();
   });
 
   it('still prompts for a planned payment when neither a rate nor a payment is set (criterion 18)', async () => {
@@ -383,7 +404,9 @@ describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () =>
     const confirmation = await screen.findByTestId('overdraft-confirmation');
 
     expect(within(confirmation).getByText("You're now using your overdraft")).toBeTruthy();
-    expect(within(confirmation).getByText('Balance $180.000, 9% of your $2.000.000 line.')).toBeTruthy();
+    expect(
+      within(confirmation).getByText('Balance $180.000, 9% of your $2.000.000 line.'),
+    ).toBeTruthy();
   });
 
   it('drops the carrying-cost sentence from the crossed-75% confirmation (criterion 19)', async () => {
@@ -396,7 +419,9 @@ describe('OverdraftScreen — unknown rate (amendment, criteria 17–19)', () =>
     const confirmation = await screen.findByTestId('overdraft-confirmation');
 
     expect(within(confirmation).getByText('You crossed 75% of your line')).toBeTruthy();
-    expect(within(confirmation).getByText('Balance $1.520.000, 76%, with $480.000 left.')).toBeTruthy();
+    expect(
+      within(confirmation).getByText('Balance $1.520.000, 76%, with $480.000 left.'),
+    ).toBeTruthy();
   });
 });
 
@@ -426,7 +451,9 @@ describe('OverdraftScreen — Line terms card (addendum, criterion 22)', () => {
     await render(<OverdraftScreen />);
 
     expect(screen.getAllByTestId('edit-overdraft-settings-button')).toHaveLength(1);
-    await fireEvent.press(within(screen.getByTestId('overdraft-terms')).getByTestId('edit-overdraft-settings-button'));
+    await fireEvent.press(
+      within(screen.getByTestId('overdraft-terms')).getByTestId('edit-overdraft-settings-button'),
+    );
 
     expect(screen.getByTestId('overdraft-settings-form')).toBeTruthy();
   });
@@ -489,7 +516,11 @@ describe('OverdraftScreen — logging (criteria 5, 6, 7)', () => {
     await fireEvent.changeText(screen.getByTestId('overdraft-note-input'), 'Auto top-up');
     await fireEvent.press(screen.getByTestId('confirm-overdraft-button'));
 
-    expect(store.logDraw).toHaveBeenCalledWith({ amount: 150000, date: expect.any(Date), note: 'Auto top-up' });
+    expect(store.logDraw).toHaveBeenCalledWith({
+      amount: 150000,
+      date: expect.any(Date),
+      note: 'Auto top-up',
+    });
     expect(store.logPayment).not.toHaveBeenCalled();
     expect(store.logInterest).not.toHaveBeenCalled();
     expect(store.logFee).not.toHaveBeenCalled();
@@ -615,8 +646,8 @@ describe('OverdraftScreen — confirmations (criterion 10)', () => {
     expect(within(confirmation).getByText("You're now using your overdraft")).toBeTruthy();
     expect(
       within(confirmation).getByText(
-        'Balance $180.000, 9% of your $2.000.000 line. At 1.9% a month, carrying this costs about $3.420 a month.'
-      )
+        'Balance $180.000, 9% of your $2.000.000 line. At 1.9% a month, carrying this costs about $3.420 a month.',
+      ),
     ).toBeTruthy();
     expect(flat('overdraft-confirmation').backgroundColor).toBe(colors.status.notice.tone);
   });
@@ -630,8 +661,8 @@ describe('OverdraftScreen — confirmations (criterion 10)', () => {
     expect(within(confirmation).getByText('You crossed 75% of your line')).toBeTruthy();
     expect(
       within(confirmation).getByText(
-        'Balance $1.520.000, 76%, with $480.000 left. Carrying cost is now about $28.880 a month.'
-      )
+        'Balance $1.520.000, 76%, with $480.000 left. Carrying cost is now about $28.880 a month.',
+      ),
     ).toBeTruthy();
     expect(flat('overdraft-confirmation').backgroundColor).toBe(colors.status.warning.tone);
   });
@@ -644,7 +675,7 @@ describe('OverdraftScreen — confirmations (criterion 10)', () => {
 
     expect(within(confirmation).getByText("You're now over your limit")).toBeTruthy();
     expect(
-      within(confirmation).getByText('Balance $2.100.000, 105% of your line — $100.000 over.')
+      within(confirmation).getByText('Balance $2.100.000, 105% of your line — $100.000 over.'),
     ).toBeTruthy();
     expect(flat('overdraft-confirmation').backgroundColor).toBe(colors.status.critical.tone);
   });
@@ -691,7 +722,9 @@ describe('OverdraftScreen — line settings (criterion 15)', () => {
 
     await fireEvent.press(screen.getByTestId('edit-overdraft-settings-button'));
 
-    expect(within(screen.getByTestId('overdraft-settings-form')).getByText('Monthly rate, % (optional)')).toBeTruthy();
+    expect(
+      within(screen.getByTestId('overdraft-settings-form')).getByText('Monthly rate, % (optional)'),
+    ).toBeTruthy();
   });
 
   it('clears the rate when the field is left blank, saving null and creating no event (amendment, criterion 20)', async () => {

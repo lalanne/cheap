@@ -57,7 +57,12 @@ describe('firestoreCreditCardRepository (native)', () => {
     expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/creditCards');
     expect(mockAddDoc).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ name: 'Visa CLP', limit: 2000000, minimumPayment: 100000, monthlyRate: null })
+      expect.objectContaining({
+        name: 'Visa CLP',
+        limit: 2000000,
+        minimumPayment: 100000,
+        monthlyRate: null,
+      }),
     );
     expect(created).toMatchObject({ id: 'card-1', name: 'Visa CLP', monthlyRate: null });
   });
@@ -66,7 +71,11 @@ describe('firestoreCreditCardRepository (native)', () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
     await expect(
-      firestoreCreditCardRepository.create({ name: 'Visa CLP', limit: 2000000, minimumPayment: 100000 })
+      firestoreCreditCardRepository.create({
+        name: 'Visa CLP',
+        limit: 2000000,
+        minimumPayment: 100000,
+      }),
     ).rejects.toThrow('No signed-in user');
     expect(mockAddDoc).not.toHaveBeenCalled();
   });
@@ -74,7 +83,10 @@ describe('firestoreCreditCardRepository (native)', () => {
   it('updates only the given fields, and deletes at the same uid-scoped path', async () => {
     await firestoreCreditCardRepository.update('card-1', { monthlyRate: 3.45 });
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/creditCards/card-1');
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ monthlyRate: 3.45 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ monthlyRate: 3.45 }),
+    );
 
     await firestoreCreditCardRepository.delete('card-1');
     expect(mockDeleteDoc).toHaveBeenCalled();
@@ -96,10 +108,13 @@ describe('firestoreCreditCardPaymentRepository (native)', () => {
       note: 'Statement payment',
     });
 
-    expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/creditCardPayments');
+    expect(mockCollection).toHaveBeenCalledWith(
+      expect.anything(),
+      'users/uid-1/creditCardPayments',
+    );
     expect(mockAddDoc).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ cardId: 'card-1', amount: 50000, note: 'Statement payment' })
+      expect.objectContaining({ cardId: 'card-1', amount: 50000, note: 'Statement payment' }),
     );
     expect(mockCollection).not.toHaveBeenCalledWith(expect.anything(), 'users/uid-1/transactions');
   });
@@ -111,13 +126,19 @@ describe('firestoreCreditCardPaymentRepository (native)', () => {
       date: new Date('2026-09-24'),
     });
 
-    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ note: null }));
+    expect(mockAddDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ note: null }),
+    );
   });
 
   it('deletes a payment at the uid-scoped path', async () => {
     await firestoreCreditCardPaymentRepository.deletePayment('payment-1');
 
-    expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/creditCardPayments/payment-1');
+    expect(mockDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      'users/uid-1/creditCardPayments/payment-1',
+    );
     expect(mockDeleteDoc).toHaveBeenCalled();
   });
 
@@ -125,7 +146,11 @@ describe('firestoreCreditCardPaymentRepository (native)', () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
     await expect(
-      firestoreCreditCardPaymentRepository.logPayment({ cardId: 'card-1', amount: 50000, date: new Date() })
+      firestoreCreditCardPaymentRepository.logPayment({
+        cardId: 'card-1',
+        amount: 50000,
+        date: new Date(),
+      }),
     ).rejects.toThrow('No signed-in user');
     expect(mockAddDoc).not.toHaveBeenCalled();
   });

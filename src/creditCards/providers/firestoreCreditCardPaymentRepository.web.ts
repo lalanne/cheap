@@ -48,9 +48,12 @@ export const firestoreCreditCardPaymentRepository: CreditCardPaymentRepository =
         callback([]);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(collection(firestore, `users/${user.uid}/creditCardPayments`), (snapshot) => {
-        callback(snapshot.docs.map((d) => toPayment(d.id, d.data())));
-      });
+      unsubscribeSnapshot = onSnapshot(
+        collection(firestore, `users/${user.uid}/creditCardPayments`),
+        (snapshot) => {
+          callback(snapshot.docs.map((d) => toPayment(d.id, d.data())));
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();
