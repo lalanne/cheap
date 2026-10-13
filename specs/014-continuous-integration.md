@@ -327,3 +327,12 @@ just running automatically now.
 Not yet a required branch-protection check (deliberately, per Decisions)
 — a repo-settings change for the user to make when they're ready, not
 bundled into this spec.
+
+### Amendment 2026-10-13 — web export check (issue #23)
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 12 — export runs, no secrets | ✅ | `ci.yml` step uses only placeholder `EXPO_PUBLIC_*` env values, no `secrets.*`; also verified locally with `.env.local` moved aside. PR run green on all three jobs — [run 38340257591](https://github.com/lalanne/cheap/actions/runs/38340257591). |
+| 13 — broken web import fails CI | ✅ | Pushed an unresolvable import (`@ts-ignore`d so `tsc` still passed) in `index.ts`: `static-analysis` failed at the export step with `Unable to resolve module this-module-does-not-exist-web-only`, `unit`/`integration` skipped — [run 38340615753](https://github.com/lalanne/cheap/actions/runs/38340615753). Reverted in the next commit. |
+
+`expo-doctor` was split out to issue #39 (fails on `main` today).
