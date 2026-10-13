@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16 verified)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16; 2026-10-13: criterion 17, required checks and `main` protection, issue #25)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -181,10 +181,25 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
     `timeout-minutes` stays unless that number says otherwise.
   - `coverage/` is added to `.gitignore` so a local coverage run leaves
     no untracked files.
-- **Not a required branch-protection check yet.** `gh pr merge` would
-  need to respect it either way, and wiring that up is a GitHub repo
-  setting, not a code change — do it once this has run successfully a
-  few times and the timing/flakiness is known, not on day one.
+- **Required checks and `main` protection.** *(Amended 2026-10-13,
+  issue #25; supersedes "not a required check yet".)* CI had run cleanly
+  for enough PRs that it is now enforced. `main` requires a pull request
+  (0 approvals — this is a solo repo) and the four status checks
+  `static-analysis`, `web-export`, `unit` and `integration`, with
+  "require branches to be up to date" on; force-pushes and deletions are
+  blocked, and the rules apply to administrators too, so there is no
+  silent bypass. "Allow auto-merge" and "delete branch on merge" are on.
+  **The repo is public**: branch protection and rulesets are unavailable
+  on a private repo on GitHub's free plan (HTTP 403 "Upgrade to GitHub
+  Pro or make this repository public"). Going public was chosen over
+  paying for Pro; it was preceded by an audit for secrets (none ever
+  tracked or in history; `GoogleService-Info.plist`/`.env` are
+  gitignored) and by removing the Apple ID email from spec 004. The CI
+  workflow needs no secrets and has a read-only token, so PRs from forks
+  gain nothing. A side effect: Actions minutes are free on public repos,
+  so the cost estimate above no longer applies. The settings live in
+  GitHub, not in the repo — if a job is renamed, update the required
+  check names or merges will block waiting on a check that never runs.
 
 ## Requirements
 
@@ -350,6 +365,10 @@ and, applying to every run, `testTimeout: 15000`.
     coverage is collected, **then** it appears in the report at 0%
     rather than being omitted, and nothing under `src/**/__tests__/`
     appears in the report.
+17. **Given** a pull request whose CI is red, **when** merging is
+    attempted (`gh pr merge` or the UI), **then** GitHub refuses until
+    the required checks pass; a direct push to `main` is rejected; and a
+    green PR can be set to auto-merge.
 
 ## Out of scope
 
@@ -363,8 +382,6 @@ and, applying to every run, `testTimeout: 15000`.
   as of criteria 12–13.)
   Revisit if deploys become frequent enough that automating them is
   worth the added secrets (`EXPO_PUBLIC_FIREBASE_*`) this would need.
-- **Required branch-protection status checks** — see Decisions; a
-  follow-up repo-settings step once this has proven stable.
 - **Linting** — this repo has no lint script today; not introduced here.
 - **A coverage threshold, PR coverage comment, or third-party coverage
   service (Codecov etc.)** — issue #24 deliberately starts with just the
@@ -393,6 +410,7 @@ and, applying to every run, `testTimeout: 15000`.
 | 14 — coverage artifact on a green run | Code review + CI run | `ci.yml`: upload step present, no `coverageThreshold` in `jest.config.js`. On the PR run: `coverage-report` listed under Artifacts with 7-day retention, `lcov-report/index.html` opens, summary visible in the `unit` log. Record the baseline (statements/branches/functions/lines) and the unit job's duration vs. the previous run. |
 | 15 — artifact still uploaded on a red run | Manual / CI run | On a throwaway draft PR, push a deliberately wrong assertion; confirm `unit` fails at `npm test`, the upload step runs green, and the run lists `coverage-report`. Close unmerged. |
 | 16 — untested files counted, tests excluded | Local run + CI artifact | `npm test -- --coverage` locally: a known-untested `src/` file is listed at 0%; no `__tests__` path appears in `coverage/coverage-summary.json`. Same check against the CI artifact. Same on the CI artifact (PR #44): 78 files, 0 `__tests__` paths, 16 at 0%. |
+| 17 — red check blocks merge | Manual / repo settings | `gh api repos/lalanne/cheap/branches/main/protection` lists the four required contexts, `strict`, `enforce_admins`, no force-push/deletion. On a throwaway PR with a deliberately failing test, `gh pr merge` is refused. On a green PR, `gh pr merge --auto` is accepted and the PR merges itself once checks pass. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
@@ -431,9 +449,9 @@ failures found and fixed along the way, not guessed at:
 code changed — this is the test suite everything else already built,
 just running automatically now.
 
-Not yet a required branch-protection check (deliberately, per Decisions)
-— a repo-settings change for the user to make when they're ready, not
-bundled into this spec.
+Not a required branch-protection check at this point (deliberately, per
+Decisions at the time); made required later — see the 2026-10-13
+amendment for issue #25 below.
 
 ### Amendment 2026-10-13 — web export check (issue #23)
 
@@ -466,3 +484,11 @@ only because untested files were left out of the denominator.
 exceed the 5 s default timeout in the full parallel run (see Decisions);
 fixed with `testTimeout: 15000`, after which the full run passes with
 coverage at default parallelism (31 s) and at `--maxWorkers=2`.
+
+### Amendment 2026-10-13 — required checks and `main` protection (issue #25)
+
+Done after making the repo public (see Decisions for why).
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 17 — red check blocks merge | ⏳ red path ✅, auto-merge path pending | `gh api .../branches/main/protection`: contexts `static-analysis`, `web-export`, `unit`, `integration`; `strict: true`; `enforce_admins: true`; force-push and deletion disabled. Throwaway PR #48 (wrong assertion; `unit` failed, `integration` skipped, run [38448434068](https://github.com/lalanne/cheap/actions/runs/38448434068)): `gh pr merge` refused with "the base branch policy prohibits the merge", state `BLOCKED`; closed unmerged, branch deleted. Green-PR auto-merge: to be confirmed on a real PR. |
