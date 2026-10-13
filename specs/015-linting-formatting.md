@@ -232,3 +232,10 @@ npx lint-staged
 ## Verification results
 
 *(Filled in as the criteria are checked off.)*
+
+**PR 2 (formatter):** criteria 3, 4, 10.
+- 3, 4 — `src/tooling/__tests__/prettier.test.ts` (15 tests), written
+  first and failing before `.prettierrc` / `.prettierignore` / scripts existed.
+- 10 — reformat commit touches 85 files, all `.ts/.tsx/.js`; `tsc` clean,
+  525/525 unit tests before and after; `npm run format` a second time
+  changes nothing and `format:check` passes.
