@@ -48,3 +48,6 @@ GoogleService-Info.plist
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# jest coverage output
+coverage/
