@@ -1,5 +1,5 @@
 import type { Category } from '../../transactions/types';
-import { rollUpCategoryTotals, subcategoryTotalsFor } from '../categoryRollup';
+import { budgetSpendTotals, rollUpCategoryTotals, subcategoryTotalsFor } from '../categoryRollup';
 
 const FOOD_SUBCATEGORIES: Category[] = [
   { id: 'c1', name: 'Groceries', type: 'both', parentCategory: 'Food' },
@@ -50,5 +50,42 @@ describe('subcategoryTotalsFor (spec 011 criterion 4)', () => {
 
   it('returns an empty object for a category with no subcategories', () => {
     expect(subcategoryTotalsFor({ Housing: 350 }, FOOD_SUBCATEGORIES, 'Housing')).toEqual({});
+  });
+});
+
+describe('budgetSpendTotals (spec 011 criterion 9)', () => {
+  it('keeps a subcategory under its own name while its parent stays rolled up', () => {
+    const totals = { Food: 100, Groceries: 220, 'Uber Eats': 130 };
+
+    expect(budgetSpendTotals(totals, FOOD_SUBCATEGORIES)).toEqual({
+      Food: 450,
+      Groceries: 220,
+      'Uber Eats': 130,
+    });
+  });
+
+  it('omits a subcategory with no spend this month rather than inventing a 0', () => {
+    expect(budgetSpendTotals({ Food: 100 }, FOOD_SUBCATEGORIES)).toEqual({ Food: 100 });
+  });
+
+  it('matches rollUpCategoryTotals for top-level categories and dangling parents', () => {
+    const orphan: Category[] = [{ id: 'c9', name: 'Old Sub', type: 'both', parentCategory: 'Deleted Parent' }];
+
+    expect(budgetSpendTotals({ Gym: 50, 'Old Sub': 75 }, [...FOOD_SUBCATEGORIES, ...orphan])).toEqual({
+      Gym: 50,
+      'Old Sub': 75,
+    });
+  });
+
+  it('works for a subcategory of a custom top-level parent', () => {
+    const custom: Category[] = [
+      { id: 'p1', name: 'Home', type: 'both', parentCategory: null },
+      { id: 's1', name: 'Gastos comunes', type: 'both', parentCategory: 'Home' },
+    ];
+
+    expect(budgetSpendTotals({ Home: 10, 'Gastos comunes': 90 }, custom)).toEqual({
+      Home: 100,
+      'Gastos comunes': 90,
+    });
   });
 });

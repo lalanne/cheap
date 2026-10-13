@@ -139,6 +139,13 @@ defaulting.
    *rolled-up* total (direct + every subcategory) — the same number the
    donut shows for that category, not a smaller, direct-only figure
    (amendment 2026-09-25).
+9. **Given** a budget set directly on a *subcategory* (e.g. "Gastos
+   comunes" under "Housing"), **when** the dashboard renders that
+   budget's progress bar or a budget-overrun suggestion is evaluated,
+   **then** the spend is that subcategory's own total for the month, not
+   $0; and a budget on its parent still shows the rolled-up total
+   (parent + every subcategory), unchanged from criterion 8
+   (amendment 2026-10-13, issues #34, #35).
 
 ## Out of scope
 
@@ -163,6 +170,7 @@ defaulting.
 | 5 — no affordance for a childless category | Component | `DashboardScreen.test.tsx`: a category with no subcategories renders no chevron/hint; tapping its row is a no-op (no state change). |
 | 6 — dangling-parent fallback | Unit | `categoryRollup.test.ts`: a subcategory whose `parentCategory` matches nothing in the category list appears as its own key in the rolled-up result, not folded into anything and not dropped. |
 | 7 — no regressions | Automated | `npx tsc --noEmit`, `npx jest`. |
+| 9 — budget on a subcategory shows its own spend | Unit + component | `categoryRollup.test.ts`: `budgetSpendTotals` keeps a subcategory's own key (rolled-up for parents, own total for subcategories, dangling-parent fallback unchanged). `DashboardScreen.test.tsx`: a budget on a subcategory with a paid transaction shows that amount in its bar and fires a budget-overrun suggestion when over; the parent's budget bar still shows the rolled-up total; the donut is unchanged. |
 | 8 — budgets/suggestions use rolled-up spend | Unit + component | `DashboardScreen.test.tsx`: a budget on "Food" with subcategory transactions shows the rolled-up total in its bar, matching the donut's Food slice; a budget-overrun suggestion fires/doesn't fire based on the rolled-up percent, not the direct-only one. |
 
 ## Verification results
@@ -224,3 +232,43 @@ green, `tsc --noEmit` clean, web export builds.
 - No Firestore rules change (same collection, existing `isOwner` rule already covers the new field) — not re-run against the emulator, matching spec 002's amendment precedent for a field-only addition.
 
 Staying at `implemented`, not `verified` — no manual browser pass yet, same as every other spec here.
+
+### Amendment (2026-10-13): a budget on a subcategory showed no spend (#34, #35)
+
+Real bug, reported live for "Gastos comunes" (#34) and "Online
+subscriptions" (#35), same root cause. The 2026-09-25 amendment above
+switched the budget bars and suggestions to `rollUpCategoryTotals`, whose
+whole job is to fold a subcategory into its parent and **drop the
+subcategory's own key** (right for the donut, which must not count
+anything twice). A budget set on a subcategory then looked up a key that
+no longer existed and got `?? 0`, so a paid subcategory showed $0 against
+its limit and could never trigger an overrun suggestion. Criterion 8 only
+covered budgets on *parents*, so no test caught it.
+
+- New pure `budgetSpendTotals(totals, categories)` in
+  `src/dashboard/categoryRollup.ts`: the rolled-up totals plus, for each
+  valid subcategory, its own unrolled total under its own name. It is a
+  lookup table for budgets only — it is **not** summed, so adding the
+  subcategory keys back cannot double-count. The donut keeps using
+  `rollUpCategoryTotals` unchanged.
+- `DashboardScreen.tsx` uses it for the budget bars (the selected month)
+  and for `computeSuggestions` (the current month).
+- Not changed: `budgetedVsIncome` (it already skips a subcategory budget
+  whose budgeted parent covers it) and `BudgetsPanel`.
+
+**Result:** ✅ criterion 9. Written test-first: 4 unit tests
+(`categoryRollup.test.ts`, `budgetSpendTotals`) and 2 component tests
+(`DashboardScreen.test.tsx`) failed first — the component tests failed
+exactly as reported, with the subcategory's bar unable to show its 133% /
+80% because it read $0. After the fix: a budget on "Groceries" ($30,000
+limit, $40,000 paid) shows 133% and fires its overrun suggestion; with
+both a "Food" ($60,000) and a "Groceries" ($50,000) budget, Food still
+shows the rolled-up 117% and Groceries its own 80%. Full suite 510
+passing, `tsc --noEmit` clean. One implementation note: the first version
+iterated `categories`, which broke a wide-web test whose mock store has no
+`categories`; it now iterates the spend entries like `rollUpCategoryTotals`.
+
+Not verified against the reporter's real data (those accounts' category
+tree isn't visible from here): the fix assumes "Gastos comunes" and
+"Online subscriptions" are subcategories, which fits the symptom exactly
+but should be confirmed live after deploy.
