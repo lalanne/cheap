@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -32,10 +32,24 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   stays well inside the free allowance. See the Verification plan for
   where the real number is recorded once this has actually run a few
   times.
-- **Triggers: every push to any branch, and every pull request into
-  `main`.** Matches how this repo actually works — a branch per change,
-  PR'd into `main` (per `CLAUDE.md`'s git rule) — so a check fails on the
-  branch before it's ever proposed for merge, not just at PR time.
+- **Triggers: pushes to `main`, and every pull request into `main`.**
+  *(Amended 2026-10-12, issue #21.)* Originally every push to any branch
+  plus PRs into `main` — but a PR branch push fired both events, so every
+  commit was built twice. The PR run already gives the branch its check
+  before merge, so `push` is restricted to `main` (post-merge sanity)
+  and `pull_request` covers everything else. A branch with no PR open
+  gets no CI run; that's accepted (same as `lalanne/da2`).
+- **Concurrency: one run per ref, newer cancels older.** `concurrency:
+  { group: ci-${{ github.ref }}, cancel-in-progress: true }`. Two quick
+  pushes to a branch waste minutes finishing the stale run. Note that on
+  `main` this also cancels an in-flight run when a second merge lands;
+  acceptable since the newest commit is what matters.
+- **Least-privilege token: top-level `permissions: contents: read`.**
+  The workflow only checks out and tests; it needs nothing else.
+- **A `timeout-minutes` on every job** so a hung emulator or install
+  can't burn the free-minutes budget until GitHub's 6-hour default:
+  10 for `static-analysis` and `unit`, 15 for `integration` (a clean run
+  is ~2 min total; these are generous ceilings, not targets).
 - **Three jobs, gated in sequence (`needs:`), not run in parallel —
   `static-analysis` → `unit` → `integration`.** Deliberate, not the
   default: no point spending minutes on unit tests against code that
@@ -96,12 +110,21 @@ earlier one has failed:
 name: CI
 on:
   push:
+    branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   static-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -115,6 +138,7 @@ jobs:
   unit:
     needs: static-analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -128,6 +152,7 @@ jobs:
   integration:
     needs: unit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -149,7 +174,7 @@ jobs:
 
 ## Acceptance criteria
 
-1. **Given** a push to any branch, **when** the workflow runs, **then**
+1. **Given** a push to `main` or a pull request into `main`, **when** the workflow runs, **then**
    `tsc --noEmit`, `npm test`, and `npm run test:rules` all run, and the
    workflow's pass/fail matches what running those three commands locally
    would report.
@@ -167,6 +192,14 @@ jobs:
    `static-analysis` job fails and neither `unit` nor `integration` runs
    at all (shown as skipped, not passed or failed) — and symmetrically, a
    failing `unit` job skips `integration`.
+6. **Given** two quick pushes to one PR branch, **when** CI runs, **then**
+   the first run is cancelled and only the latest commit's run completes.
+7. **Given** a PR branch, **when** it is pushed, **then** exactly one CI
+   run appears per commit (the `pull_request` run; no duplicate `push`
+   run), and a merge to `main` triggers one `push` run.
+8. **Given** the workflow file, **then** it declares top-level
+   `permissions: contents: read` and no job widens it.
+9. **Given** the workflow file, **then** every job sets `timeout-minutes`.
 
 ## Out of scope
 
@@ -194,6 +227,10 @@ jobs:
 | 3 — no manual setup, no real project touched | Code review + CI run | Review the workflow for any step requiring a secret or external credential (none should exist); confirm a run succeeds from a clean checkout with nothing configured beyond the repo itself. |
 | 4 — caching works | Manual / CI run | Compare a cold run's duration/log (cache miss) against a second run on the same branch (cache hit). |
 | 5 — gating skips downstream jobs | Manual / CI run | Push a deliberate type error; confirm in the Actions UI that `unit`/`integration` show as skipped, not run. Separately, push a deliberately broken unit test with valid types; confirm `static-analysis` passes, `unit` fails, and `integration` shows as skipped. |
+| 6 — newer push cancels older run | Manual / CI run | Push two commits in quick succession to a PR branch; confirm the first run shows as cancelled. |
+| 7 — one run per commit | Manual / CI run | Open a PR, push a commit; confirm the Actions tab shows exactly one run for it (event `pull_request`). After merge, confirm one `push` run on `main`. |
+| 8 — least-privilege token | Code review | Inspect `ci.yml`: top-level `permissions: contents: read`, no job-level override. |
+| 9 — job timeouts | Code review | Inspect `ci.yml`: all three jobs set `timeout-minutes`. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
