@@ -42,6 +42,19 @@ jobs:
 
       - run: npx tsc --noEmit
 
+      # Catches a broken web bundle before deploy (spec 005). The
+      # EXPO_PUBLIC_* values are inlined, never used to connect, so
+      # placeholders are enough — no secrets.
+      - run: npx expo export -p web --output-dir "$RUNNER_TEMP/web-export"
+        env:
+          EXPO_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: demo-cheap
+          EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_APP_ID: ci-placeholder
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
+
   unit:
     needs: static-analysis
     runs-on: ubuntu-latest

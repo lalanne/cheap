@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -22,8 +22,25 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   (467 unit/component tests, Firebase fully mocked — no secrets, no
   network), and `npm run test:rules` (the Firestore/Storage rules suite,
   against the local emulator under a fake project id, `demo-cheap` — same
-  "never a real project" rule as running it by hand). No web-export
-  build step and no `eas build`/`eas submit` trigger — see Out of scope.
+  "never a real project" rule as running it by hand), plus the web
+  export check below. No `eas build`/`eas submit` trigger — see Out of
+  scope.
+- **Web export check in `static-analysis`.** *(Amended 2026-10-13, issue
+  #23.)* `npx expo export -p web` runs right after `tsc`, so a broken
+  web bundle (e.g. a web-only import that fails to resolve) fails CI
+  instead of surfacing at deploy time (spec 005), and it validates the
+  artifact a later web-deploy job would ship. It runs with fake
+  `EXPO_PUBLIC_FIREBASE_*` / `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+  placeholders set in the step's `env` — the bundle only inlines them,
+  nothing connects to Firebase — so it still needs no secrets. Output goes
+  to a throwaway directory. Measured locally at ~4s. The step stays in the
+  existing `static-analysis` job rather than a new one, so job names and
+  gating don't change.
+- **`expo-doctor` deliberately not added here.** It already fails on
+  `main` (duplicate `expo-font`, major/patch version mismatches, an
+  unused `app.json`), and fixing those is native-module work needing its
+  own spec and a device build. Tracked in issue #39; add it to
+  `static-analysis` once it passes.
 - **Cost: effectively free.** The repo is private, so runs draw from
   GitHub's monthly free Actions minutes (2,000 on Free, 3,000 on Pro),
   billed at the cheapest (Linux, 1×) rate — no macOS/Windows multiplier.
@@ -138,6 +155,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - run: npx tsc --noEmit
+      - run: npx expo export -p web --output-dir "$RUNNER_TEMP/web-export"
+        env:
+          EXPO_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: demo-cheap
+          EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ci-placeholder
+          EXPO_PUBLIC_FIREBASE_APP_ID: ci-placeholder
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
 
   unit:
     needs: static-analysis
@@ -218,6 +244,12 @@ runs:
 11. **Given** the refactor, **when** CI runs, **then** the three jobs keep
     their names (`static-analysis`, `unit`, `integration`), gating and
     pass/fail behavior, and caches still hit.
+12. **Given** a clean checkout, **when** CI runs, **then** `static-analysis`
+    runs `expo export -p web` with placeholder env values and no secrets,
+    and passes.
+13. **Given** a deliberately broken web-only import, **when** it's pushed,
+    **then** `static-analysis` fails at the export step and `unit` /
+    `integration` are skipped.
 
 ## Out of scope
 
@@ -226,8 +258,9 @@ runs:
   manual step, same as every build this project has shipped so far. A
   future amendment can wire a workflow to trigger one (e.g. on a tag),
   but that's a separate decision, not a side effect of adding basic CI.
-- **A web-export build step** (`npx expo export -p web`) or a web deploy
-  trigger (spec 005) — CI here is about the test suite, not deployment.
+- **A web deploy trigger** (spec 005) — CI here is about the test suite
+  and build checks, not deployment. (The web *export* check is in scope
+  as of criteria 12–13.)
   Revisit if deploys become frequent enough that automating them is
   worth the added secrets (`EXPO_PUBLIC_FIREBASE_*`) this would need.
 - **Required branch-protection status checks** — see Decisions; a
@@ -251,6 +284,8 @@ runs:
 | 9 — job timeouts | Code review | Inspect `ci.yml`: all three jobs set `timeout-minutes`. |
 | 10 — single source for setup | Code review | `grep -rn "npm@10.9.8" .github` returns only the composite action; each job has `uses: ./.github/actions/setup`. |
 | 11 — behavior unchanged | Manual / CI run | PR run shows the same three job names, sequential gating, a green result, and cache-hit install on a re-run. |
+| 12 — export runs, no secrets | Code review + CI run | `ci.yml` step has only placeholder `env` values and no `secrets.*`; the PR run passes. |
+| 13 — broken web import fails CI | Manual / CI run | Push a deliberately unresolvable import on a web path; confirm `static-analysis` fails at the export step (`tsc` passing) and later jobs skip. Revert after. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
