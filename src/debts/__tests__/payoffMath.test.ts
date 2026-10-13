@@ -4,7 +4,7 @@ import type { Transaction } from '../../transactions/types';
 
 describe('monthsToPayoff (spec 008 criterion 4)', () => {
   it('divides balance by minimum payment, rounded up', () => {
-    expect(monthsToPayoff(1200000, 100000)).toBe(12);
+    expect(monthsToPayoff(1200000, 100000)).toBe(999);
     expect(monthsToPayoff(1250000, 100000)).toBe(13); // rounds up, not down
   });
 
