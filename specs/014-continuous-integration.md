@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24 — **draft, awaiting approval**; criteria 1–13 stay verified)
+**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24 — implemented, CI verification of 14–15 pending; criteria 1–13 stay verified)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -159,6 +159,19 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
     any report, the upload warns instead of failing
     (`if-no-files-found: warn`), so the job's red status stays the test
     failure, not a secondary upload error.
+  - **`testTimeout` raised from Jest's 5 s default to 15 s.** Found
+    while implementing: with `--coverage`, the full parallel run
+    (55 suites, 8 local cores) timed out 3 heavy render tests (`App`,
+    `CategoriesPanel › creates a new top-level custom category`,
+    `TransactionsScreen › opens the add-transaction form…`) with
+    "Exceeded timeout of 5000 ms" — they pass in 1.5 s without coverage
+    and in isolation with it, so it's CPU contention from instrumentation,
+    not a bug in them. A CI runner has fewer cores than that, so it'd be
+    worse there. Raised globally in `jest.config.js` (not only under
+    `--coverage`): one number to reason about, and a genuinely hung test
+    still fails, just after 15 s instead of 5. Also verified at
+    `--maxWorkers=2` to approximate a small runner (see Verification
+    results).
   - **No threshold — coverage never fails CI.** No `coverageThreshold`.
     The baseline is recorded in this spec's Verification results and the
     PR; whether to set a floor (and where) is a follow-up decision, made
@@ -279,6 +292,8 @@ runs:
 collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/__tests__/**'],
 coverageReporters: ['text-summary', 'lcov', 'json-summary'],
 ```
+
+and, applying to every run, `testTimeout: 15000`.
 
 ## Acceptance criteria
 
@@ -432,3 +447,22 @@ are for the final layout.
 | 13 — broken web import fails CI | ✅ | Unresolvable import (`@ts-ignore`d so `tsc` passed): `web-export` failed, `static-analysis` passed, `unit`/`integration` skipped — [run 38342428786](https://github.com/lalanne/cheap/actions/runs/38342428786). Reverse case, a type error only: `static-analysis` failed, `web-export` still ran and passed, `unit`/`integration` skipped — [run 38342561793](https://github.com/lalanne/cheap/actions/runs/38342561793). Both on a throwaway draft PR (#42), closed unmerged. |
 
 `expo-doctor` was split out to issue #39 (fails on `main` today).
+
+### Amendment 2026-10-13 — unit coverage artifact (issue #24)
+
+Local results (CI evidence for 14–15 to be added once the PR run exists):
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 14 — artifact on a green run | ⏳ | Local: `npm test -- --ci --coverage` passes (504 tests) and writes `coverage/lcov-report/index.html`; no `coverageThreshold`; workflow YAML parses with the `upload-artifact` step. PR-run artifact, retention and log summary: pending. |
+| 15 — uploaded on a red run | ⏳ | Pending the throwaway draft PR run. |
+| 16 — untested files counted, tests excluded | ✅ (local) | Report covers all 78 non-test `src/` files, 16 of them at 0%, and 0 `__tests__` paths. Before the change only 58 files were reported (the untested ones were invisible). |
+
+**Baseline (local, 8 cores):** statements 71.42%, branches 69.34%,
+functions 69.98%, lines 70.97%. Previously Jest reported 88.38% lines
+only because untested files were left out of the denominator.
+
+**Found while implementing:** `--coverage` made 3 heavy render tests
+exceed the 5 s default timeout in the full parallel run (see Decisions);
+fixed with `testTimeout: 15000`, after which the full run passes with
+coverage at default parallelism (31 s) and at `--maxWorkers=2`.

@@ -73,7 +73,16 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - run: npm test -- --ci
+      - run: npm test -- --ci --coverage
+
+      # Always, so a red run still has its report; not on cancel. Spec 014.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: warn
 
   integration:
     needs: unit
