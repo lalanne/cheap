@@ -190,6 +190,10 @@ starter set has no `id` to act on.
 | 13 — sticky on web, plain grouping on native | Component | `TransactionsScreen` test: the month header's style includes `position: 'sticky'` when `Platform.OS` is `'web'`, and does not on the native default — actual pinned-while-scrolling behavior needs a manual browser pass (no browser automation available), same caveat as every other visual-only behavior in this app. |
 | 14 — no page-level Add, per-month Add instead | Component | `TransactionsScreen` test: with transactions present, `add-transaction-button` (the old page-level testID) is absent; a per-month button (`add-transaction-button-${year}-${month}`) opens the form with the same defaults as before. |
 | 15 — empty-state Add for a brand-new account | Component | `TransactionsScreen` test: zero transactions renders an empty-state message and `add-transaction-button`; pressing it opens the form. |
+| 18 — most-used first | Unit + component | `rankCategories.test.ts`: names ordered by transaction count, descending, within the window. `TransactionsScreen` test: chips render in ranked order for the seeded transactions. |
+| 19 — window, type and count-not-amount | Unit | `rankCategories.test.ts`: a transaction older than the window is ignored; income transactions don't affect the expense ranking (and vice versa); many small transactions outrank one large one. |
+| 20 — ties and never-used keep today's order | Unit | `rankCategories.test.ts`: equal counts and zero counts keep the input order (starters, then custom). |
+| 21 — "+ New" pinned last, selection unaffected | Component | `TransactionsScreen` test: `add-category-button` is the last chip; the default selection and an edited transaction's selection are unchanged by the reordering. |
 
 Unit/component tests run against mocked Firebase (matching `da2`'s
 `src/**/__tests__/` pattern); rules tests run against the local emulator
@@ -517,3 +521,77 @@ UTC-midnight ISO-string constructor) and asserted the display equalled
 "18 September" locally at all. Switched that test to the same
 local-components constructor used everywhere else. 472 tests pass (up
 from 467), `tsc --noEmit` clean.
+
+### Amendment (2026-10-14, approved, implemented): order the category picker by recent usage (issue #41)
+
+Logging a transaction means scanning the whole category chip row for the
+one you use most. Order the chips so the categories the user actually
+uses come first.
+
+**Decisions (from the issue):**
+
+- **Recent usage drives the ranking**: the number of transactions in a
+  category over a trailing window, counted by transaction, not by amount.
+  Window: **90 days** back from today, by the transaction's `date` (not
+  `createdAt`).
+- **Categories only.** The "Paid with" card picker is unchanged.
+- **Expense and income rank separately.** The ranking for the form's
+  current type only counts transactions of that type, so toggling
+  Expense/Income reorders the chips.
+- **Ties and never-used categories keep today's order** (starter
+  categories in their declared order, then custom categories in store
+  order), so a brand-new account sees exactly today's picker.
+- **"+ New" stays pinned at the end**, unranked.
+- **Client-side only.** Counts come from the transactions already in the
+  store; no schema, repository or rules change.
+- **A new pure function** `rankCategories(names, transactions, type, now)`
+  in `src/transactions/rankCategories.ts`, no React/Firestore dependency,
+  same pattern as `groupByMonth.ts`.
+
+**Open questions (settled: all four proposals approved 2026-10-14):**
+
+1. **Grouping.** The issue says parents and subcategories "stay grouped,
+   ranked within each level", but the picker today is a *flat* row of
+   chips (starters + every custom category, subcategories included, no
+   nesting). Proposal: **stay flat** and rank leaf categories directly;
+   adding a grouped picker is a separate UI change, not part of this
+   amendment. If you want grouping, this spec grows a layout section and
+   a rule for how a parent's rank is derived (own count vs. own plus
+   subcategories').
+2. **Filtering by type.** The picker also shows every category regardless
+   of the Expense/Income toggle (e.g. "Income" is offered while logging
+   an expense). Proposal: unchanged here — ranking reorders, it does not
+   hide anything. Hiding mismatched categories would be its own change.
+3. **Default selection.** A new form preselects the first starter
+   category ("Food"), which may now sit mid-row. Proposal: unchanged —
+   the preselected chip keeps its highlight wherever it ranks. The
+   alternative (preselect the top-ranked category) saves a tap but
+   changes behavior and makes "Food" a silent mis-log risk.
+4. **Window length.** 90 days is the issue's example; confirm or change.
+
+18. **Given** transactions in the last 90 days, **when** the user opens
+    the add or edit form, **then** the category chips are ordered by
+    number of transactions of the form's current type in that window,
+    most first.
+19. **Given** a transaction older than the window, or of the other type,
+    **then** it does not affect the order; **given** one large and
+    several small transactions, **then** the category with more
+    transactions ranks first regardless of amount.
+20. **Given** categories with equal counts, or none at all (including a
+    brand-new account), **then** they keep today's order: starters in
+    declared order, then custom categories in store order.
+21. **Given** the reordered chips, **then** "+ New" is still the last
+    chip, and neither the preselected category on a new form nor the
+    selected category when editing an existing transaction changes
+    because of the reordering.
+
+Verification: see criteria 18–21 in the table above.
+
+**Result:** ✅ criteria 18–21, implemented 2026-10-14 test-first.
+`rankCategories.test.ts` (8 unit tests) failed on the missing module, and
+the two `TransactionsScreen` ordering tests failed before the change
+(criterion 21's test is a regression guard and passed either way).
+`TransactionsScreen` now orders its chips with
+`rankCategories(starters + custom, transactions, type, new Date())`; "+ New"
+and the preselected "Food" are untouched. 543 tests pass, `tsc --noEmit`,
+ESLint and Prettier clean. Not yet checked in a running app.
