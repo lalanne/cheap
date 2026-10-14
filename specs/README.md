@@ -26,7 +26,7 @@ This project is built spec-first. Rules:
 | 011 | [Subcategories](011-subcategories.md) | implemented (amended 2026-10-13: criterion 9, budgets on a subcategory, issues #34, #35) |
 | 012 | [Overdraft line](012-overdraft-line.md) | implemented (amended 2026-10-10: criterion 25, balance as of month end) |
 | 013 | [Credit cards (CLP)](013-credit-cards.md) | implemented (amended 2026-10-10: criterion 10, balance as of month end) |
-| 014 | [Continuous integration (GitHub Actions)](014-continuous-integration.md) | verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16 verified) |
+| 014 | [Continuous integration (GitHub Actions)](014-continuous-integration.md) | verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16 verified; 2026-10-13: criteria 18–20, PR template and warn-only spec/test traceability check, issue #27, pending) |
 | 015 | [Linting and formatting (ESLint + Prettier + pre-commit hook)](015-linting-formatting.md) | implemented (criteria 6, 13 pending CI and branch protection) |
 
 Status values: `draft` → `approved` → `implemented` → `verified`.

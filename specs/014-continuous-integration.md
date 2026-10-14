@@ -334,6 +334,50 @@ coverageReporters: ['text-summary', 'lcov', 'json-summary'],
 
 and, applying to every run, `testTimeout: 15000`.
 
+### PR template and traceability warning (issue #27)
+
+`.github/pull_request_template.md` pre-fills every new PR body with the
+SDD/TDD checklist from `CLAUDE.md`, so the rules are in front of the
+author instead of in memory:
+
+```markdown
+## Summary
+
+<!-- What changed and why. Link the issue: Closes #N -->
+
+## Checklist
+
+- [ ] Spec linked (`specs/NNN-…md`), or this change needs none (say why)
+- [ ] A failing test was written first and covers the change
+- [ ] The spec's Verification plan table is updated
+- [ ] `specs/README.md` status is updated
+```
+
+`ci.yml` gains a `traceability` job — `pull_request` only, no `needs:`,
+not a required check, never fails. It diffs the PR against its base and,
+if any file under `src/` (excluding `src/**/__tests__/**`) changed but
+nothing under `**/__tests__/**` or `specs/` did, emits a
+`::warning::` annotation naming the rule. Warn first; promoting it to a
+failing/required check is a separate later amendment.
+
+```yaml
+  traceability:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          src=$(echo "$changed" | grep -E '^src/' | grep -vE '/__tests__/' || true)
+          covered=$(echo "$changed" | grep -E '(^specs/|/__tests__/)' || true)
+          if [ -n "$src" ] && [ -z "$covered" ]; then
+            echo "::warning::src/ changed without a test or spec change — CLAUDE.md: no implementation without a failing test first."
+          fi
+```
+
 ## Acceptance criteria
 
 1. **Given** a push to `main` or a pull request into `main`, **when** the workflow runs, **then**
@@ -394,6 +438,18 @@ and, applying to every run, `testTimeout: 15000`.
     the required checks pass; a direct push to `main` is rejected; and a
     green PR can be set to auto-merge.
 
+18. **Given** a new pull request into `main`, **when** its description
+    is opened, **then** it is pre-filled with the Summary section and
+    the four-item checklist above.
+19. **Given** a pull request that changes a non-test file under `src/`
+    and touches nothing under `**/__tests__/**` or `specs/`, **when** CI
+    runs, **then** the `traceability` job passes and shows a warning
+    annotation naming the rule.
+20. **Given** a pull request that changes `src/` and also a test or a
+    spec (or does not change `src/` at all), **when** CI runs, **then** `traceability` passes with no warning;
+    and in every case it is not in `main`'s required checks and does not
+    gate `unit`.
+
 ## Out of scope
 
 - **Triggering `eas build`/`eas submit` from CI.** Those are deploy
@@ -435,6 +491,9 @@ and, applying to every run, `testTimeout: 15000`.
 | 15 — artifact still uploaded on a red run | Manual / CI run | On a throwaway draft PR, push a deliberately wrong assertion; confirm `unit` fails at `npm test`, the upload step runs green, and the run lists `coverage-report`. Close unmerged. |
 | 16 — untested files counted, tests excluded | Local run + CI artifact | `npm test -- --coverage` locally: a known-untested `src/` file is listed at 0%; no `__tests__` path appears in `coverage/coverage-summary.json`. Same check against the CI artifact. Same on the CI artifact (PR #44): 78 files, 0 `__tests__` paths, 16 at 0%. |
 | 17 — red check blocks merge | Manual / repo settings | `gh api repos/lalanne/cheap/branches/main/protection` lists the four required contexts, `strict`, `enforce_admins`, no force-push/deletion. On a throwaway PR with a deliberately failing test, `gh pr merge` is refused. On a green PR, `gh pr merge --auto` is accepted and the PR merges itself once checks pass. |
+| 18 — template pre-fills the PR | Manual / GitHub | Open a PR without `--body`/via the web UI; confirm the body contains the template. |
+| 19 — warning when `src/` changes unaccompanied | Manual / CI run | On a throwaway draft PR change a `src/` file only; confirm the `traceability` job is green with the warning annotation. Close unmerged. |
+| 20 — no warning otherwise; never gates | Manual / CI run + repo settings | Same PR with a test file touched: no annotation. `gh api …/branches/main/protection` still lists only the four contexts; `unit`'s `needs:` unchanged. |
 
 No unit-test layer for the workflow file itself — a GitHub Actions
 workflow isn't unit-testable the way application code is; its own
