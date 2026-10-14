@@ -1,6 +1,6 @@
 # 014 — Continuous Integration (GitHub Actions)
 
-**Status:** verified (amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16; 2026-10-13: criterion 17, required checks and `main` protection, issue #25)
+**Status:** verified (amended 2026-10-13: `format-check` and `lint` jobs added to the gating, spec 015, issue #26; amended 2026-10-12: criteria 6–9, CI hardening, issue #21; 2026-10-13: criteria 10–11, shared setup action, issue #22; 2026-10-13: criteria 12–13, web export check, issue #23; 2026-10-13: criteria 12–13 revised to a separate `web-export` job; 2026-10-13: criteria 14–16, unit coverage artifact, issue #24, criteria 14–16; 2026-10-13: criterion 17, required checks and `main` protection, issue #25)
 **Depends on:** 000 (stack), every implemented spec (the suite CI runs is
 theirs, not new work of its own)
 
@@ -91,6 +91,14 @@ makes "tests pass before merge" automatic and enforced instead of a habit.
   jobs would finish a clean run faster but waste the later stages'
   minutes whenever an earlier one was always going to fail — not the
   right trade for this repo's test pyramid.
+- **`format-check` and `lint` jobs, gating `unit`.** *(Amended
+  2026-10-13, spec 015, issue #26.)* Two more parallel peers of
+  `static-analysis` and `web-export` — `npm run format:check` and
+  `npm run lint`, each checkout + setup action + one command — and
+  `unit` becomes `needs: [static-analysis, web-export, format-check,
+  lint]`. Supersedes the two-job gating above wherever it differs. The
+  required status checks gain `format-check` and `lint` once they have
+  run on `main` (the settings live in GitHub, see below).
 - **No separate "acceptance" or "e2e" job.** "Acceptance" isn't a
   distinct runnable suite in this repo — per CLAUDE.md's test layout, it's
   a traceability label: each spec's Verification plan maps a Given/When/
@@ -248,8 +256,24 @@ jobs:
           EXPO_PUBLIC_FIREBASE_APP_ID: ci-placeholder
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
 
+  format-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run format:check
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run lint
+
   unit:
-    needs: [static-analysis, web-export]
+    needs: [static-analysis, web-export, format-check, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -382,7 +406,7 @@ and, applying to every run, `testTimeout: 15000`.
   as of criteria 12–13.)
   Revisit if deploys become frequent enough that automating them is
   worth the added secrets (`EXPO_PUBLIC_FIREBASE_*`) this would need.
-- **Linting** — this repo has no lint script today; not introduced here.
+- **Linting** — introduced by spec 015, not here.
 - **A coverage threshold, PR coverage comment, or third-party coverage
   service (Codecov etc.)** — issue #24 deliberately starts with just the
   artifact and a recorded baseline; a floor is a follow-up decision.
