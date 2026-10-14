@@ -84,8 +84,9 @@ remembering.
      single mechanical `prettier --write` commit. Nothing but formatting;
      reviewed by confirming `tsc` and the full test suite are unchanged
      and that re-running `prettier --write` is a no-op (the diff is
-     large by nature, not by judgment). CI does not yet enforce
-     `format:check`, so it cannot block on its own change.
+     large by nature, not by judgment). Also adds the `format-check` CI
+     job (and `unit` waits for it): the reformat is in the same PR, so it
+     passes on its own change. Only `lint` waits for PR 3.
   3. **ESLint + enforcement** — adds ESLint, fixes (or narrowly disables,
      each with a comment) whatever it reports, adds the CI steps, husky,
      and lint-staged. A rule is never blanket-disabled to get green; an
