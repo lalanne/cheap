@@ -52,9 +52,12 @@ export const firestoreCreditCardRepository: CreditCardRepository = {
         callback([]);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(collection(firestore, `users/${user.uid}/creditCards`), (snapshot) => {
-        callback(snapshot.docs.map((d) => toCard(d.id, d.data())));
-      });
+      unsubscribeSnapshot = onSnapshot(
+        collection(firestore, `users/${user.uid}/creditCards`),
+        (snapshot) => {
+          callback(snapshot.docs.map((d) => toCard(d.id, d.data())));
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();
@@ -91,7 +94,10 @@ export const firestoreCreditCardRepository: CreditCardRepository = {
       throw new Error('Firestore is not configured.');
     }
     const uid = requireUid();
-    await updateDoc(doc(db, `users/${uid}/creditCards/${id}`), { ...patch, updatedAt: serverTimestamp() });
+    await updateDoc(doc(db, `users/${uid}/creditCards/${id}`), {
+      ...patch,
+      updatedAt: serverTimestamp(),
+    });
   },
 
   async delete(id) {

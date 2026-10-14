@@ -12,7 +12,16 @@ type StatusIconProps = {
 // each step of the overdraft scale has its own shape.
 export function StatusIcon({ kind, color, size = 20 }: StatusIconProps) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       {kind === 'info' && (
         <>
           <Circle cx={12} cy={12} r={9} />

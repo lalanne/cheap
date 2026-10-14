@@ -48,10 +48,19 @@ function createMockRepo() {
     deleteEvent: jest.fn(async () => {}),
   };
 
-  return { repo, unsubscribeLine, unsubscribeEvents, emitEvents: (e: OverdraftEvent[]) => eventsListener?.(e) };
+  return {
+    repo,
+    unsubscribeLine,
+    unsubscribeEvents,
+    emitEvents: (e: OverdraftEvent[]) => eventsListener?.(e),
+  };
 }
 
-const MOVEMENT: LogMovementInput = { amount: 150000, date: new Date('2026-09-24'), note: 'Auto top-up' };
+const MOVEMENT: LogMovementInput = {
+  amount: 150000,
+  date: new Date('2026-09-24'),
+  note: 'Auto top-up',
+};
 
 describe('overdraftStore', () => {
   it('does not touch the repository until startSync is called', () => {
@@ -189,7 +198,9 @@ describe('overdraftStore', () => {
     (repo.logCharge as jest.Mock).mockRejectedValue(new Error('transaction aborted'));
     const { useOverdraftStore } = createOverdraftStore(repo);
 
-    await expect(useOverdraftStore.getState().logInterest(MOVEMENT)).rejects.toThrow('transaction aborted');
+    await expect(useOverdraftStore.getState().logInterest(MOVEMENT)).rejects.toThrow(
+      'transaction aborted',
+    );
   });
 
   it('deletes an event through the repository, which cascades to a linked expense (criterion 6)', async () => {
@@ -205,9 +216,14 @@ describe('overdraftStore', () => {
     const { repo } = createMockRepo();
     const { useOverdraftStore } = createOverdraftStore(repo);
 
-    await useOverdraftStore.getState().updateLine({ monthlyRate: 2.1, plannedMonthlyPayment: 350000 });
+    await useOverdraftStore
+      .getState()
+      .updateLine({ monthlyRate: 2.1, plannedMonthlyPayment: 350000 });
 
-    expect(repo.updateLine).toHaveBeenCalledWith({ monthlyRate: 2.1, plannedMonthlyPayment: 350000 });
+    expect(repo.updateLine).toHaveBeenCalledWith({
+      monthlyRate: 2.1,
+      plannedMonthlyPayment: 350000,
+    });
     expect(repo.logDraw).not.toHaveBeenCalled();
     expect(repo.logPayment).not.toHaveBeenCalled();
     expect(repo.logCharge).not.toHaveBeenCalled();

@@ -33,7 +33,7 @@ export function CategoriesPanel() {
   const topLevelCustom = categories.filter((c) => c.parentCategory === null);
   // A category currently being edited is never offered as its own parent.
   const parentOptions = [...STARTER_CATEGORIES, ...topLevelCustom.map((c) => c.name)].filter(
-    (option) => option !== editingOriginalName
+    (option) => option !== editingOriginalName,
   );
 
   function hasChildren(categoryName: string): boolean {
@@ -137,7 +137,9 @@ export function CategoriesPanel() {
                   style={parentCategory === null ? styles.chipActive : styles.chip}
                   onPress={() => setParentCategory(null)}
                 >
-                  <Text style={parentCategory === null ? styles.chipLabelActive : styles.chipLabel}>None</Text>
+                  <Text style={parentCategory === null ? styles.chipLabelActive : styles.chipLabel}>
+                    None
+                  </Text>
                 </Pressable>
                 {parentOptions.map((option) => (
                   <Pressable
@@ -146,7 +148,9 @@ export function CategoriesPanel() {
                     style={parentCategory === option ? styles.chipActive : styles.chip}
                     onPress={() => setParentCategory(option)}
                   >
-                    <Text style={parentCategory === option ? styles.chipLabelActive : styles.chipLabel}>
+                    <Text
+                      style={parentCategory === option ? styles.chipLabelActive : styles.chipLabel}
+                    >
                       {option}
                     </Text>
                   </Pressable>
@@ -176,12 +180,18 @@ export function CategoriesPanel() {
           <Text style={styles.sectionLabel}>Custom</Text>
           {categories.length === 0 && (
             <View style={styles.emptyState} testID="categories-empty-state">
-              <Text style={styles.emptyStateText}>No custom categories yet — tap Add to create one.</Text>
+              <Text style={styles.emptyStateText}>
+                No custom categories yet — tap Add to create one.
+              </Text>
             </View>
           )}
           {topLevelCustom.map((category) => (
             <View key={category.id} testID={`category-group-${category.name}`}>
-              <Pressable testID={`category-row-${category.id}`} style={styles.row} onPress={() => openEditForm(category)}>
+              <Pressable
+                testID={`category-row-${category.id}`}
+                style={styles.row}
+                onPress={() => openEditForm(category)}
+              >
                 <Text style={styles.rowName}>{category.name}</Text>
                 <Pressable
                   testID={`delete-category-${category.id}`}

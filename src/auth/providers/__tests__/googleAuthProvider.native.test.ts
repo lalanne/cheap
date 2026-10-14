@@ -58,7 +58,9 @@ describe('googleAuthProvider (native)', () => {
 
     expect(mockConfigure).toHaveBeenCalledWith({ webClientId: 'test-web-client-id' });
     expect(mockCredential).toHaveBeenCalledWith('id-token');
-    expect(mockSignInWithCredential).toHaveBeenCalledWith(expect.anything(), { idToken: 'id-token' });
+    expect(mockSignInWithCredential).toHaveBeenCalledWith(expect.anything(), {
+      idToken: 'id-token',
+    });
     expect(user).toEqual({
       uid: 'uid-1',
       email: 'ana@example.com',

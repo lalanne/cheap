@@ -1,4 +1,9 @@
-import { budgetedVsIncome, categoryTotalsForMonth, monthlyTotals, last6MonthsExpense } from '../aggregation';
+import {
+  budgetedVsIncome,
+  categoryTotalsForMonth,
+  monthlyTotals,
+  last6MonthsExpense,
+} from '../aggregation';
 import type { Budget } from '../../budgets/types';
 import type { Category, Transaction } from '../../transactions/types';
 
@@ -83,9 +88,15 @@ describe('budgetedVsIncome', () => {
 
   it('totals every limit and returns the rounded share of income (criterion 18)', () => {
     const result = budgetedVsIncome(
-      [budget('Rent', 900000), budget('Food', 450000), budget('Transport', 150000), budget('Fun', 120000), budget('Health', 108000)],
+      [
+        budget('Rent', 900000),
+        budget('Food', 450000),
+        budget('Transport', 150000),
+        budget('Fun', 120000),
+        budget('Health', 108000),
+      ],
       [],
-      2400000
+      2400000,
     );
     expect(result).toEqual({ totalBudgeted: 1728000, income: 2400000, percent: 72 });
   });
@@ -105,7 +116,11 @@ describe('budgetedVsIncome', () => {
   });
 
   it('returns zero budgeted with no budgets', () => {
-    expect(budgetedVsIncome([], [], 500000)).toEqual({ totalBudgeted: 0, income: 500000, percent: 0 });
+    expect(budgetedVsIncome([], [], 500000)).toEqual({
+      totalBudgeted: 0,
+      income: 500000,
+      percent: 0,
+    });
   });
 
   it('counts only the parent limit when a subcategory is also budgeted (criterion 23)', () => {
@@ -113,7 +128,7 @@ describe('budgetedVsIncome', () => {
     const result = budgetedVsIncome(
       [budget('Food', 450000), budget('Restaurants', 100000), budget('Rent', 900000)],
       categories,
-      2000000
+      2000000,
     );
     expect(result.totalBudgeted).toBe(1350000);
   });

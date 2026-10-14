@@ -85,7 +85,20 @@ const HISTORY_WIDTH = 358;
 const HISTORY_HEIGHT = 150;
 const HISTORY_TOP = 10;
 const HISTORY_BASE = 116;
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 // Spec 012's 2026-09-27 addendum (criterion 24) — the running balance right
 // after each event, replayed in the same chronological order overdraftMath
@@ -93,7 +106,7 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 // wide-web activity table; harmless (and cheap) to compute either way.
 function computeBalanceAfterMap(events: OverdraftEvent[]): Map<string, number> {
   const ordered = [...events].sort(
-    (a, b) => a.date.getTime() - b.date.getTime() || a.createdAt.getTime() - b.createdAt.getTime()
+    (a, b) => a.date.getTime() - b.date.getTime() || a.createdAt.getTime() - b.createdAt.getTime(),
   );
   let running = 0;
   const map = new Map<string, number>();
@@ -121,7 +134,10 @@ export function OverdraftScreen() {
   const [noteText, setNoteText] = useState('');
   const [date, setDate] = useState(new Date());
   const [formError, setFormError] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<{ transition: UsageTransition; balance: number } | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    transition: UsageTransition;
+    balance: number;
+  } | null>(null);
 
   const [limitText, setLimitText] = useState('');
   const [rateText, setRateText] = useState('');
@@ -136,7 +152,8 @@ export function OverdraftScreen() {
     const limit = validateAmount(limitText);
     const rate = parseRate(rateText);
     const planned = plannedText.trim() === '' ? null : validateAmount(plannedText);
-    const opening = includeOpening && openingText.trim() !== '' ? validateAmount(openingText) : null;
+    const opening =
+      includeOpening && openingText.trim() !== '' ? validateAmount(openingText) : null;
 
     setLimitError(limit.ok ? null : limit.error);
     setRateError(rate.ok ? null : 'Enter a monthly rate, like 1.9.');
@@ -203,14 +220,42 @@ export function OverdraftScreen() {
         <View style={styles.card} testID="overdraft-setup-form">
           <Text style={styles.sectionTitle}>Set up your line</Text>
           <Text style={styles.helper}>
-            Enter your approved limit and the monthly rate on your statement. Don't know the rate? Leave the rate
-            blank and add it later from Edit settings. If you already owe something on the line, add that as the
-            opening balance.
+            Enter your approved limit and the monthly rate on your statement. Don't know the rate?
+            Leave the rate blank and add it later from Edit settings. If you already owe something
+            on the line, add that as the opening balance.
           </Text>
-          <Input label="Limit" value={limitText} onChangeText={setLimitText} keyboardType="number-pad" error={limitError} testID="setup-limit-input" />
-          <Input label="Monthly rate, % (optional)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="setup-rate-input" />
-          <Input label="Planned monthly payment (optional)" value={plannedText} onChangeText={setPlannedText} keyboardType="number-pad" error={plannedError} testID="setup-planned-payment-input" />
-          <Input label="Opening balance (optional)" value={openingText} onChangeText={setOpeningText} keyboardType="number-pad" error={openingError} testID="setup-opening-balance-input" />
+          <Input
+            label="Limit"
+            value={limitText}
+            onChangeText={setLimitText}
+            keyboardType="number-pad"
+            error={limitError}
+            testID="setup-limit-input"
+          />
+          <Input
+            label="Monthly rate, % (optional)"
+            value={rateText}
+            onChangeText={setRateText}
+            keyboardType="decimal-pad"
+            error={rateError}
+            testID="setup-rate-input"
+          />
+          <Input
+            label="Planned monthly payment (optional)"
+            value={plannedText}
+            onChangeText={setPlannedText}
+            keyboardType="number-pad"
+            error={plannedError}
+            testID="setup-planned-payment-input"
+          />
+          <Input
+            label="Opening balance (optional)"
+            value={openingText}
+            onChangeText={setOpeningText}
+            keyboardType="number-pad"
+            error={openingError}
+            testID="setup-opening-balance-input"
+          />
           <Button title="Save" onPress={handleSaveSetup} testID="save-overdraft-line-button" />
         </View>
       </Screen>
@@ -228,19 +273,24 @@ export function OverdraftScreen() {
   const payoff = overdraftPayoff(balance, line.monthlyRate, line.plannedMonthlyPayment);
   const history = balanceHistory(events, now);
   const sortedEvents = [...events].sort(
-    (a, b) => b.date.getTime() - a.date.getTime() || b.createdAt.getTime() - a.createdAt.getTime()
+    (a, b) => b.date.getTime() - a.date.getTime() || b.createdAt.getTime() - a.createdAt.getTime(),
   );
 
   async function handleConfirm() {
     if (!line || mode === 'closed' || mode === 'settings') {
       return;
     }
-    const result = mode === 'payment' ? validatePaymentAmount(amountText, balance) : validateAmount(amountText);
+    const result =
+      mode === 'payment' ? validatePaymentAmount(amountText, balance) : validateAmount(amountText);
     if (!result.ok) {
       setFormError(result.error);
       return;
     }
-    const input = { amount: result.value, date, note: noteText.trim() === '' ? null : noteText.trim() };
+    const input = {
+      amount: result.value,
+      date,
+      note: noteText.trim() === '' ? null : noteText.trim(),
+    };
     if (mode === 'draw') {
       await logDraw(input);
     } else if (mode === 'payment') {
@@ -279,7 +329,9 @@ export function OverdraftScreen() {
       icon = 'warning';
       title = 'You crossed 75% of your line';
       body = `Balance ${formatCLP(shown)}, ${pct}%, with ${formatCLP(availableOf(shown, line.limit))} left.${
-        projectedInterest === null ? '' : ` Carrying cost is now about ${formatCLP(projectedInterest)} a month.`
+        projectedInterest === null
+          ? ''
+          : ` Carrying cost is now about ${formatCLP(projectedInterest)} a month.`
       }`;
     } else if (confirmation.transition === 'crossed-limit') {
       palette = colors.status.critical;
@@ -290,7 +342,10 @@ export function OverdraftScreen() {
     return (
       <View
         testID="overdraft-confirmation"
-        style={[styles.confirmation, { backgroundColor: palette.tone, borderColor: palette.border }]}
+        style={[
+          styles.confirmation,
+          { backgroundColor: palette.tone, borderColor: palette.border },
+        ]}
       >
         <View style={styles.confirmationHeader}>
           <StatusIcon kind={icon} color={palette.text} size={22} />
@@ -311,10 +366,16 @@ export function OverdraftScreen() {
   function renderPayoff() {
     switch (payoff.kind) {
       case 'done':
-        return <Text style={styles.payoffText}>You're back to zero — nothing owed on the line.</Text>;
+        return (
+          <Text style={styles.payoffText}>You're back to zero — nothing owed on the line.</Text>
+        );
       case 'no-plan':
         return (
-          <Pressable testID="set-planned-payment-button" onPress={openSettings} style={styles.linkButton}>
+          <Pressable
+            testID="set-planned-payment-button"
+            onPress={openSettings}
+            style={styles.linkButton}
+          >
             <Text style={styles.linkLabel}>Set a planned payment to see when it clears</Text>
           </Pressable>
         );
@@ -373,7 +434,10 @@ export function OverdraftScreen() {
       <View style={styles.gaugeTrack}>
         <View
           testID="overdraft-gauge-fill"
-          style={[styles.gaugeFill, { width: `${Math.min(100, percent)}%`, backgroundColor: statusColor(status) }]}
+          style={[
+            styles.gaugeFill,
+            { width: `${Math.min(100, percent)}%`, backgroundColor: statusColor(status) },
+          ]}
         />
         <View testID="overdraft-gauge-threshold" style={styles.gaugeThreshold} />
       </View>
@@ -382,13 +446,19 @@ export function OverdraftScreen() {
       </View>
       <View style={styles.rowBetween}>
         <Text style={styles.strong}>{`${percent}% used`}</Text>
-        <Text style={styles.helper}>{`${formatCLP(availableOf(balance, line.limit))} available`}</Text>
+        <Text
+          style={styles.helper}
+        >{`${formatCLP(availableOf(balance, line.limit))} available`}</Text>
       </View>
       <View style={styles.buttonRow}>
         <View style={styles.flex}>
           <Button title="Log draw" onPress={() => openForm('draw')} testID="log-draw-button" />
         </View>
-        <Pressable testID="log-payment-button" onPress={() => openForm('payment')} style={[styles.outlineButton, styles.flex]}>
+        <Pressable
+          testID="log-payment-button"
+          onPress={() => openForm('payment')}
+          style={[styles.outlineButton, styles.flex]}
+        >
           <Text style={styles.outlineButtonLabel}>Log payment</Text>
         </Pressable>
       </View>
@@ -399,7 +469,11 @@ export function OverdraftScreen() {
   // 2026-09-27 addendum) — never both at once, since isWideWeb picks one.
   const interestFeeButtons = (
     <View style={styles.splitRow}>
-      <Pressable testID="log-interest-button" onPress={() => openForm('interest')} style={styles.linkButton}>
+      <Pressable
+        testID="log-interest-button"
+        onPress={() => openForm('interest')}
+        style={styles.linkButton}
+      >
         <Text style={styles.linkLabel}>Log interest</Text>
       </Pressable>
       <Pressable testID="log-fee-button" onPress={() => openForm('fee')} style={styles.linkButton}>
@@ -413,11 +487,32 @@ export function OverdraftScreen() {
       {isLogForm && (
         <View style={styles.card} testID="overdraft-form">
           <Text style={styles.sectionTitle}>{FORM_TITLES[mode]}</Text>
-          <Input label="Amount" value={amountText} onChangeText={setAmountText} keyboardType="number-pad" error={formError} testID="overdraft-amount-input" />
-          <DatePickerField label="Date" value={date} onChange={setDate} testID="overdraft-date-input" />
-          <Input label="Note (optional)" value={noteText} onChangeText={setNoteText} testID="overdraft-note-input" />
+          <Input
+            label="Amount"
+            value={amountText}
+            onChangeText={setAmountText}
+            keyboardType="number-pad"
+            error={formError}
+            testID="overdraft-amount-input"
+          />
+          <DatePickerField
+            label="Date"
+            value={date}
+            onChange={setDate}
+            testID="overdraft-date-input"
+          />
+          <Input
+            label="Note (optional)"
+            value={noteText}
+            onChangeText={setNoteText}
+            testID="overdraft-note-input"
+          />
           <Button title="Save" onPress={handleConfirm} testID="confirm-overdraft-button" />
-          <Pressable testID="cancel-overdraft-button" onPress={() => setMode('closed')} style={styles.linkButton}>
+          <Pressable
+            testID="cancel-overdraft-button"
+            onPress={() => setMode('closed')}
+            style={styles.linkButton}
+          >
             <Text style={styles.linkLabel}>Cancel</Text>
           </Pressable>
         </View>
@@ -426,10 +521,35 @@ export function OverdraftScreen() {
       {mode === 'settings' && (
         <View style={styles.card} testID="overdraft-settings-form">
           <Text style={styles.sectionTitle}>Line settings</Text>
-          <Input label="Limit" value={limitText} onChangeText={setLimitText} keyboardType="number-pad" error={limitError} testID="settings-limit-input" />
-          <Input label="Monthly rate, % (optional)" value={rateText} onChangeText={setRateText} keyboardType="decimal-pad" error={rateError} testID="settings-rate-input" />
-          <Input label="Planned monthly payment (optional)" value={plannedText} onChangeText={setPlannedText} keyboardType="number-pad" error={plannedError} testID="settings-planned-payment-input" />
-          <Button title="Save" onPress={handleSaveSettings} testID="save-overdraft-settings-button" />
+          <Input
+            label="Limit"
+            value={limitText}
+            onChangeText={setLimitText}
+            keyboardType="number-pad"
+            error={limitError}
+            testID="settings-limit-input"
+          />
+          <Input
+            label="Monthly rate, % (optional)"
+            value={rateText}
+            onChangeText={setRateText}
+            keyboardType="decimal-pad"
+            error={rateError}
+            testID="settings-rate-input"
+          />
+          <Input
+            label="Planned monthly payment (optional)"
+            value={plannedText}
+            onChangeText={setPlannedText}
+            keyboardType="number-pad"
+            error={plannedError}
+            testID="settings-planned-payment-input"
+          />
+          <Button
+            title="Save"
+            onPress={handleSaveSettings}
+            testID="save-overdraft-settings-button"
+          />
           <Pressable onPress={() => setMode('closed')} style={styles.linkButton}>
             <Text style={styles.linkLabel}>Cancel</Text>
           </Pressable>
@@ -442,7 +562,11 @@ export function OverdraftScreen() {
     <View style={styles.termsCard} testID="overdraft-terms">
       <View style={styles.termsHeader}>
         <Text style={styles.termsTitle}>Line terms</Text>
-        <Pressable testID="edit-overdraft-settings-button" onPress={openSettings} style={styles.linkButton}>
+        <Pressable
+          testID="edit-overdraft-settings-button"
+          onPress={openSettings}
+          style={styles.linkButton}
+        >
           <Text style={styles.linkLabel}>Edit</Text>
         </Pressable>
       </View>
@@ -453,7 +577,11 @@ export function OverdraftScreen() {
       <View style={styles.termsRow} testID="terms-rate">
         <Text style={styles.helperBase}>Monthly rate</Text>
         {line.monthlyRate === null ? (
-          <Pressable testID="terms-add-rate-button" onPress={openSettings} style={styles.linkButton}>
+          <Pressable
+            testID="terms-add-rate-button"
+            onPress={openSettings}
+            style={styles.linkButton}
+          >
             <Text style={styles.linkLabel}>Not set · Add</Text>
           </Pressable>
         ) : (
@@ -465,7 +593,11 @@ export function OverdraftScreen() {
         {line.plannedMonthlyPayment ? (
           <Text style={styles.strong}>{`${formatCLP(line.plannedMonthlyPayment)} / month`}</Text>
         ) : (
-          <Pressable testID="terms-add-payment-button" onPress={openSettings} style={styles.linkButton}>
+          <Pressable
+            testID="terms-add-payment-button"
+            onPress={openSettings}
+            style={styles.linkButton}
+          >
             <Text style={styles.linkLabel}>Not set · Add</Text>
           </Pressable>
         )}
@@ -478,7 +610,9 @@ export function OverdraftScreen() {
       <Text style={styles.sectionTitle}>What it's costing you</Text>
       <View style={styles.card} testID="overdraft-cost-month">
         <Text style={styles.eyebrow}>CHARGED THIS MONTH</Text>
-        <Text style={styles.midNumber}>{formatCLP(cost.interestThisMonth + cost.feesThisMonth)}</Text>
+        <Text style={styles.midNumber}>
+          {formatCLP(cost.interestThisMonth + cost.feesThisMonth)}
+        </Text>
         <View style={styles.splitRow}>
           <Text style={styles.helper}>{`Interest ${formatCLP(cost.interestThisMonth)}`}</Text>
           <Text style={styles.helper}>{`Fees ${formatCLP(cost.feesThisMonth)}`}</Text>
@@ -488,7 +622,11 @@ export function OverdraftScreen() {
         <View style={[styles.card, styles.flex]} testID="overdraft-cost-carrying">
           <Text style={styles.eyebrow}>CARRYING COST</Text>
           {carrying === null ? (
-            <Pressable testID="carrying-add-rate-button" onPress={openSettings} style={styles.linkButton}>
+            <Pressable
+              testID="carrying-add-rate-button"
+              onPress={openSettings}
+              style={styles.linkButton}
+            >
               <Text style={styles.linkLabel}>Add your rate to see this</Text>
             </Pressable>
           ) : (
@@ -516,9 +654,16 @@ export function OverdraftScreen() {
           <Text style={styles.midNumber}>{formatCLP(balance)}</Text>
         </View>
         <View style={styles.clearedTrack}>
-          <View testID="overdraft-cleared-fill" style={[styles.clearedFill, { width: `${cleared}%` }]} />
+          <View
+            testID="overdraft-cleared-fill"
+            style={[styles.clearedFill, { width: `${cleared}%` }]}
+          />
         </View>
-        {balance > 0 && <Text style={styles.helper}>{`${cleared}% cleared from the ${formatCLP(peak)} peak`}</Text>}
+        {balance > 0 && (
+          <Text
+            style={styles.helper}
+          >{`${cleared}% cleared from the ${formatCLP(peak)} peak`}</Text>
+        )}
         {line.plannedMonthlyPayment ? (
           <View style={styles.rowBetween}>
             <Text style={styles.helper}>Planned payment</Text>
@@ -534,16 +679,66 @@ export function OverdraftScreen() {
     <>
       <Text style={styles.sectionTitle}>Balance, last 6 months</Text>
       <View style={styles.card} testID="overdraft-history">
-        <Svg width="100%" height={HISTORY_HEIGHT} viewBox={`0 0 ${HISTORY_WIDTH} ${HISTORY_HEIGHT}`}>
-          <Line x1={8} y1={yFor(line.limit)} x2={HISTORY_WIDTH - 8} y2={yFor(line.limit)} stroke={colors.status.critical.text} strokeWidth={1} strokeDasharray="4 4" />
-          <SvgText x={12} y={yFor(line.limit) + 12} fontSize={10} fill={colors.inkSecondary}>{`Limit ${formatCLP(line.limit)}`}</SvgText>
-          <Line x1={8} y1={yFor(line.limit * 0.75)} x2={HISTORY_WIDTH - 8} y2={yFor(line.limit * 0.75)} stroke={colors.inkMuted} strokeWidth={1} strokeDasharray="2 4" />
-          <Line x1={8} y1={HISTORY_BASE} x2={HISTORY_WIDTH - 8} y2={HISTORY_BASE} stroke={colors.border} strokeWidth={1} />
+        <Svg
+          width="100%"
+          height={HISTORY_HEIGHT}
+          viewBox={`0 0 ${HISTORY_WIDTH} ${HISTORY_HEIGHT}`}
+        >
+          <Line
+            x1={8}
+            y1={yFor(line.limit)}
+            x2={HISTORY_WIDTH - 8}
+            y2={yFor(line.limit)}
+            stroke={colors.status.critical.text}
+            strokeWidth={1}
+            strokeDasharray="4 4"
+          />
+          <SvgText
+            x={12}
+            y={yFor(line.limit) + 12}
+            fontSize={10}
+            fill={colors.inkSecondary}
+          >{`Limit ${formatCLP(line.limit)}`}</SvgText>
+          <Line
+            x1={8}
+            y1={yFor(line.limit * 0.75)}
+            x2={HISTORY_WIDTH - 8}
+            y2={yFor(line.limit * 0.75)}
+            stroke={colors.inkMuted}
+            strokeWidth={1}
+            strokeDasharray="2 4"
+          />
+          <Line
+            x1={8}
+            y1={HISTORY_BASE}
+            x2={HISTORY_WIDTH - 8}
+            y2={HISTORY_BASE}
+            stroke={colors.border}
+            strokeWidth={1}
+          />
           <Path d={areaPath} fill={colors.status.notice.text} fillOpacity={0.14} />
-          <Path d={stepPath} fill="none" stroke={colors.status.notice.text} strokeWidth={2.5} strokeLinejoin="round" />
-          <Circle cx={12 + history.length * stepWidth} cy={lastY} r={4.5} fill={colors.status.notice.text} />
+          <Path
+            d={stepPath}
+            fill="none"
+            stroke={colors.status.notice.text}
+            strokeWidth={2.5}
+            strokeLinejoin="round"
+          />
+          <Circle
+            cx={12 + history.length * stepWidth}
+            cy={lastY}
+            r={4.5}
+            fill={colors.status.notice.text}
+          />
           {history.map((p, i) => (
-            <SvgText key={`${p.year}-${p.month}`} x={12 + i * stepWidth + stepWidth / 2} y={136} fontSize={11} fill={colors.inkSecondary} textAnchor="middle">
+            <SvgText
+              key={`${p.year}-${p.month}`}
+              x={12 + i * stepWidth + stepWidth / 2}
+              y={136}
+              fontSize={11}
+              fill={colors.inkSecondary}
+              textAnchor="middle"
+            >
               {MONTH_LABELS[p.month - 1]}
             </SvgText>
           ))}
@@ -562,7 +757,12 @@ export function OverdraftScreen() {
     ) : isWideWeb ? (
       <View style={styles.card} testID="overdraft-activity-table">
         {sortedEvents.map((e) => (
-          <ActivityRow key={e.id} event={e} balanceAfter={balanceAfterMap.get(e.id) ?? 0} onDelete={() => deleteEvent(e.id)} />
+          <ActivityRow
+            key={e.id}
+            event={e}
+            balanceAfter={balanceAfterMap.get(e.id) ?? 0}
+            onDelete={() => deleteEvent(e.id)}
+          />
         ))}
       </View>
     ) : (
@@ -619,12 +819,20 @@ export function OverdraftScreen() {
 function EventRow({ event, onDelete }: { event: OverdraftEvent; onDelete: () => void }) {
   const isPayment = event.type === 'payment';
   const amount = `${isPayment ? '−' : '+'}${formatCLP(event.amount)}`;
-  const amountColor = isPayment ? colors.success : event.type === 'draw' ? colors.status.notice.text : colors.ink;
+  const amountColor = isPayment
+    ? colors.success
+    : event.type === 'draw'
+      ? colors.status.notice.text
+      : colors.ink;
   return (
     <View testID={`overdraft-event-${event.id}`} style={styles.eventRow}>
       <View style={styles.flex}>
         <Text style={styles.strong}>{EVENT_LABELS[event.type]}</Text>
-        <Text style={styles.helper}>{event.note ? `${formatShortDate(event.date)} · ${event.note}` : formatShortDate(event.date)}</Text>
+        <Text style={styles.helper}>
+          {event.note
+            ? `${formatShortDate(event.date)} · ${event.note}`
+            : formatShortDate(event.date)}
+        </Text>
       </View>
       <Text style={[styles.strong, { color: amountColor }]}>{amount}</Text>
       <Pressable testID={`delete-event-${event.id}`} onPress={onDelete} style={styles.linkButton}>
@@ -648,7 +856,11 @@ function ActivityRow({
 }) {
   const isPayment = event.type === 'payment';
   const amount = `${isPayment ? '−' : '+'}${formatCLP(event.amount)}`;
-  const amountColor = isPayment ? colors.success : event.type === 'draw' ? colors.status.notice.text : colors.ink;
+  const amountColor = isPayment
+    ? colors.success
+    : event.type === 'draw'
+      ? colors.status.notice.text
+      : colors.ink;
   return (
     <View testID={`overdraft-activity-row-${event.id}`} style={styles.activityRow}>
       <Text style={[styles.helper, styles.activityDate]}>{formatShortDate(event.date)}</Text>
@@ -658,7 +870,11 @@ function ActivityRow({
       <Text testID="balance-after" style={[styles.helper, styles.activityAmount]}>
         {formatCLP(balanceAfter)}
       </Text>
-      <Pressable testID={`delete-event-${event.id}`} onPress={onDelete} style={[styles.linkButton, styles.activityDelete]}>
+      <Pressable
+        testID={`delete-event-${event.id}`}
+        onPress={onDelete}
+        style={[styles.linkButton, styles.activityDelete]}
+      >
         <Text style={styles.linkLabel}>Delete</Text>
       </Pressable>
     </View>
@@ -667,7 +883,12 @@ function ActivityRow({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   title: { fontFamily: typography.display, fontSize: typography.size.xl, color: colors.ink },
   sectionTitle: {
     fontFamily: typography.display,
@@ -691,7 +912,11 @@ const styles = StyleSheet.create({
     color: colors.inkSecondary,
   },
   helper: { fontFamily: typography.body, fontSize: typography.size.sm, color: colors.inkSecondary },
-  helperBase: { fontFamily: typography.body, fontSize: typography.size.base, color: colors.inkSecondary },
+  helperBase: {
+    fontFamily: typography.body,
+    fontSize: typography.size.base,
+    color: colors.inkSecondary,
+  },
   termsCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
@@ -702,7 +927,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     marginBottom: spacing.sm + 4,
   },
-  termsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
+  termsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 48,
+  },
   termsTitle: { fontFamily: typography.display, fontSize: typography.size.lg, color: colors.ink },
   termsRow: {
     flexDirection: 'row',
@@ -738,7 +968,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gaugeFill: { height: 24, borderRadius: 12 },
-  gaugeThreshold: { position: 'absolute', left: '75%', top: -4, width: 2, height: 32, backgroundColor: colors.ink },
+  gaugeThreshold: {
+    position: 'absolute',
+    left: '75%',
+    top: -4,
+    width: 2,
+    height: 32,
+    backgroundColor: colors.ink,
+  },
   thresholdLabelRow: { height: 16 },
   thresholdLabel: {
     position: 'absolute',
@@ -757,12 +994,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outlineButtonLabel: { fontFamily: typography.bodyBold, fontSize: typography.size.base, color: colors.accent },
+  outlineButtonLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.base,
+    color: colors.accent,
+  },
   linkButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  linkLabel: { fontFamily: typography.bodyBold, fontSize: typography.size.sm + 1, color: colors.accent },
-  clearedTrack: { height: 12, borderRadius: 6, backgroundColor: colors.background, marginVertical: spacing.sm },
+  linkLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm + 1,
+    color: colors.accent,
+  },
+  clearedTrack: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.background,
+    marginVertical: spacing.sm,
+  },
   clearedFill: { height: 12, borderRadius: 6, backgroundColor: colors.accent },
-  payoffText: { fontFamily: typography.bodyBold, fontSize: typography.size.base, color: colors.ink, marginTop: spacing.sm, lineHeight: 22 },
+  payoffText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.base,
+    color: colors.ink,
+    marginTop: spacing.sm,
+    lineHeight: 22,
+  },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -809,12 +1065,20 @@ const styles = StyleSheet.create({
   },
   confirmationHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   confirmationTitle: { flex: 1, fontFamily: typography.display, fontSize: typography.size.lg },
-  confirmationBody: { fontFamily: typography.body, fontSize: typography.size.base - 1, lineHeight: 21 },
+  confirmationBody: {
+    fontFamily: typography.body,
+    fontSize: typography.size.base - 1,
+    lineHeight: 21,
+  },
   confirmationButton: {
     minHeight: 44,
     borderRadius: radius.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmationButtonLabel: { fontFamily: typography.bodyBold, fontSize: typography.size.base, color: colors.onAccent },
+  confirmationButtonLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.base,
+    color: colors.onAccent,
+  },
 });

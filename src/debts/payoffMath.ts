@@ -30,7 +30,11 @@ export function percentPaid(originalAmount: number, currentBalance: number): num
 // adding back the logged payments (expense transactions in the debt's
 // category) dated after it. Approximate by design: direct balance edits
 // aren't logged. `null` = the debt didn't exist yet.
-export function debtBalanceAsOf(debt: Debt, transactions: Transaction[], month: MonthRef): number | null {
+export function debtBalanceAsOf(
+  debt: Debt,
+  transactions: Transaction[],
+  month: MonthRef,
+): number | null {
   const end = startOfNextMonth(month);
   if (debt.createdAt >= end) {
     return null;

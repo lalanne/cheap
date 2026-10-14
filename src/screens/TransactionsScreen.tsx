@@ -15,7 +15,20 @@ import { validateAmount } from '../transactions/validateAmount';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import { useWideWeb } from '../theme/useWideWeb';
 
-const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const SHORT_MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 const FULL_MONTH_NAMES = [
   'January',
   'February',
@@ -129,7 +142,9 @@ export function TransactionsScreen() {
       }
       closeForm();
     } catch (e) {
-      setSaveError((e as { message?: string }).message ?? 'Something went wrong. Please try again.');
+      setSaveError(
+        (e as { message?: string }).message ?? 'Something went wrong. Please try again.',
+      );
     }
   }
 
@@ -182,7 +197,9 @@ export function TransactionsScreen() {
     />
   );
 
-  const dateField = <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />;
+  const dateField = (
+    <DatePickerField label="Date" value={date} onChange={setDate} testID="date-input" />
+  );
 
   const categorySection = (
     <>
@@ -195,11 +212,17 @@ export function TransactionsScreen() {
             style={category === name ? styles.chipActive : styles.chip}
             onPress={() => setCategory(name)}
           >
-            <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>{name}</Text>
+            <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>
+              {name}
+            </Text>
           </Pressable>
         ))}
         {!addingCategory && (
-          <Pressable testID="add-category-button" style={styles.chip} onPress={() => setAddingCategory(true)}>
+          <Pressable
+            testID="add-category-button"
+            style={styles.chip}
+            onPress={() => setAddingCategory(true)}
+          >
             <Text style={styles.chipLabel}>+ New</Text>
           </Pressable>
         )}
@@ -215,7 +238,11 @@ export function TransactionsScreen() {
               testID="new-category-input"
             />
           </View>
-          <Button title="Add" onPress={handleConfirmAddCategory} testID="confirm-add-category-button" />
+          <Button
+            title="Add"
+            onPress={handleConfirmAddCategory}
+            testID="confirm-add-category-button"
+          />
         </View>
       )}
     </>
@@ -242,7 +269,9 @@ export function TransactionsScreen() {
               style={cardId === c.id ? styles.chipActive : styles.chip}
               onPress={() => setCardId(c.id)}
             >
-              <Text style={cardId === c.id ? styles.chipLabelActive : styles.chipLabel}>{c.name}</Text>
+              <Text style={cardId === c.id ? styles.chipLabelActive : styles.chipLabel}>
+                {c.name}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -333,14 +362,17 @@ export function TransactionsScreen() {
   // which month's rows the middle column shows, defaulting to the most
   // recent when nothing's been clicked.
   const selectedGroup =
-    monthGroups.find((g) => selectedMonth && g.year === selectedMonth.year && g.month === selectedMonth.month) ??
+    monthGroups.find(
+      (g) => selectedMonth && g.year === selectedMonth.year && g.month === selectedMonth.month,
+    ) ??
     monthGroups[0] ??
     null;
 
   const monthRail = (
     <View style={styles.monthRail} testID="month-rail">
       {monthGroups.map((group) => {
-        const isSelected = selectedGroup?.year === group.year && selectedGroup?.month === group.month;
+        const isSelected =
+          selectedGroup?.year === group.year && selectedGroup?.month === group.month;
         return (
           <Pressable
             key={`${group.year}-${group.month}`}
@@ -405,7 +437,9 @@ export function TransactionsScreen() {
               </View>
             ) : (
               <View style={styles.wideEmptyState} testID="wide-empty-state">
-                <Text style={styles.wideEmptyStateText}>Select Add, or a transaction, to see it here.</Text>
+                <Text style={styles.wideEmptyStateText}>
+                  Select Add, or a transaction, to see it here.
+                </Text>
               </View>
             )}
           </View>

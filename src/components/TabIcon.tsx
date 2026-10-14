@@ -15,7 +15,16 @@ type TabIconProps = {
 // the dashboard.
 export function TabIcon({ name, color, size = 20 }: TabIconProps) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       {name === 'transactions' && (
         <>
           <Path d="M4 6h16" />

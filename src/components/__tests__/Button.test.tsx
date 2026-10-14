@@ -18,7 +18,7 @@ describe('Button', () => {
       <>
         <Button title="Save" testID="button-a" />
         <Button title="Create account" testID="button-b" />
-      </>
+      </>,
     );
 
     const a = screen.getByTestId('button-a');

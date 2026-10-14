@@ -49,7 +49,7 @@ export const firestoreCreditCardPaymentRepository: CreditCardPaymentRepository =
         collection(getFirestore(), `users/${user.uid}/creditCardPayments`),
         (snapshot) => {
           callback(snapshot.docs.map((d) => toPayment(d.id, d.data())));
-        }
+        },
       );
     });
     return () => {

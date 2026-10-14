@@ -8,7 +8,7 @@ import type { Transaction } from '../transactions/types';
 export function computeCategorySpend(
   transactions: Transaction[],
   category: string,
-  reference: Date = new Date()
+  reference: Date = new Date(),
 ): number {
   const year = reference.getFullYear();
   const month = reference.getMonth();
@@ -19,7 +19,7 @@ export function computeCategorySpend(
         t.type === 'expense' &&
         t.category === category &&
         t.date.getFullYear() === year &&
-        t.date.getMonth() === month
+        t.date.getMonth() === month,
     )
     .reduce((sum, t) => sum + t.amount, 0);
 }

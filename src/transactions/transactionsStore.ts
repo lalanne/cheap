@@ -19,12 +19,21 @@ type TransactionsActions = {
   addTransaction: (input: NewTransactionInput) => Promise<void>;
   updateTransaction: (id: string, input: UpdateTransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  addCategory: (name: string, type: CategoryType, parentCategory: string | null) => Promise<Category>;
+  addCategory: (
+    name: string,
+    type: CategoryType,
+    parentCategory: string | null,
+  ) => Promise<Category>;
   deleteCategory: (id: string) => Promise<void>;
   // Spec 002's 2026-09-24 amendment — renames the category, and cascades
   // to every transaction that used oldName only when the name actually
   // changed (a parent-only edit needs no cascade).
-  updateCategory: (id: string, name: string, parentCategory: string | null, oldName: string) => Promise<void>;
+  updateCategory: (
+    id: string,
+    name: string,
+    parentCategory: string | null,
+    oldName: string,
+  ) => Promise<void>;
 };
 
 export type TransactionsStore = TransactionsState & TransactionsActions;
@@ -55,7 +64,8 @@ export function createTransactionsStore(repos: TransactionsRepositories) {
       await repos.transactions.delete(id);
     },
 
-    addCategory: async (name, type, parentCategory) => repos.categories.create(name, type, parentCategory),
+    addCategory: async (name, type, parentCategory) =>
+      repos.categories.create(name, type, parentCategory),
 
     deleteCategory: async (id) => {
       await repos.categories.delete(id);

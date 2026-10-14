@@ -61,7 +61,9 @@ export function SignInScreen() {
     try {
       await signInWithGoogle();
     } catch (e) {
-      setGoogleError((e as { message?: string }).message ?? 'Something went wrong. Please try again.');
+      setGoogleError(
+        (e as { message?: string }).message ?? 'Something went wrong. Please try again.',
+      );
     }
   }
 
@@ -90,9 +92,7 @@ export function SignInScreen() {
         </Pressable>
       </View>
 
-      {!isSignin && (
-        <Input label="Name" value={name} onChangeText={setName} testID="name-input" />
-      )}
+      {!isSignin && <Input label="Name" value={name} onChangeText={setName} testID="name-input" />}
       <Input
         label="Email"
         value={email}

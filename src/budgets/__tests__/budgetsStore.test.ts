@@ -16,13 +16,21 @@ function createMockRepo() {
     }),
     create: jest.fn(async (category: string, monthlyLimit: number) => {
       const now = new Date();
-      const budget: Budget = { id: `b-${nextId++}`, category, monthlyLimit, createdAt: now, updatedAt: now };
+      const budget: Budget = {
+        id: `b-${nextId++}`,
+        category,
+        monthlyLimit,
+        createdAt: now,
+        updatedAt: now,
+      };
       budgets = [...budgets, budget];
       listener?.(budgets);
       return budget;
     }),
     update: jest.fn(async (id: string, monthlyLimit: number) => {
-      budgets = budgets.map((b) => (b.id === id ? { ...b, monthlyLimit, updatedAt: new Date() } : b));
+      budgets = budgets.map((b) =>
+        b.id === id ? { ...b, monthlyLimit, updatedAt: new Date() } : b,
+      );
       listener?.(budgets);
     }),
     delete: jest.fn(async (id: string) => {
@@ -72,7 +80,10 @@ describe('budgetsStore', () => {
     expect(repo.create).toHaveBeenCalledWith('Food', 250000);
     expect(repo.update).not.toHaveBeenCalled();
     expect(useStore.getState().budgets).toHaveLength(1);
-    expect(useStore.getState().budgets[0]).toMatchObject({ category: 'Food', monthlyLimit: 250000 });
+    expect(useStore.getState().budgets[0]).toMatchObject({
+      category: 'Food',
+      monthlyLimit: 250000,
+    });
   });
 
   it('updates the existing budget in place for a category that already has one, not a duplicate (criterion 2)', async () => {

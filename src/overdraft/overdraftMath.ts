@@ -15,7 +15,7 @@ function signed(event: OverdraftEvent): number {
 // Date order, ties broken by when the event was logged.
 function replayOrder(events: OverdraftEvent[]): OverdraftEvent[] {
   return [...events].sort(
-    (a, b) => a.date.getTime() - b.date.getTime() || a.createdAt.getTime() - b.createdAt.getTime()
+    (a, b) => a.date.getTime() - b.date.getTime() || a.createdAt.getTime() - b.createdAt.getTime(),
   );
 }
 
@@ -103,7 +103,8 @@ export function costSummary(events: OverdraftEvent[], now: Date): CostSummary {
       continue;
     }
     totalCost += e.amount;
-    const thisMonth = e.date.getFullYear() === now.getFullYear() && e.date.getMonth() === now.getMonth();
+    const thisMonth =
+      e.date.getFullYear() === now.getFullYear() && e.date.getMonth() === now.getMonth();
     if (thisMonth) {
       if (e.type === 'interest') {
         interestThisMonth += e.amount;
@@ -127,7 +128,11 @@ export type UsageTransition = 'started' | 'crossed-high' | 'crossed-limit';
 
 // Which confirmation a balance increase earns; the most severe threshold
 // crossed wins when one draw crosses several.
-export function usageTransition(before: number, after: number, limit: number): UsageTransition | null {
+export function usageTransition(
+  before: number,
+  after: number,
+  limit: number,
+): UsageTransition | null {
   if (after <= before) {
     return null;
   }

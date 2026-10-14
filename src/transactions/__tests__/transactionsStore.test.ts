@@ -42,7 +42,7 @@ function createMockRepos() {
     }),
     update: jest.fn(async (id: string, input: UpdateTransactionInput) => {
       transactions = transactions.map((t) =>
-        t.id === id ? { ...t, ...input, updatedAt: new Date() } : t
+        t.id === id ? { ...t, ...input, updatedAt: new Date() } : t,
       );
       txListener?.(transactions);
     }),
@@ -51,7 +51,9 @@ function createMockRepos() {
       txListener?.(transactions);
     }),
     renameCategoryInTransactions: jest.fn(async (oldName: string, newName: string) => {
-      transactions = transactions.map((t) => (t.category === oldName ? { ...t, category: newName } : t));
+      transactions = transactions.map((t) =>
+        t.category === oldName ? { ...t, category: newName } : t,
+      );
       txListener?.(transactions);
     }),
   };
@@ -157,7 +159,10 @@ describe('transactionsStore', () => {
     });
 
     const dates = useStore.getState().transactions.map((t) => t.date.toISOString());
-    expect(dates).toEqual([new Date('2026-09-17').toISOString(), new Date('2026-09-16').toISOString()]);
+    expect(dates).toEqual([
+      new Date('2026-09-17').toISOString(),
+      new Date('2026-09-16').toISOString(),
+    ]);
   });
 
   it('edits a transaction in place, not as a duplicate (criterion 3)', async () => {
@@ -249,7 +254,10 @@ describe('transactionsStore', () => {
     await useStore.getState().updateCategory(created.id, 'Food Delivery', 'Food', 'Uber Eats');
 
     expect(repos.categories.update).toHaveBeenCalledWith(created.id, 'Food Delivery', 'Food');
-    expect(repos.transactions.renameCategoryInTransactions).toHaveBeenCalledWith('Uber Eats', 'Food Delivery');
+    expect(repos.transactions.renameCategoryInTransactions).toHaveBeenCalledWith(
+      'Uber Eats',
+      'Food Delivery',
+    );
     expect(useStore.getState().transactions[0].category).toBe('Food Delivery');
   });
 
@@ -280,7 +288,7 @@ describe('transactionsStore — cardId (spec 002 2026-09-29 amendment)', () => {
     });
 
     expect(repos.transactions.create).toHaveBeenCalledWith(
-      expect.objectContaining({ cardId: 'card-1' })
+      expect.objectContaining({ cardId: 'card-1' }),
     );
   });
 

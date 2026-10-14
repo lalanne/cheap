@@ -3,7 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { availableOf, creditCardBalance, creditCardStatus, usedPercent } from '../creditCards/creditCardMath';
+import {
+  availableOf,
+  creditCardBalance,
+  creditCardStatus,
+  usedPercent,
+} from '../creditCards/creditCardMath';
 import { useCreditCardsStore } from '../creditCards/store';
 import type { CreditCard } from '../creditCards/types';
 import { revolvingPayoff } from '../finance/revolvingPayoff';
@@ -24,7 +29,11 @@ function statusColor(status: ReturnType<typeof creditCardStatus>): string {
   return status === 'over-limit' ? colors.status.critical.text : colors.status.warning.text;
 }
 
-function payoffSentence(balance: number, monthlyRate: number | null, minimumPayment: number): string {
+function payoffSentence(
+  balance: number,
+  monthlyRate: number | null,
+  minimumPayment: number,
+): string {
   const payoff = revolvingPayoff(balance, monthlyRate, minimumPayment);
   switch (payoff.kind) {
     case 'done':
@@ -209,7 +218,11 @@ export function CreditCardsPanel() {
             keyboardType="number-pad"
             error={amountError}
           />
-          <Button title="Confirm payment" onPress={handleConfirmPayment} testID="confirm-card-payment-button" />
+          <Button
+            title="Confirm payment"
+            onPress={handleConfirmPayment}
+            testID="confirm-card-payment-button"
+          />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForms} testID="cancel-card-payment-button" />
         </View>
@@ -217,7 +230,9 @@ export function CreditCardsPanel() {
 
       {mode === 'closed' && cards.length === 0 && (
         <View style={styles.emptyState} testID="credit-cards-empty-state">
-          <Text style={styles.emptyStateText}>No credit cards tracked yet — tap Add to track one.</Text>
+          <Text style={styles.emptyStateText}>
+            No credit cards tracked yet — tap Add to track one.
+          </Text>
         </View>
       )}
 
@@ -233,17 +248,21 @@ export function CreditCardsPanel() {
                 {showBadge && (
                   <View testID={`card-status-${card.id}`} style={styles.statusPill}>
                     <View style={[styles.statusDot, { backgroundColor: statusColor(status) }]} />
-                    <Text style={styles.statusLabel}>{status === 'over-limit' ? 'Over limit' : 'High'}</Text>
+                    <Text style={styles.statusLabel}>
+                      {status === 'over-limit' ? 'Over limit' : 'High'}
+                    </Text>
                   </View>
                 )}
               </View>
               <Text style={styles.rowDetail}>{formatCLP(balance)}</Text>
               <Text style={styles.rowSubDetail}>
                 {`of ${formatCLP(card.limit)} limit · ${usedPercent(balance, card.limit)}% used · ${formatCLP(
-                  availableOf(balance, card.limit)
+                  availableOf(balance, card.limit),
                 )} available`}
               </Text>
-              <Text style={styles.rowSubDetail}>{payoffSentence(balance, card.monthlyRate, card.minimumPayment)}</Text>
+              <Text style={styles.rowSubDetail}>
+                {payoffSentence(balance, card.monthlyRate, card.minimumPayment)}
+              </Text>
               <View style={styles.rowActions}>
                 <Pressable
                   testID={`log-card-payment-button-${card.id}`}
@@ -275,7 +294,12 @@ export function CreditCardsPanel() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   title: { fontFamily: typography.display, fontSize: typography.size.lg, color: colors.ink },
   form: {
     backgroundColor: colors.surface,
@@ -286,9 +310,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   spacer: { height: spacing.sm },
-  errorText: { fontFamily: typography.body, fontSize: typography.size.sm, color: colors.status.critical.text, marginBottom: spacing.sm },
+  errorText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.sm,
+    color: colors.status.critical.text,
+    marginBottom: spacing.sm,
+  },
   emptyState: { paddingVertical: spacing.md },
-  emptyStateText: { fontFamily: typography.body, fontSize: typography.size.base, color: colors.inkSecondary },
+  emptyStateText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.base,
+    color: colors.inkSecondary,
+  },
   row: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
@@ -301,10 +334,18 @@ const styles = StyleSheet.create({
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowName: { fontFamily: typography.bodyBold, fontSize: typography.size.base, color: colors.ink },
   rowDetail: { fontFamily: typography.display, fontSize: typography.size.xl, color: colors.ink },
-  rowSubDetail: { fontFamily: typography.body, fontSize: typography.size.sm, color: colors.inkSecondary },
+  rowSubDetail: {
+    fontFamily: typography.body,
+    fontSize: typography.size.sm,
+    color: colors.inkSecondary,
+  },
   rowActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   actionButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  actionLabel: { fontFamily: typography.bodyBold, fontSize: typography.size.sm + 1, color: colors.accent },
+  actionLabel: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.sm + 1,
+    color: colors.accent,
+  },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',

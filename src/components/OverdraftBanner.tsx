@@ -33,7 +33,10 @@ export function OverdraftBanner({ onPress }: OverdraftBannerProps) {
   }
 
   const since = inUseSince(events);
-  const sinceLabel = since === null ? '' : ` · since ${isSameLocalDay(since, new Date()) ? 'today' : formatShortDate(since)}`;
+  const sinceLabel =
+    since === null
+      ? ''
+      : ` · since ${isSameLocalDay(since, new Date()) ? 'today' : formatShortDate(since)}`;
   const percent = usedPercent(balance, line.limit);
   const used = `${formatCLP(balance)} of ${formatCLP(line.limit)}`;
 

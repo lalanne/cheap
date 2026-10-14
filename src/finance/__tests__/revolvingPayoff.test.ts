@@ -41,13 +41,29 @@ describe('revolvingPayoff', () => {
   });
 
   it('is ⌈B/P⌉ months with no remaining interest at a zero rate', () => {
-    expect(revolvingPayoff(900000, 0, 300000)).toEqual({ kind: 'clears', months: 3, remainingInterest: 0 });
-    expect(revolvingPayoff(900000, 0, 250000)).toEqual({ kind: 'clears', months: 4, remainingInterest: 0 });
+    expect(revolvingPayoff(900000, 0, 300000)).toEqual({
+      kind: 'clears',
+      months: 3,
+      remainingInterest: 0,
+    });
+    expect(revolvingPayoff(900000, 0, 250000)).toEqual({
+      kind: 'clears',
+      months: 4,
+      remainingInterest: 0,
+    });
   });
 
   it('amortizes at a monthly rate: months rounded up, interest from the unrounded month count', () => {
-    expect(revolvingPayoff(1240000, 1.9, 300000)).toEqual({ kind: 'clears', months: 5, remainingInterest: 63630 });
-    expect(revolvingPayoff(1240000, 1.9, 400000)).toEqual({ kind: 'clears', months: 4, remainingInterest: 50122 });
+    expect(revolvingPayoff(1240000, 1.9, 300000)).toEqual({
+      kind: 'clears',
+      months: 5,
+      remainingInterest: 63630,
+    });
+    expect(revolvingPayoff(1240000, 1.9, 400000)).toEqual({
+      kind: 'clears',
+      months: 4,
+      remainingInterest: 50122,
+    });
   });
 
   it('gives an interest-free lower bound of ⌈B/P⌉ months when the rate is unknown', () => {
@@ -65,6 +81,10 @@ describe('revolvingPayoff', () => {
   });
 
   it('clears in one month when the payment covers the balance plus a month of interest', () => {
-    expect(revolvingPayoff(100000, 1.9, 200000)).toEqual({ kind: 'clears', months: 1, remainingInterest: 1430 });
+    expect(revolvingPayoff(100000, 1.9, 200000)).toEqual({
+      kind: 'clears',
+      months: 1,
+      remainingInterest: 1430,
+    });
   });
 });

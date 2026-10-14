@@ -15,8 +15,8 @@ function mockStore(overrides: Partial<Record<string, jest.Mock>> = {}) {
     sendPasswordReset: jest.fn(),
     ...overrides,
   };
-  (useAuthStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof state) => unknown) =>
-    selector(state)
+  (useAuthStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -33,7 +33,9 @@ describe('SignInScreen', () => {
 
   it('shows the mapped error when Google sign-in fails for a real reason', async () => {
     const store = mockStore({
-      signInWithGoogle: jest.fn().mockRejectedValue({ message: "Sign-in isn't set up yet — check back soon." }),
+      signInWithGoogle: jest
+        .fn()
+        .mockRejectedValue({ message: "Sign-in isn't set up yet — check back soon." }),
     });
     await render(<SignInScreen />);
 

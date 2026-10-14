@@ -36,7 +36,9 @@ function createMockRepo() {
     }),
     logPayment: jest.fn(async (id: string, amount: number) => {
       debts = debts.map((d) =>
-        d.id === id ? { ...d, currentBalance: d.currentBalance - amount, updatedAt: new Date() } : d
+        d.id === id
+          ? { ...d, currentBalance: d.currentBalance - amount, updatedAt: new Date() }
+          : d,
       );
       listener?.(debts);
     }),
@@ -90,7 +92,10 @@ describe('debtsStore', () => {
 
     expect(repo.create).toHaveBeenCalledWith(NEW_DEBT);
     expect(useStore.getState().debts).toHaveLength(1);
-    expect(useStore.getState().debts[0]).toMatchObject({ name: 'Credit Card', currentBalance: 2000000 });
+    expect(useStore.getState().debts[0]).toMatchObject({
+      name: 'Credit Card',
+      currentBalance: 2000000,
+    });
   });
 
   it('logs a payment via the repository (criterion 2 — atomicity lives in the repo)', async () => {

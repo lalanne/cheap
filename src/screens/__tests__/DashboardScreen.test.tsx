@@ -73,21 +73,21 @@ function mockStores({
 }) {
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { transactions: Transaction[]; categories: Category[] }) => unknown) =>
-      selector({ transactions, categories })
+      selector({ transactions, categories }),
   );
   (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { budgets: Budget[] }) => unknown) => selector({ budgets })
+    (selector: (s: { budgets: Budget[] }) => unknown) => selector({ budgets }),
   );
   (useDebtsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: { debts: Debt[] }) => unknown) => selector({ debts })
+    (selector: (s: { debts: Debt[] }) => unknown) => selector({ debts }),
   );
   (useOverdraftStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { line: OverdraftLine | null; events: OverdraftEvent[] }) => unknown) =>
-      selector({ line: overdraftLine, events: overdraftEvents })
+      selector({ line: overdraftLine, events: overdraftEvents }),
   );
   (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { cards: CreditCard[]; payments: CreditCardPayment[] }) => unknown) =>
-      selector({ cards: creditCards, payments: creditCardPayments })
+      selector({ cards: creditCards, payments: creditCardPayments }),
   );
 }
 
@@ -334,7 +334,9 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
   it("shows a subcategory's own spend for a budget set directly on it, and fires its overrun suggestion (criterion 9 — #34, #35)", async () => {
     mockStores({
       categories: SUBCATEGORIES,
-      budgets: [{ id: 'b-2', category: 'Groceries', monthlyLimit: 30000, createdAt: now, updatedAt: now }],
+      budgets: [
+        { id: 'b-2', category: 'Groceries', monthlyLimit: 30000, createdAt: now, updatedAt: now },
+      ],
       transactions: [tx({ id: 't1', category: 'Groceries', amount: 40000, date: now })],
     });
     await render(<DashboardScreen />);
@@ -368,7 +370,9 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
     const now = new Date();
     const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
     mockStores({
-      budgets: [{ id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now }],
+      budgets: [
+        { id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now },
+      ],
       transactions: [
         tx({ id: 't1', category: 'Food', amount: 20000, date: now }),
         tx({ id: 't2', category: 'Housing', amount: 90000, date: twoMonthsAgo }),
@@ -376,14 +380,18 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
     });
     await render(<DashboardScreen />);
 
-    expect(within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/),
+    ).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/20%/)).toBeTruthy();
 
     // last6MonthsExpense is oldest-first, index 5 = current month; two
     // months ago is index 3.
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
 
-    expect(within(screen.getByTestId('dashboard-donut-legend-Housing')).getByText(/\$90\.000/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-donut-legend-Housing')).getByText(/\$90\.000/),
+    ).toBeTruthy();
     expect(screen.queryByTestId('dashboard-donut-legend-Food')).toBeNull();
     // Budgets/KPIs follow the month too (2026-10-10 amendment, criterion 13)
     // — covered in depth in the whole-dashboard describe block below.
@@ -407,12 +415,18 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
 
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
 
-    expect(flatten(screen.getByTestId('dashboard-trend-bar-3-label').props.style).color).toBe(colors.accent);
-    expect(flatten(screen.getByTestId('dashboard-trend-bar-5-label').props.style).color).not.toBe(colors.accent);
+    expect(flatten(screen.getByTestId('dashboard-trend-bar-3-label').props.style).color).toBe(
+      colors.accent,
+    );
+    expect(flatten(screen.getByTestId('dashboard-trend-bar-5-label').props.style).color).not.toBe(
+      colors.accent,
+    );
 
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-5'));
 
-    expect(within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/),
+    ).toBeTruthy();
   });
 
   it('resets an active drill-down when a different month is selected', async () => {
@@ -576,7 +590,20 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
   const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
   const afterTwoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 1, 10);
   // Mid-year-agnostic label for the selected month, matching the screen's own.
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const pastLabel = MONTHS[twoMonthsAgo.getMonth()];
   const longAgo = new Date(now.getFullYear() - 1, 0, 1);
 
@@ -609,7 +636,9 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
 
   function fixture() {
     mockStores({
-      budgets: [{ id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now }],
+      budgets: [
+        { id: 'b-1', category: 'Food', monthlyLimit: 100000, createdAt: now, updatedAt: now },
+      ],
       transactions: [
         // current month
         tx({ id: 'c1', category: 'Food', amount: 20000, date: now }),
@@ -624,8 +653,24 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
       creditCards: [VISA],
       overdraftLine: LINE,
       overdraftEvents: [
-        { id: 'e1', type: 'draw', amount: 200000, date: twoMonthsAgo, note: null, transactionId: null, createdAt: twoMonthsAgo },
-        { id: 'e2', type: 'payment', amount: 50000, date: now, note: null, transactionId: null, createdAt: now },
+        {
+          id: 'e1',
+          type: 'draw',
+          amount: 200000,
+          date: twoMonthsAgo,
+          note: null,
+          transactionId: null,
+          createdAt: twoMonthsAgo,
+        },
+        {
+          id: 'e2',
+          type: 'payment',
+          amount: 50000,
+          date: now,
+          note: null,
+          transactionId: null,
+          createdAt: now,
+        },
       ],
     });
   }
@@ -639,8 +684,12 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(/\$75\.000/)).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-kpi-saved')).getByText(/\$225\.000/)).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-budget-Food')).getByText(/50%/)).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-kpi-spent')).getByText(new RegExp(pastLabel))).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-budgets')).getByText(`Budgets — ${pastLabel}`)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-kpi-spent')).getByText(new RegExp(pastLabel)),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-budgets')).getByText(`Budgets — ${pastLabel}`),
+    ).toBeTruthy();
   });
 
   it('shows month-end debt balances in the KPI and rows, labelled with the month (criterion 14)', async () => {
@@ -651,10 +700,14 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     // Loan 500.000 + 40.000 paid later = 540.000; Visa 25.000; overdraft 200.000.
     expect(within(screen.getByTestId('dashboard-kpi-debt')).getByText('$765.000')).toBeTruthy();
     expect(within(screen.getByTestId('dashboard-card-card-1')).getByText(/\$25\.000/)).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-overdraft-row')).getByText(/\$200\.000/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-overdraft-row')).getByText(/\$200\.000/),
+    ).toBeTruthy();
     // 46% paid = (1.000.000 - 540.000) / 1.000.000
     expect(within(screen.getByTestId('dashboard-debt-d-1')).getByText(/46% paid/)).toBeTruthy();
-    expect(within(screen.getByTestId('dashboard-debts')).getByText(new RegExp(pastLabel))).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-debts')).getByText(new RegExp(pastLabel)),
+    ).toBeTruthy();
   });
 
   it('returns every section to current-month data when the current bar is tapped (criterion 15)', async () => {
@@ -680,13 +733,23 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
       creditCards: [VISA],
       overdraftLine: LINE,
       overdraftEvents: [
-        { id: 'e2', type: 'draw', amount: 50000, date: now, note: null, transactionId: null, createdAt: now },
+        {
+          id: 'e2',
+          type: 'draw',
+          amount: 50000,
+          date: now,
+          note: null,
+          transactionId: null,
+          createdAt: now,
+        },
       ],
     });
     await render(<DashboardScreen />);
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
 
-    expect(screen.getByTestId('dashboard-debts-empty')).toHaveTextContent(`No debts recorded as of ${pastLabel}.`);
+    expect(screen.getByTestId('dashboard-debts-empty')).toHaveTextContent(
+      `No debts recorded as of ${pastLabel}.`,
+    );
     expect(screen.queryByTestId('dashboard-debt-d-1')).toBeNull();
     expect(screen.queryByTestId('dashboard-card-card-1')).toBeNull();
     expect(screen.queryByTestId('dashboard-overdraft-row')).toBeNull();
@@ -700,7 +763,15 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     ];
     mockStores({
       transactions: overBudget,
-      budgets: [{ id: 'b-1', category: 'Entertainment', monthlyLimit: 60000, createdAt: now, updatedAt: now }],
+      budgets: [
+        {
+          id: 'b-1',
+          category: 'Entertainment',
+          monthlyLimit: 60000,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
       debts: [LOAN],
     });
     await render(<DashboardScreen />);
@@ -712,14 +783,29 @@ describe('DashboardScreen — the month selection scopes the whole dashboard (sp
     expect(screen.getByTestId('suggestion-budget-b-1')).toBeTruthy();
     expect(screen.getByTestId('suggestion-debt-d-1')).toBeTruthy();
     // ...while the budget bar itself now shows the selected month (2%).
-    expect(within(screen.getByTestId('dashboard-budget-Entertainment')).getByText(/2%/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-budget-Entertainment')).getByText(/2%/),
+    ).toBeTruthy();
   });
 });
 
 describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 amendment, #15)', () => {
   const now = new Date();
   const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 15);
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const budgets: Budget[] = [
     { id: 'b-1', category: 'Rent', monthlyLimit: 900000, createdAt: now, updatedAt: now },
     { id: 'b-2', category: 'Food', monthlyLimit: 450000, createdAt: now, updatedAt: now },
@@ -728,7 +814,9 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
   it('shows total budgeted, income and the percentage, with a proportional bar (criterion 18)', async () => {
     mockStores({
       budgets,
-      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now })],
+      transactions: [
+        tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now }),
+      ],
     });
     await render(<DashboardScreen />);
 
@@ -744,7 +832,9 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
   it('shows the real percentage over 100% with a full bar in the over color (criterion 19)', async () => {
     mockStores({
       budgets,
-      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now })],
+      transactions: [
+        tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now }),
+      ],
     });
     await render(<DashboardScreen />);
 
@@ -760,7 +850,9 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
     await render(<DashboardScreen />);
 
     const row = screen.getByTestId('dashboard-budgeted-vs-income');
-    expect(within(row).getByText(new RegExp(`No income recorded in ${MONTHS[now.getMonth()]}`))).toBeTruthy();
+    expect(
+      within(row).getByText(new RegExp(`No income recorded in ${MONTHS[now.getMonth()]}`)),
+    ).toBeTruthy();
     expect(within(row).getByText(/\$1\.350\.000/)).toBeTruthy();
     expect(within(row).queryByText(/%/)).toBeNull();
     expect(screen.queryByTestId('dashboard-budgeted-bar')).toBeNull();
@@ -769,7 +861,9 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
   it('is absent with no budgets, leaving the existing empty state (criterion 21)', async () => {
     mockStores({
       budgets: [],
-      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now })],
+      transactions: [
+        tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1800000, date: now }),
+      ],
     });
     await render(<DashboardScreen />);
 
@@ -777,16 +871,24 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
     expect(screen.getByTestId('dashboard-budgets-empty')).toBeTruthy();
   });
 
-  it('uses the selected month\'s income and names the month (criterion 22)', async () => {
+  it("uses the selected month's income and names the month (criterion 22)", async () => {
     mockStores({
       budgets,
       transactions: [
         tx({ id: 'i-now', type: 'income', category: 'Salary', amount: 1800000, date: now }),
-        tx({ id: 'i-past', type: 'income', category: 'Salary', amount: 2700000, date: twoMonthsAgo }),
+        tx({
+          id: 'i-past',
+          type: 'income',
+          category: 'Salary',
+          amount: 2700000,
+          date: twoMonthsAgo,
+        }),
       ],
     });
     await render(<DashboardScreen />);
-    expect(within(screen.getByTestId('dashboard-budgeted-vs-income')).getByText(/75% of income/)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('dashboard-budgeted-vs-income')).getByText(/75% of income/),
+    ).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('dashboard-trend-bar-3'));
 
@@ -799,10 +901,18 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
     mockStores({
       budgets: [
         { id: 'b-1', category: 'Food', monthlyLimit: 400000, createdAt: now, updatedAt: now },
-        { id: 'b-2', category: 'Restaurants', monthlyLimit: 100000, createdAt: now, updatedAt: now },
+        {
+          id: 'b-2',
+          category: 'Restaurants',
+          monthlyLimit: 100000,
+          createdAt: now,
+          updatedAt: now,
+        },
       ],
       categories: [{ id: 'c-1', name: 'Restaurants', type: 'expense', parentCategory: 'Food' }],
-      transactions: [tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now })],
+      transactions: [
+        tx({ id: 'i1', type: 'income', category: 'Salary', amount: 1000000, date: now }),
+      ],
     });
     await render(<DashboardScreen />);
 

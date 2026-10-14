@@ -29,19 +29,21 @@ jest.mock('../../theme/useWideWeb', () => ({
 describe('DashboardScreen (wide web, spec 009 criterion 5)', () => {
   it('groups budgets+KPIs and donut+trend+debts into wide rows instead of one column', async () => {
     (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { transactions: never[] }) => unknown) => selector({ transactions: [] })
+      (selector: (s: { transactions: never[] }) => unknown) => selector({ transactions: [] }),
     );
     (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { budgets: never[] }) => unknown) => selector({ budgets: [] })
+      (selector: (s: { budgets: never[] }) => unknown) => selector({ budgets: [] }),
     );
     (useDebtsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { debts: never[] }) => unknown) => selector({ debts: [] })
+      (selector: (s: { debts: never[] }) => unknown) => selector({ debts: [] }),
     );
     (useOverdraftStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { line: null; events: never[] }) => unknown) => selector({ line: null, events: [] })
+      (selector: (s: { line: null; events: never[] }) => unknown) =>
+        selector({ line: null, events: [] }),
     );
     (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { cards: never[]; payments: never[] }) => unknown) => selector({ cards: [], payments: [] })
+      (selector: (s: { cards: never[]; payments: never[] }) => unknown) =>
+        selector({ cards: [], payments: [] }),
     );
 
     await render(<DashboardScreen />);

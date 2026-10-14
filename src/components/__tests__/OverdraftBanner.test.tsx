@@ -25,12 +25,15 @@ function draw(amount: number, date: Date, id = 'e-1'): OverdraftEvent {
 function mockStore(line: OverdraftLine | null, events: OverdraftEvent[]) {
   (useOverdraftStore as unknown as jest.Mock).mockImplementation(
     (selector: (s: { line: OverdraftLine | null; events: OverdraftEvent[] }) => unknown) =>
-      selector({ line, events })
+      selector({ line, events }),
   );
 }
 
 function bannerStyle() {
-  return StyleSheet.flatten(screen.getByTestId('overdraft-banner').props.style) as Record<string, unknown>;
+  return StyleSheet.flatten(screen.getByTestId('overdraft-banner').props.style) as Record<
+    string,
+    unknown
+  >;
 }
 
 const APR_9 = new Date(2026, 3, 9);

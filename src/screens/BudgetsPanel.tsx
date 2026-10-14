@@ -80,7 +80,9 @@ export function BudgetsPanel() {
                 style={category === name ? styles.chipActive : styles.chip}
                 onPress={() => setCategory(name)}
               >
-                <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>{name}</Text>
+                <Text style={category === name ? styles.chipLabelActive : styles.chipLabel}>
+                  {name}
+                </Text>
               </Pressable>
             ))}
           </View>

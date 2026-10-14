@@ -1,4 +1,8 @@
-import { GoogleSignin, isCancelledResponse, isSuccessResponse } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isSuccessResponse,
+} from '@react-native-google-signin/google-signin';
 import {
   getAuth,
   GoogleAuthProvider as FirebaseGoogleAuthProvider,

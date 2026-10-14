@@ -22,12 +22,22 @@ jest.mock('../../creditCards/store', () => ({
 describe('ManageScreen (spec 009 amendment, criterion 10 — narrow/native)', () => {
   it('renders Categories, Budgets, and Debts stacked, not in a wide row', async () => {
     (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { categories: never[]; addCategory: jest.Mock; deleteCategory: jest.Mock }) => unknown) =>
-        selector({ categories: [], addCategory: jest.fn(), deleteCategory: jest.fn() })
+      (
+        selector: (s: {
+          categories: never[];
+          addCategory: jest.Mock;
+          deleteCategory: jest.Mock;
+        }) => unknown,
+      ) => selector({ categories: [], addCategory: jest.fn(), deleteCategory: jest.fn() }),
     );
     (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: { budgets: never[]; setBudget: jest.Mock; deleteBudget: jest.Mock }) => unknown) =>
-        selector({ budgets: [], setBudget: jest.fn(), deleteBudget: jest.fn() })
+      (
+        selector: (s: {
+          budgets: never[];
+          setBudget: jest.Mock;
+          deleteBudget: jest.Mock;
+        }) => unknown,
+      ) => selector({ budgets: [], setBudget: jest.fn(), deleteBudget: jest.fn() }),
     );
     (useDebtsStore as unknown as jest.Mock).mockImplementation(
       (
@@ -37,8 +47,15 @@ describe('ManageScreen (spec 009 amendment, criterion 10 — narrow/native)', ()
           logPayment: jest.Mock;
           editBalance: jest.Mock;
           deleteDebt: jest.Mock;
-        }) => unknown
-      ) => selector({ debts: [], addDebt: jest.fn(), logPayment: jest.fn(), editBalance: jest.fn(), deleteDebt: jest.fn() })
+        }) => unknown,
+      ) =>
+        selector({
+          debts: [],
+          addDebt: jest.fn(),
+          logPayment: jest.fn(),
+          editBalance: jest.fn(),
+          deleteDebt: jest.fn(),
+        }),
     );
     (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
       (
@@ -50,7 +67,7 @@ describe('ManageScreen (spec 009 amendment, criterion 10 — narrow/native)', ()
           deleteCard: jest.Mock;
           logPayment: jest.Mock;
           deletePayment: jest.Mock;
-        }) => unknown
+        }) => unknown,
       ) =>
         selector({
           cards: [],
@@ -60,7 +77,7 @@ describe('ManageScreen (spec 009 amendment, criterion 10 — narrow/native)', ()
           deleteCard: jest.fn(),
           logPayment: jest.fn(),
           deletePayment: jest.fn(),
-        })
+        }),
     );
 
     await render(<ManageScreen />);

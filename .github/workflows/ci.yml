@@ -64,8 +64,19 @@ jobs:
           EXPO_PUBLIC_FIREBASE_APP_ID: ci-placeholder
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
 
+  # Spec 015 — Prettier check; parallel with the other static jobs.
+  format-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - run: npm run format:check
+
   unit:
-    needs: [static-analysis, web-export]
+    needs: [static-analysis, web-export, format-check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

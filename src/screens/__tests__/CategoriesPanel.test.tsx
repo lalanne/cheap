@@ -21,7 +21,7 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -32,7 +32,7 @@ function mockBudgetsStore(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-    (selector: (s: typeof state) => unknown) => selector(state)
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -110,7 +110,12 @@ describe('CategoriesPanel (spec 011 — subcategories)', () => {
   });
 
   it('nests a subcategory under a starter-category parent (criterion 2)', async () => {
-    const subcategory: Category = { id: 'c1', name: 'Uber Eats', type: 'both', parentCategory: 'Food' };
+    const subcategory: Category = {
+      id: 'c1',
+      name: 'Uber Eats',
+      type: 'both',
+      parentCategory: 'Food',
+    };
     mockStore({ categories: [subcategory] });
     await render(<CategoriesPanel />);
 

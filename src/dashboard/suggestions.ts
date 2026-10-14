@@ -53,7 +53,14 @@ export function computeSuggestions({
     .map((b) => {
       const spend = categorySpend[b.category] ?? 0;
       const percent = b.monthlyLimit > 0 ? spend / b.monthlyLimit : 0;
-      return { id: `budget-${b.id}`, kind: 'budget-overrun' as const, category: b.category, spend, limit: b.monthlyLimit, percent };
+      return {
+        id: `budget-${b.id}`,
+        kind: 'budget-overrun' as const,
+        category: b.category,
+        spend,
+        limit: b.monthlyLimit,
+        percent,
+      };
     })
     .filter((s) => s.percent > 1)
     .sort((a, b) => b.percent - a.percent);
@@ -77,7 +84,8 @@ export function computeSuggestions({
       id: 'savings-rate',
       kind: 'savings-rate',
       thisMonthRate: (thisMonth.income - thisMonth.expense) / thisMonth.income,
-      lastMonthRate: lastMonth.income > 0 ? (lastMonth.income - lastMonth.expense) / lastMonth.income : 0,
+      lastMonthRate:
+        lastMonth.income > 0 ? (lastMonth.income - lastMonth.expense) / lastMonth.income : 0,
     });
   }
 

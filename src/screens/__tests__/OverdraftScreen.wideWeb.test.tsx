@@ -24,8 +24,22 @@ function monthsAgo(months: number, day: number): Date {
   return new Date(now.getFullYear(), now.getMonth() - months, day, 12);
 }
 
-function ev(id: string, type: OverdraftEvent['type'], amount: number, date: Date, offsetMs = 0): OverdraftEvent {
-  return { id, type, amount, date, note: null, transactionId: null, createdAt: new Date(date.getTime() + offsetMs) };
+function ev(
+  id: string,
+  type: OverdraftEvent['type'],
+  amount: number,
+  date: Date,
+  offsetMs = 0,
+): OverdraftEvent {
+  return {
+    id,
+    type,
+    amount,
+    date,
+    note: null,
+    transactionId: null,
+    createdAt: new Date(date.getTime() + offsetMs),
+  };
 }
 
 // Same fixture shape as OverdraftScreen.test.tsx's busyEvents: balance
@@ -56,8 +70,8 @@ function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
     deleteEvent: jest.fn(),
     ...overrides,
   };
-  (useOverdraftStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof state) => unknown) =>
-    selector(state)
+  (useOverdraftStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof state) => unknown) => selector(state),
   );
   return state;
 }
@@ -108,21 +122,21 @@ describe('OverdraftScreen (wide web, spec 012 addendum criterion 24 — Balance 
       'overdraft-activity-row-draw1',
     ]);
 
-    expect(within(screen.getByTestId('overdraft-activity-row-payment2')).getByTestId('balance-after')).toHaveTextContent(
-      '$1.097.550'
-    );
-    expect(within(screen.getByTestId('overdraft-activity-row-interest1')).getByTestId('balance-after')).toHaveTextContent(
-      '$1.168.550'
-    );
-    expect(within(screen.getByTestId('overdraft-activity-row-fee1')).getByTestId('balance-after')).toHaveTextContent(
-      '$1.144.990'
-    );
-    expect(within(screen.getByTestId('overdraft-activity-row-payment1')).getByTestId('balance-after')).toHaveTextContent(
-      '$1.140.000'
-    );
-    expect(within(screen.getByTestId('overdraft-activity-row-draw1')).getByTestId('balance-after')).toHaveTextContent(
-      '$1.600.000'
-    );
+    expect(
+      within(screen.getByTestId('overdraft-activity-row-payment2')).getByTestId('balance-after'),
+    ).toHaveTextContent('$1.097.550');
+    expect(
+      within(screen.getByTestId('overdraft-activity-row-interest1')).getByTestId('balance-after'),
+    ).toHaveTextContent('$1.168.550');
+    expect(
+      within(screen.getByTestId('overdraft-activity-row-fee1')).getByTestId('balance-after'),
+    ).toHaveTextContent('$1.144.990');
+    expect(
+      within(screen.getByTestId('overdraft-activity-row-payment1')).getByTestId('balance-after'),
+    ).toHaveTextContent('$1.140.000');
+    expect(
+      within(screen.getByTestId('overdraft-activity-row-draw1')).getByTestId('balance-after'),
+    ).toHaveTextContent('$1.600.000');
   });
 
   it('still lets an event be deleted from the table', async () => {

@@ -30,7 +30,10 @@ function debt(overrides: Partial<Debt>): Debt {
 describe('computeSuggestions — budget overrun rule (spec 009 criterion 2)', () => {
   it('flags a category over its budget, sorted by how far over', () => {
     const suggestions = computeSuggestions({
-      budgets: [budget({ id: 'b-1', category: 'Entertainment', monthlyLimit: 60000 }), budget({ id: 'b-2', category: 'Food', monthlyLimit: 250000 })],
+      budgets: [
+        budget({ id: 'b-1', category: 'Entertainment', monthlyLimit: 60000 }),
+        budget({ id: 'b-2', category: 'Food', monthlyLimit: 250000 }),
+      ],
       categorySpend: { Entertainment: 95000, Food: 285000 },
       debts: [],
       thisMonth: { income: 0, expense: 0 },

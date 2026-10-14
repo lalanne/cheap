@@ -50,7 +50,11 @@ describe('emailAuthProvider (web)', () => {
 
     await emailAuthProvider.signUp('Jane', 'jane@example.com', 'password123');
 
-    expect(mockCreateUser).toHaveBeenCalledWith(expect.anything(), 'jane@example.com', 'password123');
+    expect(mockCreateUser).toHaveBeenCalledWith(
+      expect.anything(),
+      'jane@example.com',
+      'password123',
+    );
     expect(mockUpdateProfile).toHaveBeenCalledWith(fakeUser, { displayName: 'Jane' });
     expect(mockSendEmailVerification).toHaveBeenCalledWith(fakeUser);
   });

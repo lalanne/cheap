@@ -53,7 +53,7 @@ export const firestoreBudgetRepository: BudgetRepository = {
         collection(getFirestore(), `users/${user.uid}/budgets`),
         (snapshot) => {
           callback(snapshot.docs.map((d) => toBudget(d.id, d.data())));
-        }
+        },
       );
     });
     return () => {
@@ -92,7 +92,7 @@ export const firestoreBudgetRepository: BudgetRepository = {
     const uid = requireUid();
     const firestore = getFirestore();
     const matching = await getDocs(
-      query(collection(firestore, `users/${uid}/budgets`), where('category', '==', oldName))
+      query(collection(firestore, `users/${uid}/budgets`), where('category', '==', oldName)),
     );
     if (matching.empty) {
       return;

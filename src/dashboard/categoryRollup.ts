@@ -19,7 +19,7 @@ function isValidParentName(name: string, categories: Category[]): boolean {
 // entry instead of disappearing or being folded into a stale name.
 export function rollUpCategoryTotals(
   totals: Record<string, number>,
-  categories: Category[]
+  categories: Category[],
 ): Record<string, number> {
   const result: Record<string, number> = {};
   for (const [categoryName, amount] of Object.entries(totals)) {
@@ -40,7 +40,7 @@ export function rollUpCategoryTotals(
 // rollUpCategoryTotals so nothing is counted twice.
 export function budgetSpendTotals(
   totals: Record<string, number>,
-  categories: Category[]
+  categories: Category[],
 ): Record<string, number> {
   const result = rollUpCategoryTotals(totals, categories);
   for (const [categoryName, amount] of Object.entries(totals)) {
@@ -57,9 +57,11 @@ export function budgetSpendTotals(
 export function subcategoryTotalsFor(
   totals: Record<string, number>,
   categories: Category[],
-  parentName: string
+  parentName: string,
 ): Record<string, number> {
-  const childNames = new Set(categories.filter((c) => c.parentCategory === parentName).map((c) => c.name));
+  const childNames = new Set(
+    categories.filter((c) => c.parentCategory === parentName).map((c) => c.name),
+  );
   const result: Record<string, number> = {};
   for (const [categoryName, amount] of Object.entries(totals)) {
     if (childNames.has(categoryName)) {

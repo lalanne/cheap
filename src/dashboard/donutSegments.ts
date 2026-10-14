@@ -20,7 +20,10 @@ export type DonutSegment = {
 // the point of this ring is "what's costing the most," so the biggest
 // category belongs at 12 o'clock and at the top of the legend built from
 // this same array, not wherever Object.entries() happened to put it.
-export function computeDonutSegments(categoryTotals: Record<string, number>, radius: number): DonutSegment[] {
+export function computeDonutSegments(
+  categoryTotals: Record<string, number>,
+  radius: number,
+): DonutSegment[] {
   const entries = Object.entries(categoryTotals)
     .filter(([, amount]) => amount > 0)
     .sort(([nameA, amountA], [nameB, amountB]) => amountB - amountA || nameA.localeCompare(nameB));

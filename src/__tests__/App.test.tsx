@@ -68,8 +68,8 @@ function mockAuthState(state: {
     refreshEmailVerified: jest.fn(),
     signOut: jest.fn(),
   };
-  (useAuthStore as unknown as jest.Mock).mockImplementation((selector: (s: typeof fullState) => unknown) =>
-    selector(fullState)
+  (useAuthStore as unknown as jest.Mock).mockImplementation(
+    (selector: (s: typeof fullState) => unknown) => selector(fullState),
   );
 }
 
@@ -87,7 +87,7 @@ describe('App', () => {
       deleteEvent: jest.fn(),
     };
     (useOverdraftStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: typeof overdraftState) => unknown) => selector(overdraftState)
+      (selector: (s: typeof overdraftState) => unknown) => selector(overdraftState),
     );
   }
 
@@ -104,15 +104,21 @@ describe('App', () => {
       deleteCategory: jest.fn(),
     };
     (useTransactionsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: typeof transactionsState) => unknown) => selector(transactionsState)
+      (selector: (s: typeof transactionsState) => unknown) => selector(transactionsState),
     );
     const budgetsState = { budgets: [], setBudget: jest.fn(), deleteBudget: jest.fn() };
     (useBudgetsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: typeof budgetsState) => unknown) => selector(budgetsState)
+      (selector: (s: typeof budgetsState) => unknown) => selector(budgetsState),
     );
-    const debtsState = { debts: [], addDebt: jest.fn(), logPayment: jest.fn(), editBalance: jest.fn(), deleteDebt: jest.fn() };
+    const debtsState = {
+      debts: [],
+      addDebt: jest.fn(),
+      logPayment: jest.fn(),
+      editBalance: jest.fn(),
+      deleteDebt: jest.fn(),
+    };
     (useDebtsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: typeof debtsState) => unknown) => selector(debtsState)
+      (selector: (s: typeof debtsState) => unknown) => selector(debtsState),
     );
     const creditCardsState = {
       cards: [],
@@ -124,7 +130,7 @@ describe('App', () => {
       deletePayment: jest.fn(),
     };
     (useCreditCardsStore as unknown as jest.Mock).mockImplementation(
-      (selector: (s: typeof creditCardsState) => unknown) => selector(creditCardsState)
+      (selector: (s: typeof creditCardsState) => unknown) => selector(creditCardsState),
     );
   });
 
@@ -265,7 +271,13 @@ describe('App', () => {
   it('shows the overdraft banner on every tab while the line is in use, and tapping it opens the Overdraft tab (criterion 10)', async () => {
     mockAuthState({ status: 'signedIn', user: { emailVerified: true } });
     mockOverdraft(
-      { limit: 2000000, monthlyRate: 1.9, plannedMonthlyPayment: 300000, createdAt: new Date(), updatedAt: new Date() },
+      {
+        limit: 2000000,
+        monthlyRate: 1.9,
+        plannedMonthlyPayment: 300000,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       [
         {
           id: 'e-1',
@@ -276,7 +288,7 @@ describe('App', () => {
           transactionId: null,
           createdAt: new Date(2026, 3, 9),
         },
-      ]
+      ],
     );
 
     await render(<App />);

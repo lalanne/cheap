@@ -61,7 +61,7 @@ export const firestoreTransactionRepository: TransactionRepository = {
       }
       const q = query(
         collection(getFirestore(), `users/${user.uid}/transactions`),
-        orderBy('date', 'desc')
+        orderBy('date', 'desc'),
       );
       unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
         callback(snapshot.docs.map((d) => toTransaction(d.id, d.data())));
@@ -122,7 +122,7 @@ export const firestoreTransactionRepository: TransactionRepository = {
     const uid = requireUid();
     const firestore = getFirestore();
     const matching = await getDocs(
-      query(collection(firestore, `users/${uid}/transactions`), where('category', '==', oldName))
+      query(collection(firestore, `users/${uid}/transactions`), where('category', '==', oldName)),
     );
     if (matching.empty) {
       return;

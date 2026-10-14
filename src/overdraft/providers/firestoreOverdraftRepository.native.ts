@@ -52,7 +52,13 @@ function toEvent(id: string, data: DocumentData): OverdraftEvent {
   };
 }
 
-function eventData(type: OverdraftEventType, amount: number, date: Date, note: string | null, transactionId: string | null) {
+function eventData(
+  type: OverdraftEventType,
+  amount: number,
+  date: Date,
+  note: string | null,
+  transactionId: string | null,
+) {
   return {
     type,
     amount,
@@ -73,10 +79,13 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
         callback(null);
         return;
       }
-      unsubscribeSnapshot = onSnapshot(doc(getFirestore(), `users/${user.uid}/overdraft/line`), (snapshot) => {
-        const data = snapshot.data();
-        callback(data ? toLine(data) : null);
-      });
+      unsubscribeSnapshot = onSnapshot(
+        doc(getFirestore(), `users/${user.uid}/overdraft/line`),
+        (snapshot) => {
+          const data = snapshot.data();
+          callback(data ? toLine(data) : null);
+        },
+      );
     });
     return () => {
       unsubscribeSnapshot?.();
@@ -97,7 +106,7 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
         collection(getFirestore(), `users/${user.uid}/overdraftEvents`),
         (snapshot) => {
           callback(snapshot.docs.map((d) => toEvent(d.id, d.data())));
-        }
+        },
       );
     });
     return () => {
@@ -112,7 +121,9 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
     const uid = requireUid();
     const db = getFirestore();
     const lineRef = doc(db, `users/${uid}/overdraft/line`);
-    const openingRef = input.openingBalance ? doc(collection(db, `users/${uid}/overdraftEvents`)) : null;
+    const openingRef = input.openingBalance
+      ? doc(collection(db, `users/${uid}/overdraftEvents`))
+      : null;
 
     await runTransaction(db, async (t) => {
       t.set(lineRef, {
@@ -125,7 +136,13 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
       if (openingRef && input.openingBalance) {
         t.set(
           openingRef,
-          eventData('draw', input.openingBalance, input.openingDate ?? new Date(), 'Opening balance', null)
+          eventData(
+            'draw',
+            input.openingBalance,
+            input.openingDate ?? new Date(),
+            'Opening balance',
+            null,
+          ),
         );
       }
     });
@@ -145,7 +162,7 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
     const uid = requireUid();
     await addDoc(
       collection(getFirestore(), `users/${uid}/overdraftEvents`),
-      eventData('draw', input.amount, input.date, input.note ?? null, null)
+      eventData('draw', input.amount, input.date, input.note ?? null, null),
     );
   },
 
@@ -153,7 +170,7 @@ export const firestoreOverdraftRepository: OverdraftRepository = {
     const uid = requireUid();
     await addDoc(
       collection(getFirestore(), `users/${uid}/overdraftEvents`),
-      eventData('payment', input.amount, input.date, input.note ?? null, null)
+      eventData('payment', input.amount, input.date, input.note ?? null, null),
     );
   },
 

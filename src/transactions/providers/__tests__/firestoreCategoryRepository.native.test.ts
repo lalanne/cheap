@@ -37,7 +37,11 @@ describe('firestoreCategoryRepository (native)', () => {
     const created = await firestoreCategoryRepository.create('Pets', 'both', null);
 
     expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories');
-    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), { name: 'Pets', type: 'both', parentCategory: null });
+    expect(mockAddDoc).toHaveBeenCalledWith(expect.anything(), {
+      name: 'Pets',
+      type: 'both',
+      parentCategory: null,
+    });
     expect(created).toEqual({ id: 'cat-1', name: 'Pets', type: 'both', parentCategory: null });
   });
 
@@ -51,14 +55,19 @@ describe('firestoreCategoryRepository (native)', () => {
       type: 'both',
       parentCategory: 'Food',
     });
-    expect(created).toEqual({ id: 'cat-1', name: 'Uber Eats', type: 'both', parentCategory: 'Food' });
+    expect(created).toEqual({
+      id: 'cat-1',
+      name: 'Uber Eats',
+      type: 'both',
+      parentCategory: 'Food',
+    });
   });
 
   it('throws a clear error when nobody is signed in', async () => {
     mockGetAuth.mockReturnValue({ currentUser: null });
 
     await expect(firestoreCategoryRepository.create('Pets', 'both', null)).rejects.toThrow(
-      'No signed-in user'
+      'No signed-in user',
     );
     expect(mockAddDoc).not.toHaveBeenCalled();
   });
@@ -78,6 +87,9 @@ describe('firestoreCategoryRepository (native)', () => {
     await firestoreCategoryRepository.update('cat-1', 'Food Delivery', 'Food');
 
     expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/categories/cat-1');
-    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), { name: 'Food Delivery', parentCategory: 'Food' });
+    expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), {
+      name: 'Food Delivery',
+      parentCategory: 'Food',
+    });
   });
 });

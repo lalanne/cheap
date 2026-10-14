@@ -12,7 +12,7 @@ function isSameMonth(date: Date, reference: Date): boolean {
 // of a single one, for the dashboard's use).
 export function categoryTotalsForMonth(
   transactions: Transaction[],
-  reference: Date = new Date()
+  reference: Date = new Date(),
 ): Record<string, number> {
   const totals: Record<string, number> = {};
   for (const t of transactions) {
@@ -26,7 +26,7 @@ export function categoryTotalsForMonth(
 
 export function monthlyTotals(
   transactions: Transaction[],
-  reference: Date = new Date()
+  reference: Date = new Date(),
 ): { income: number; expense: number } {
   let income = 0;
   let expense = 0;
@@ -49,7 +49,10 @@ export type MonthExpense = { year: number; month: number; total: number };
 // for the trend chart. `month` is 1-indexed (matches how the rest of
 // this app already talks about months, e.g. computeCategorySpend's
 // callers), not JS's 0-indexed getMonth().
-export function last6MonthsExpense(transactions: Transaction[], reference: Date = new Date()): MonthExpense[] {
+export function last6MonthsExpense(
+  transactions: Transaction[],
+  reference: Date = new Date(),
+): MonthExpense[] {
   const months: MonthExpense[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(reference.getFullYear(), reference.getMonth() - i, 1);
@@ -60,7 +63,9 @@ export function last6MonthsExpense(transactions: Transaction[], reference: Date 
     if (t.type !== 'expense') {
       continue;
     }
-    const match = months.find((m) => m.year === t.date.getFullYear() && m.month === t.date.getMonth() + 1);
+    const match = months.find(
+      (m) => m.year === t.date.getFullYear() && m.month === t.date.getMonth() + 1,
+    );
     if (match) {
       match.total += t.amount;
     }
@@ -78,7 +83,7 @@ export function last6MonthsExpense(transactions: Transaction[], reference: Date 
 export function budgetedVsIncome(
   budgets: Budget[],
   categories: Category[],
-  income: number
+  income: number,
 ): { totalBudgeted: number; income: number; percent: number | null } {
   const budgeted = new Set(budgets.map((b) => b.category));
   let totalBudgeted = 0;

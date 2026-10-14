@@ -49,13 +49,17 @@ describe('emailAuthProvider (native)', () => {
 
     await emailAuthProvider.signUp('Jane', 'jane@example.com', 'password123');
 
-    expect(mockCreateUser).toHaveBeenCalledWith(expect.anything(), 'jane@example.com', 'password123');
+    expect(mockCreateUser).toHaveBeenCalledWith(
+      expect.anything(),
+      'jane@example.com',
+      'password123',
+    );
     expect(mockUpdateProfile).toHaveBeenCalledWith(fakeUser, { displayName: 'Jane' });
     // Explicit actionCodeSettings required — omitting it throws inside the
     // native SDK post-Dynamic-Links-shutdown (da2's spec 001 finding).
     expect(mockSendEmailVerification).toHaveBeenCalledWith(
       fakeUser,
-      expect.objectContaining({ url: expect.any(String), handleCodeInApp: false })
+      expect.objectContaining({ url: expect.any(String), handleCodeInApp: false }),
     );
   });
 
@@ -65,7 +69,7 @@ describe('emailAuthProvider (native)', () => {
     expect(mockSendPasswordReset).toHaveBeenCalledWith(
       expect.anything(),
       'jane@example.com',
-      expect.objectContaining({ url: expect.any(String), handleCodeInApp: false })
+      expect.objectContaining({ url: expect.any(String), handleCodeInApp: false }),
     );
   });
 });

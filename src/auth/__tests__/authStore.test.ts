@@ -128,7 +128,7 @@ describe('authStore', () => {
     const useAuthStore = createAuthStore(providers);
 
     await expect(
-      useAuthStore.getState().sendPasswordReset('nobody@example.com')
+      useAuthStore.getState().sendPasswordReset('nobody@example.com'),
     ).resolves.toBeUndefined();
   });
 
@@ -139,9 +139,9 @@ describe('authStore', () => {
     });
     const useAuthStore = createAuthStore(providers);
 
-    await expect(useAuthStore.getState().sendPasswordReset('jane@example.com')).rejects.toMatchObject(
-      { message: 'Too many attempts. Try again later.' }
-    );
+    await expect(
+      useAuthStore.getState().sendPasswordReset('jane@example.com'),
+    ).rejects.toMatchObject({ message: 'Too many attempts. Try again later.' });
   });
 
   it('rethrows a mapped error when sign-up fails (criterion 8)', async () => {
@@ -152,9 +152,10 @@ describe('authStore', () => {
     const useAuthStore = createAuthStore(providers);
 
     await expect(
-      useAuthStore.getState().signUpWithEmail('Jane', 'jane@example.com', 'password123')
+      useAuthStore.getState().signUpWithEmail('Jane', 'jane@example.com', 'password123'),
     ).rejects.toMatchObject({
-      message: 'An account with this email already exists — sign in or continue with Google instead.',
+      message:
+        'An account with this email already exists — sign in or continue with Google instead.',
     });
   });
 

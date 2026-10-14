@@ -179,7 +179,11 @@ export function DebtsPanel() {
             keyboardType="number-pad"
             error={amountError}
           />
-          <Button title="Confirm payment" onPress={handleConfirmPayment} testID="confirm-payment-button" />
+          <Button
+            title="Confirm payment"
+            onPress={handleConfirmPayment}
+            testID="confirm-payment-button"
+          />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForms} testID="cancel-payment-button" />
         </View>
@@ -198,7 +202,11 @@ export function DebtsPanel() {
             keyboardType="number-pad"
             error={amountError}
           />
-          <Button title="Save balance" onPress={handleConfirmBalance} testID="confirm-balance-button" />
+          <Button
+            title="Save balance"
+            onPress={handleConfirmBalance}
+            testID="confirm-balance-button"
+          />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForms} testID="cancel-balance-button" />
         </View>
@@ -221,7 +229,7 @@ export function DebtsPanel() {
                   {paidOff
                     ? 'Paid off'
                     : `${formatCLP(debt.currentBalance)} of ${formatCLP(debt.originalAmount)} · ${Math.round(
-                        percentPaid(debt.originalAmount, debt.currentBalance) * 100
+                        percentPaid(debt.originalAmount, debt.currentBalance) * 100,
                       )}% paid`}
                 </Text>
               </View>
