@@ -8,6 +8,7 @@ web-build/
 /ios
 /android
 package-lock.json
+src/__fixtures__/
 *.md
 *.yml
 *.yaml

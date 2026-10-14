@@ -49,7 +49,6 @@ jest.mock('../creditCards/store', () => ({
 const mockInsets = { top: 47, bottom: 34, left: 0, right: 0 };
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => mockInsets,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   SafeAreaProvider: ({ children }: any) => children,
 }));
 

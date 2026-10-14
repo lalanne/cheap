@@ -80,7 +80,7 @@ describe('firestoreTransactionRepository (native)', () => {
   });
 
   it('writes cardId as null when the expense was not paid with a card (spec 002 2026-09-29 amendment)', async () => {
-    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    if (mockGetAuth) mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
     await firestoreTransactionRepository.create({
       type: 'expense',
       amount: 45000,
@@ -96,7 +96,7 @@ describe('firestoreTransactionRepository (native)', () => {
   });
 
   it('writes the given cardId when the expense was paid with a card', async () => {
-    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    if (mockGetAuth) mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
     await firestoreTransactionRepository.create({
       type: 'expense',
       amount: 45000,
@@ -113,7 +113,7 @@ describe('firestoreTransactionRepository (native)', () => {
   });
 
   it('updates cardId only when it is included in the update, same as any other field', async () => {
-    mockGetAuth ? mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } }) : undefined;
+    if (mockGetAuth) mockGetAuth.mockReturnValue({ currentUser: { uid: 'uid-1' } });
     await firestoreTransactionRepository.update('tx-1', { cardId: 'card-2' });
 
     expect(mockUpdateDoc).toHaveBeenCalledWith(

@@ -75,8 +75,19 @@ jobs:
 
       - run: npm run format:check
 
+  # Spec 015 — ESLint; parallel with the other static jobs.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - run: npm run lint
+
   unit:
-    needs: [static-analysis, web-export, format-check]
+    needs: [static-analysis, web-export, format-check, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

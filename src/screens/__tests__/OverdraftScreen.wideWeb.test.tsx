@@ -140,7 +140,7 @@ describe('OverdraftScreen (wide web, spec 012 addendum criterion 24 — Balance 
   });
 
   it('still lets an event be deleted from the table', async () => {
-    const store = mockStore();
+    mockStore();
     await render(<OverdraftScreen />);
 
     await screen.getByTestId('delete-event-fee1');

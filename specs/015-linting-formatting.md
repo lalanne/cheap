@@ -1,6 +1,6 @@
 # 015 — Linting and formatting (ESLint + Prettier + pre-commit hook)
 
-**Status:** approved
+**Status:** implemented (criteria 6 and 13 pending a CI run and the branch-protection change)
 **Depends on:** 014 (CI — adds jobs to its workflow and gating), 000 (stack)
 
 ## Purpose
@@ -63,7 +63,7 @@ remembering.
   workflow listing, required-check names) so that spec stays accurate.
 - **Pre-commit hook: husky + lint-staged.** `prepare: husky` installs it
   on `npm ci`; `.husky/pre-commit` runs `lint-staged`, which on staged
-  files only runs `eslint --max-warnings 0 --fix` then `prettier --write`
+  files only runs `eslint --max-warnings 0 --no-warn-ignored --fix` then `prettier --write`
   for `ts/tsx/js`, and `prettier --write` for `json`. Staged-only keeps
   it fast; `--fix` / `--write` re-stage the fixed files. It does **not**
   run `tsc` or tests (CI's job; a slow hook gets bypassed).
@@ -128,7 +128,7 @@ npx lint-staged
 
 ```json
 {
-  "*.{ts,tsx,js}": ["eslint --max-warnings 0 --fix", "prettier --write"],
+  "*.{ts,tsx,js}": ["eslint --max-warnings 0 --no-warn-ignored --fix", "prettier --write"],
   "*.json": ["prettier --write"]
 }
 ```
@@ -240,3 +240,29 @@ npx lint-staged
 - 10 — reformat commit touches 85 files, all `.ts/.tsx/.js`; `tsc` clean,
   525/525 unit tests before and after; `npm run format` a second time
   changes nothing and `format:check` passes.
+
+**PR 3 (ESLint + enforcement):** criteria 1, 2, 5, 7, 8, 9, 11, 12.
+- 2, 5, 6 (job wiring), 7–9 (wiring), 11 (file) — `src/tooling/__tests__/eslint.test.ts`
+  (7 tests), written first; all failed before the config existed.
+- 1 — `npm run lint` and `npm run format:check` exit 0 on this branch.
+  ESLint's first run reported 6 errors and 24 warnings; fixed rather than
+  disabled: 5 unused imports/variables removed, 5 unescaped apostrophes in
+  `OverdraftScreen` (`&apos;`), a ternary-as-statement made an `if`, a stale
+  `eslint-disable` removed. Two rules are off for `**/__tests__/**` only,
+  with a comment in `eslint.config.js`: `import/first` (`jest.mock` must
+  precede imports) and `no-require-imports` (mock factories can't `import`).
+  `jest` is declared a global for tests and `jest.setup.js`.
+- 7 — staged file with an unused variable: `git commit` blocked, violation
+  printed ("ESLint found too many warnings", `husky - pre-commit script
+  failed (code 1)`), no commit created.
+- 8 — staged `export const y   =  {a:"b"}` was committed as `export const y = { a: 'b' };`;
+  an unstaged unformatted file was left untouched.
+- 9 — both commits above were made from a Claude session with the
+  `core-practices` plugin enabled, on a feature branch; husky ran and the
+  commit rules were unaffected. `core.hooksPath` is `.husky/_` after
+  `npm run prepare`.
+- Found by the hook itself on its first real commit: lint-staged hands
+  the (ESLint-ignored) fixtures to `eslint`, which warns "File ignored",
+  failing `--max-warnings 0`. Fixed with `--no-warn-ignored` in the
+  lint-staged command (test updated first).
+- 11 — `.git-blame-ignore-revs` lists `01683cb` (the squashed reformat, #55).
