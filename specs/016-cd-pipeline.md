@@ -1,6 +1,6 @@
 # 016 — CD Pipeline Design (environments, secrets, approvals, rollback)
 
-**Status:** draft
+**Status:** approved (2026-10-14)
 **Depends on:** 004 (iOS deployment), 005 (web deployment), 014 (CI — the
 checks that gate `main`)
 **Blocks:** #29 (web deploy), #30 (`eas update`), #31 (native build)
@@ -81,13 +81,9 @@ at a time.
   duplicate build number); the workflow fails fast if the number matches
   the latest submitted build rather than auto-incrementing it. Deciding
   whether tags should drive the number is deferred to spec 017.
-- **PR preview channels (#29).** Same-repo PRs may deploy to a Firebase
-  Hosting preview channel (`pr-<number>`, 7-day expiry) and comment the
-  URL. This needs the Firebase identity, so it is limited to PRs from
-  branches of this repo, never forks, and uses a separate service
-  account scoped to Hosting only (no Rules Admin). Whether it is worth it
-  for a solo project is left to #29; this spec only fixes the security
-  boundary.
+- **No PR preview channels (#29).** Decided out for now (see Resolved
+  questions). #29 deploys only from `main`. Pull-request workflows never
+  receive Firebase credentials.
 - **Rollback.**
   - *Web Hosting:* Firebase Console → Hosting → "Roll back" to a prior
     release (instant, no rebuild). CLI alternative: `firebase
@@ -190,26 +186,24 @@ Notes:
 - The role list is the expected minimum, not a verified one. The first
   deploy may reveal a missing permission; add the narrowest role that
   fixes it and update this list rather than granting `firebase.admin`.
-- The PR-preview service account (Decisions) is a second, Hosting-only
-  account with its own provider condition (`assertion.event_name ==
-  'pull_request'`), created only if #29 builds preview channels.
 - Teardown/rotation: nothing to rotate. To revoke, delete the provider
   or remove the `workloadIdentityUser` binding.
 - If this setup stalls, the fallback is a service-account key stored as
-  `FIREBASE_SERVICE_ACCOUNT` on `production` (open question 1).
+  `FIREBASE_SERVICE_ACCOUNT` on `production` (Resolved question 1).
 
-## Open questions (resolve by editing this spec)
+## Resolved questions
 
-1. Firebase auth: Workload Identity Federation (more setup, no stored key)
-   or a service-account key (simple, long-lived secret)? Recommendation:
-   WIF; fall back to a key only if setup stalls.
-2. Is a separate `release` environment acceptable, versus the issue's
-   two-environment sketch?
-3. Should Firestore rules deploy be gated (it is the one auto-deploy that
-   can lock users out or open data)? Recommendation: auto-deploy, because
-   the rules suite already gates the merge (spec 014 `integration`), and
-   rollback is a redeploy.
-4. PR preview channels: build them (#29) or skip for a solo repo?
+Decided 2026-10-14 (discussion on PR #62):
+
+1. **Firebase auth: Workload Identity Federation.** A service-account key
+   is only the fallback if WIF setup stalls.
+2. **Three environments** (`preview`, `production`, `release`), because
+   reviewers are per environment.
+3. **Firestore rules auto-deploy.** The rules suite already gates the merge
+   (spec 014 `integration`) and rollback is a redeploy.
+4. **No PR preview channels for now.** Solo repo; skipped to avoid a second
+   service account and extra attack surface. If added later, amend this
+   spec first (same-repo PRs only, Hosting-only service account).
 
 ## Requirements
 
