@@ -86,6 +86,25 @@ jobs:
 
       - run: npm run lint
 
+  # Spec 014 (issue #27) — warn-only: flags a src/ change with no test or
+  # spec change. Not required, not in any `needs:`; never fails.
+  traceability:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: |
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          src=$(echo "$changed" | grep -E '^src/' | grep -vE '/__tests__/' || true)
+          covered=$(echo "$changed" | grep -E '(^specs/|/__tests__/)' || true)
+          if [ -n "$src" ] && [ -z "$covered" ]; then
+            echo "::warning::src/ changed without a test or spec change — CLAUDE.md: no implementation without a failing test first."
+          fi
+
   unit:
     needs: [static-analysis, web-export, format-check, lint]
     runs-on: ubuntu-latest

@@ -575,3 +575,11 @@ Done after making the repo public (see Decisions for why).
 | Criterion | Result | Evidence |
 |-----------|--------|----------|
 | 17 — red check blocks merge, green PR auto-merges | ✅ | `gh api .../branches/main/protection`: contexts `static-analysis`, `web-export`, `unit`, `integration`; `strict: true`; `enforce_admins: true`; force-push and deletion disabled. Throwaway PR #48 (wrong assertion; `unit` failed, `integration` skipped, run [38448434068](https://github.com/lalanne/cheap/actions/runs/38448434068)): `gh pr merge` refused with "the base branch policy prohibits the merge", state `BLOCKED`; closed unmerged, branch deleted. Green-PR auto-merge: this very PR (#52) was set to auto-merge once its four checks were green and merged itself — the PR timeline has an `auto_squash_enabled` event (GitHub's name for auto-merge armed with squash) four minutes before the merge. |
+
+### Amendment 2026-10-13 — PR template and traceability warning (issue #27)
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 18 — template pre-fills the PR | ⏳ | GitHub only applies a template from the default branch; check on the first PR opened after this merges. |
+| 19 — warning when `src/` changes unaccompanied | ✅ | Throwaway draft PR #58 changing only a `src/` file: `traceability` passed in 4s with the annotation "src/ changed without a test or spec change…" — [run 38498159140](https://github.com/lalanne/cheap/actions/runs/38498159140). Closed unmerged, branch deleted. |
+| 20 — no warning otherwise; never gates | ✅ | Same PR plus a `__tests__` file: `traceability` passed, no such annotation — [run 38498201328](https://github.com/lalanne/cheap/actions/runs/38498201328). `main` protection still lists only `static-analysis`, `web-export`, `unit`, `integration`; `unit`'s `needs:` unchanged. |
