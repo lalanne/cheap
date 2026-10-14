@@ -522,9 +522,7 @@ UTC-midnight ISO-string constructor) and asserted the display equalled
 local-components constructor used everywhere else. 472 tests pass (up
 from 467), `tsc --noEmit` clean.
 
-### Amendment (2026-10-14, draft): order the category picker by recent usage (issue #41)
-
-**Status: draft — not approved. No code until this is.**
+### Amendment (2026-10-14, approved, implemented): order the category picker by recent usage (issue #41)
 
 Logging a transaction means scanning the whole category chip row for the
 one you use most. Order the chips so the categories the user actually
@@ -550,7 +548,7 @@ uses come first.
   in `src/transactions/rankCategories.ts`, no React/Firestore dependency,
   same pattern as `groupByMonth.ts`.
 
-**Open questions (to settle on this diff before approval):**
+**Open questions (settled: all four proposals approved 2026-10-14):**
 
 1. **Grouping.** The issue says parents and subcategories "stay grouped,
    ranked within each level", but the picker today is a *flat* row of
@@ -588,3 +586,12 @@ uses come first.
     because of the reordering.
 
 Verification: see criteria 18–21 in the table above.
+
+**Result:** ✅ criteria 18–21, implemented 2026-10-14 test-first.
+`rankCategories.test.ts` (8 unit tests) failed on the missing module, and
+the two `TransactionsScreen` ordering tests failed before the change
+(criterion 21's test is a regression guard and passed either way).
+`TransactionsScreen` now orders its chips with
+`rankCategories(starters + custom, transactions, type, new Date())`; "+ New"
+and the preselected "Food" are untouched. 543 tests pass, `tsc --noEmit`,
+ESLint and Prettier clean. Not yet checked in a running app.

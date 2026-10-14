@@ -9,6 +9,7 @@ import { VersionStamp } from '../components/VersionStamp';
 import { useCreditCardsStore } from '../creditCards/store';
 import { groupTransactionsByMonth } from '../transactions/groupByMonth';
 import { STARTER_CATEGORIES } from '../transactions/starterCategories';
+import { rankCategories } from '../transactions/rankCategories';
 import { useTransactionsStore } from '../transactions/store';
 import type { Transaction, TransactionType } from '../transactions/types';
 import { validateAmount } from '../transactions/validateAmount';
@@ -85,7 +86,14 @@ export function TransactionsScreen() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  const allCategoryNames = [...STARTER_CATEGORIES, ...categories.map((c) => c.name)];
+  // Spec 002's 2026-10-14 amendment — chips ordered by recent usage for the
+  // form's current type; ties keep starters-then-custom order.
+  const allCategoryNames = rankCategories(
+    [...STARTER_CATEGORIES, ...categories.map((c) => c.name)],
+    transactions,
+    type,
+    new Date(),
+  );
 
   function openAddForm() {
     setEditingId(null);

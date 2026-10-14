@@ -413,4 +413,52 @@ describe('TransactionsScreen — "Paid with" a credit card (spec 002 2026-09-29 
       expect.objectContaining({ amount: 45000, category: 'Food', cardId: 'card-1' }),
     );
   });
+
+  describe('category picker ordering (spec 002, criteria 18–21)', () => {
+    function recent(category: string, id: string, type: 'expense' | 'income' = 'expense') {
+      const d = new Date();
+      d.setDate(d.getDate() - 2);
+      return { ...EXISTING, id, category, type, date: d, cardId: null } as Transaction;
+    }
+    function chipNames() {
+      return screen
+        .getAllByTestId(/^category-chip-/)
+        .map((c) => c.props.testID.replace('category-chip-', ''));
+    }
+
+    it('orders chips by recent usage, then the default order (criteria 18, 20)', async () => {
+      mockStore({
+        transactions: [recent('Health', 'a'), recent('Health', 'b'), recent('Shopping', 'c')],
+      });
+      await render(<TransactionsScreen />);
+      await fireEvent.press(screen.getAllByTestId(/^add-transaction-button-/)[0]);
+      expect(chipNames().slice(0, 4)).toEqual(['Health', 'Shopping', 'Food', 'Transport']);
+    });
+
+    it('reorders when switching to income (criterion 19)', async () => {
+      mockStore({
+        transactions: [recent('Health', 'a'), recent('Other', 'b', 'income')],
+      });
+      await render(<TransactionsScreen />);
+      await fireEvent.press(screen.getAllByTestId(/^add-transaction-button-/)[0]);
+      expect(chipNames()[0]).toBe('Health');
+      await fireEvent.press(screen.getByTestId('type-income'));
+      expect(chipNames()[0]).toBe('Other');
+    });
+
+    it('keeps + New last and the default selection on Food (criterion 21)', async () => {
+      const store = mockStore({ transactions: [recent('Health', 'a')] });
+      await render(<TransactionsScreen />);
+      await fireEvent.press(screen.getAllByTestId(/^add-transaction-button-/)[0]);
+      const ids = screen
+        .getAllByTestId(/^(category-chip-|add-category-button)/)
+        .map((c) => c.props.testID);
+      expect(ids[ids.length - 1]).toBe('add-category-button');
+      await fireEvent.changeText(screen.getByTestId('amount-input'), '1000');
+      await fireEvent.press(screen.getByTestId('save-transaction-button'));
+      expect(store.addTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ category: 'Food' }),
+      );
+    });
+  });
 });
