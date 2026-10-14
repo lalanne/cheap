@@ -594,4 +594,7 @@ the two `TransactionsScreen` ordering tests failed before the change
 `TransactionsScreen` now orders its chips with
 `rankCategories(starters + custom, transactions, type, new Date())`; "+ New"
 and the preselected "Food" are untouched. 543 tests pass, `tsc --noEmit`,
-ESLint and Prettier clean. Not yet checked in a running app.
+ESLint and Prettier clean. Deployed 2026-10-14 (web via Firebase
+Hosting, iOS via `eas update` on the `preview` channel) and confirmed
+working in the running apps by the owner, so criteria 18–21 are
+**verified**.

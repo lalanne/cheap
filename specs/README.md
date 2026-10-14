@@ -14,7 +14,7 @@ This project is built spec-first. Rules:
 |---|------|--------|
 | 000 | [Product overview & stack](000-overview.md) | approved |
 | 001 | [Authentication (Google + email/password)](001-auth.md) | approved (amended — criterion 12 pending) |
-| 002 | [Transactions: data model & manual entry](002-transactions.md) | implemented (amended 2026-10-14: criteria 18–21, category picker ordered by recent usage, issue #41) |
+| 002 | [Transactions: data model & manual entry](002-transactions.md) | implemented (amended 2026-10-14: criteria 18–21, category picker ordered by recent usage, issue #41, criteria 18–21 verified) |
 | 003 | [Design system & visual language](003-design-system.md) | implemented |
 | 004 | [iOS deployment (TestFlight)](004-ios-deployment.md) | implemented |
 | 005 | [Web deployment (Firebase Hosting)](005-web-deployment.md) | implemented |
