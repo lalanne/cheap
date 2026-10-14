@@ -34,10 +34,6 @@ jest.mock('../../creditCards/store', () => ({
   useCreditCardsStore: jest.fn(),
 }));
 
-function localDate(year: number, month: number, day: number): Date {
-  return new Date(year, month - 1, day);
-}
-
 function tx(overrides: Partial<Transaction>): Transaction {
   return {
     id: 'tx-1',

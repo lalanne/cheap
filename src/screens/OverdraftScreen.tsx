@@ -220,9 +220,9 @@ export function OverdraftScreen() {
         <View style={styles.card} testID="overdraft-setup-form">
           <Text style={styles.sectionTitle}>Set up your line</Text>
           <Text style={styles.helper}>
-            Enter your approved limit and the monthly rate on your statement. Don't know the rate?
-            Leave the rate blank and add it later from Edit settings. If you already owe something
-            on the line, add that as the opening balance.
+            Enter your approved limit and the monthly rate on your statement. Don&apos;t know the
+            rate? Leave the rate blank and add it later from Edit settings. If you already owe
+            something on the line, add that as the opening balance.
           </Text>
           <Input
             label="Limit"
@@ -367,7 +367,9 @@ export function OverdraftScreen() {
     switch (payoff.kind) {
       case 'done':
         return (
-          <Text style={styles.payoffText}>You're back to zero — nothing owed on the line.</Text>
+          <Text style={styles.payoffText}>
+            You&apos;re back to zero — nothing owed on the line.
+          </Text>
         );
       case 'no-plan':
         return (
@@ -382,7 +384,7 @@ export function OverdraftScreen() {
       case 'not-covering':
         return (
           <Text style={styles.payoffText}>
-            Your payment doesn't cover the interest — the balance won't shrink.
+            Your payment doesn&apos;t cover the interest — the balance won&apos;t shrink.
           </Text>
         );
       case 'at-least':
@@ -607,7 +609,7 @@ export function OverdraftScreen() {
 
   const costSection = (
     <>
-      <Text style={styles.sectionTitle}>What it's costing you</Text>
+      <Text style={styles.sectionTitle}>What it&apos;s costing you</Text>
       <View style={styles.card} testID="overdraft-cost-month">
         <Text style={styles.eyebrow}>CHARGED THIS MONTH</Text>
         <Text style={styles.midNumber}>

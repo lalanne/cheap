@@ -4,7 +4,6 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Screen } from '../components/Screen';
 import { useBudgetsStore } from '../budgets/store';
-import { computeCategorySpend } from '../budgets/computeCategorySpend';
 import { cardBalanceAsOf, creditCardBalance } from '../creditCards/creditCardMath';
 import { useCreditCardsStore } from '../creditCards/store';
 import { useDebtsStore } from '../debts/store';

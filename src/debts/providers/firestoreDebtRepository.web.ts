@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth } from '../../auth/providers/firebaseApp';
-import type { Debt, DebtRepository, NewDebtInput } from '../types';
+import type { Debt, DebtRepository } from '../types';
 import { db } from '../../transactions/providers/firestoreDb';
 
 // Own requireUid, not the transactions module's — see

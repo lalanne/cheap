@@ -13,7 +13,7 @@ import {
   type DocumentData,
 } from '@react-native-firebase/firestore';
 
-import type { Debt, DebtRepository, NewDebtInput } from '../types';
+import type { Debt, DebtRepository } from '../types';
 
 // Native only — see firestoreTransactionRepository.native.ts (spec 002)
 // for why this can't share the web-SDK-based (.web.ts) version.
