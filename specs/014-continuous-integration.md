@@ -580,6 +580,6 @@ Done after making the repo public (see Decisions for why).
 
 | Criterion | Result | Evidence |
 |-----------|--------|----------|
-| 18 — template pre-fills the PR | ⏳ | GitHub only applies a template from the default branch; check on the first PR opened after this merges. |
+| 18 — template pre-fills the PR | ✅ | PR #60, opened from the GitHub compare page after the template reached `main`, had its description pre-filled with the Summary section and the four-item checklist. |
 | 19 — warning when `src/` changes unaccompanied | ✅ | Throwaway draft PR #58 changing only a `src/` file: `traceability` passed in 4s with the annotation "src/ changed without a test or spec change…" — [run 38498159140](https://github.com/lalanne/cheap/actions/runs/38498159140). Closed unmerged, branch deleted. |
 | 20 — no warning otherwise; never gates | ✅ | Same PR plus a `__tests__` file: `traceability` passed, no such annotation — [run 38498201328](https://github.com/lalanne/cheap/actions/runs/38498201328). `main` protection still lists only `static-analysis`, `web-export`, `unit`, `integration`; `unit`'s `needs:` unchanged. |
