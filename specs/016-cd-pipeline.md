@@ -121,6 +121,83 @@ at a time.
   Their intended configuration is recorded here; Verification results
   records the date they were actually set.
 
+## Firebase identity setup (Workload Identity Federation)
+
+One-time, run by the owner with `gcloud` authenticated as a project owner.
+Nothing here is stored in GitHub except the two non-secret values printed
+at the end. Names (`github-pool`, `github-provider`, `gh-deployer`) are
+this spec's choice; change them consistently if needed.
+
+```sh
+PROJECT_ID=lalanne-cheap-tracker
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+REPO=lalanne/cheap
+SA=gh-deployer@${PROJECT_ID}.iam.gserviceaccount.com
+
+# 1. APIs the federation and the Firebase CLI need
+gcloud services enable iam.googleapis.com iamcredentials.googleapis.com \
+  sts.googleapis.com cloudresourcemanager.googleapis.com \
+  firebasehosting.googleapis.com firebaserules.googleapis.com \
+  --project "$PROJECT_ID"
+
+# 2. The deploy service account, with only the roles it needs
+gcloud iam service-accounts create gh-deployer \
+  --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
+for ROLE in roles/firebasehosting.admin roles/firebaserules.admin \
+            roles/serviceusage.serviceUsageConsumer; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$SA" --role "$ROLE" --condition=None
+done
+
+# 3. Workload identity pool + GitHub OIDC provider. The attribute
+#    condition is the real security boundary: only this repo, and only
+#    jobs running under the `production` environment, are accepted.
+gcloud iam workload-identity-pools create github-pool \
+  --project "$PROJECT_ID" --location global --display-name "GitHub Actions"
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --project "$PROJECT_ID" --location global \
+  --workload-identity-pool github-pool \
+  --issuer-uri "https://token.actions.githubusercontent.com" \
+  --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.environment=assertion.environment" \
+  --attribute-condition "assertion.repository == '${REPO}' && assertion.environment == 'production'"
+
+# 4. Let identities from that pool impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --project "$PROJECT_ID" --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${REPO}"
+
+# 5. Print the two values the workflow needs (not secrets; store as
+#    `vars` on the `production` environment)
+echo "WIF_PROVIDER=projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+echo "WIF_SERVICE_ACCOUNT=${SA}"
+```
+
+Workflow side (in #29): the Firebase job declares `environment:
+production` and `permissions: { id-token: write, contents: read }`, then:
+
+```yaml
+- uses: google-github-actions/auth@<sha>
+  with:
+    workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+    service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+- run: npx firebase-tools deploy --only firestore:rules,hosting --project lalanne-cheap-tracker
+```
+
+Notes:
+- `assertion.environment` exists only for jobs that declare an
+  `environment:`, so a PR or a job without one is rejected by the
+  condition even though the repo matches.
+- The role list is the expected minimum, not a verified one. The first
+  deploy may reveal a missing permission; add the narrowest role that
+  fixes it and update this list rather than granting `firebase.admin`.
+- The PR-preview service account (Decisions) is a second, Hosting-only
+  account with its own provider condition (`assertion.event_name ==
+  'pull_request'`), created only if #29 builds preview channels.
+- Teardown/rotation: nothing to rotate. To revoke, delete the provider
+  or remove the `workloadIdentityUser` binding.
+- If this setup stalls, the fallback is a service-account key stored as
+  `FIREBASE_SERVICE_ACCOUNT` on `production` (open question 1).
+
 ## Open questions (resolve by editing this spec)
 
 1. Firebase auth: Workload Identity Federation (more setup, no stored key)
