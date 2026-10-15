@@ -671,6 +671,16 @@ gauge's list. Proposal: keep the Budgets card as is for now and revisit
 merging them after the gauge is seen in use; merging is a separate decision.
 
 **Status of this amendment:** approved 2026-10-15 (decisions above accepted
-as proposed; Budgets card kept as is). Criteria 24–32 are being implemented
-test-first; the spec stays `implemented` for 1–23 until they are verified. Prerequisite from the issue, #34 and #35 (budget lines not showing
+as proposed; Budgets card kept as is) and implemented the same day. Prerequisite from the issue, #34 and #35 (budget lines not showing
 paid amounts), is closed.
+
+**Results (2026-10-15):** ✅ criteria 24–32, test-first (the new tests were
+committed failing before any implementation). Pure functions
+`computeGaugeSegments` / `rankGaugeRows` in `src/dashboard/gaugeSegments.ts`
+(`gaugeSegments.test.ts`: arc sizing and order, ancestor rule, fill and
+over-cap, unbudgeted spend, no budgets, ranking). `DashboardScreen.test.tsx`
+— new describe block, one test per criterion 24–32 (hover is checked on web
+and absent on native). The existing donut tests (criteria 7, 11, 12, spec
+011) now press `dashboard-view-share` first, as criterion 32 specifies.
+559 tests pass, `tsc --noEmit`, eslint and prettier clean, web export
+builds. Not yet checked in the running app.

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, processColor, StyleSheet } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
@@ -143,6 +143,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
   it('stacks sections in a single column (no wide-row wrappers) when useWideWeb is false', async () => {
     mockStores({});
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.queryByTestId('dashboard-wide-row-1')).toBeNull();
     expect(screen.queryByTestId('dashboard-wide-row-2')).toBeNull();
@@ -161,6 +162,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const DONUT_RADIUS = 60;
     const circumference = 2 * Math.PI * DONUT_RADIUS;
@@ -189,6 +191,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
       transactions: [tx({ id: 't1', category: 'Food', amount: 300, date: now })],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent(screen.getByTestId('dashboard-donut-arc-Food'), 'mouseEnter');
 
@@ -209,6 +212,7 @@ describe('DashboardScreen (web) — donut hover-to-reveal (spec 009 criterion 11
         ],
       });
       await render(<DashboardScreen />);
+      await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
       expect(screen.queryByTestId('dashboard-donut-hover-label')).toBeNull();
 
@@ -243,6 +247,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const foodRow = screen.getByTestId('dashboard-donut-legend-Food');
     expect(within(foodRow).getByText(/\$450\.000/)).toBeTruthy();
@@ -260,6 +265,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.queryByTestId('dashboard-donut-back')).toBeNull();
 
@@ -286,6 +292,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent.press(screen.getByTestId('dashboard-donut-legend-Housing'));
 
@@ -299,6 +306,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       transactions: [tx({ id: 't1', category: 'Old Sub', amount: 75000, date: now })],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.getByTestId('dashboard-donut-legend-Old Sub')).toBeTruthy();
   });
@@ -375,6 +383,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(
       within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/),
@@ -403,6 +412,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const currentLabel = screen.getByTestId('dashboard-trend-bar-5-label');
     const pastLabel = screen.getByTestId('dashboard-trend-bar-3-label');
@@ -435,6 +445,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent.press(screen.getByTestId('dashboard-donut-legend-Food'));
     expect(screen.getByTestId('dashboard-donut-back')).toBeTruthy();
@@ -952,7 +963,9 @@ describe('DashboardScreen — budget gauge (spec 009 2026-10-15 amendment, #36)'
     const row = screen.getByTestId('dashboard-gauge-row-Fun');
     const text = within(row).getByText('$205 / $200');
     expect(flatten(text.props.style).color).toBe(colors.chart[1]);
-    expect(screen.getByTestId('dashboard-gauge-fill-Fun').props.stroke).toBe(colors.chart[1]);
+    expect(screen.getByTestId('dashboard-gauge-fill-Fun').props.stroke.payload).toBe(
+      processColor(colors.chart[1]),
+    );
     expect(
       within(screen.getByTestId('dashboard-gauge-center')).getByText(/Spent \$205 of \$200/),
     ).toBeTruthy();
