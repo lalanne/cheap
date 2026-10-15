@@ -1,4 +1,4 @@
-import { Fragment, useState, type ComponentProps, type ComponentType } from 'react';
+import { useState, type ComponentProps, type ComponentType } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -24,7 +24,6 @@ import {
   subcategoryTotalsFor,
 } from '../dashboard/categoryRollup';
 import { computeDonutSegments } from '../dashboard/donutSegments';
-import { computeGaugeSegments, rankGaugeRows } from '../dashboard/gaugeSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
 import { useTransactionsStore } from '../transactions/store';
 import { useWideWeb } from '../theme/useWideWeb';
@@ -33,10 +32,6 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 const DONUT_RADIUS = 60;
 const DONUT_STROKE = 16;
 const DONUT_SIZE = (DONUT_RADIUS + DONUT_STROKE) * 2;
-const GAUGE_RADIUS = 80;
-const GAUGE_STROKE = 16;
-const GAUGE_SIZE = (GAUGE_RADIUS + GAUGE_STROKE) * 2;
-const GAUGE_ROWS_COLLAPSED = 5;
 
 // react-native-svg's web renderer forwards unrecognized props straight to
 // the underlying DOM node (its prepare() spreads unknown props through
@@ -103,8 +98,6 @@ export function DashboardScreen() {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [drilledCategory, setDrilledCategory] = useState<string | null>(null);
   const [chartView, setChartView] = useState<'budget' | 'share'>('budget');
-  const [hoveredGauge, setHoveredGauge] = useState<string | null>(null);
-  const [gaugeExpanded, setGaugeExpanded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const transactions = useTransactionsStore((s) => s.transactions);
   const categories = useTransactionsStore((s) => s.categories);
@@ -452,128 +445,9 @@ export function DashboardScreen() {
     </View>
   );
 
-  // Spec 009 2026-10-15 amendment (#36): the budget gauge is the default
-  // view of the chart slot; the donut stays one tap away.
-  const gauge = computeGaugeSegments({
-    budgets,
-    categories,
-    totals: donutCategorySpend,
-    radius: GAUGE_RADIUS,
-  });
-  const gaugeRows = rankGaugeRows(gauge.segments);
-  const visibleGaugeRows = gaugeExpanded ? gaugeRows : gaugeRows.slice(0, GAUGE_ROWS_COLLAPSED);
-  const hoveredSegment = gauge.segments.find((seg) => seg.category === hoveredGauge) ?? null;
-  const gaugeCenter = GAUGE_SIZE / 2;
-
-  const gaugeCard = (
-    <View style={styles.card} testID="dashboard-gauge">
-      <Text style={styles.cardTitle}>
-        {selectedMonth === null ? 'Budget used' : `Budget used${monthSuffix}`}
-      </Text>
-      {gauge.segments.length === 0 ? (
-        <Text style={styles.emptyText} testID="dashboard-gauge-empty">
-          No budgets set yet.
-        </Text>
-      ) : (
-        <>
-          <View style={styles.donutWrap}>
-            <Svg width={GAUGE_SIZE} height={gaugeCenter + GAUGE_STROKE / 2 + 4}>
-              {gauge.segments.map((seg) => {
-                const full = 2 * Math.PI * GAUGE_RADIUS;
-                const common = {
-                  cx: gaugeCenter,
-                  cy: gaugeCenter,
-                  r: GAUGE_RADIUS,
-                  strokeWidth: GAUGE_STROKE,
-                  strokeDashoffset: seg.arcOffset,
-                  fill: 'transparent',
-                  rotation: '-180',
-                  origin: `${gaugeCenter}, ${gaugeCenter}`,
-                  ...(Platform.OS === 'web'
-                    ? {
-                        onMouseEnter: () => setHoveredGauge(seg.category),
-                        onMouseLeave: () => setHoveredGauge(null),
-                      }
-                    : {}),
-                };
-                return (
-                  <Fragment key={seg.category}>
-                    <HoverableCircle
-                      {...common}
-                      testID={`dashboard-gauge-arc-${seg.category}`}
-                      stroke={seg.over ? colors.chart[1] : seg.color}
-                      strokeOpacity={0.25}
-                      strokeDasharray={`${Math.max(seg.arcLength - 2, 0)} ${full}`}
-                    />
-                    <HoverableCircle
-                      {...common}
-                      testID={`dashboard-gauge-fill-${seg.category}`}
-                      stroke={seg.over ? colors.chart[1] : seg.color}
-                      strokeDasharray={`${Math.max(Math.min(seg.fillLength, seg.arcLength - 2), 0)} ${full}`}
-                    />
-                  </Fragment>
-                );
-              })}
-            </Svg>
-            <View style={styles.gaugeCenter} pointerEvents="none" testID="dashboard-gauge-center">
-              <Text style={styles.donutCenterAmount}>
-                {`Spent ${formatCLP(gauge.totalSpent)} of ${formatCLP(gauge.totalBudgeted)} budget`}
-              </Text>
-            </View>
-            {hoveredSegment && (
-              <View
-                style={styles.gaugeHover}
-                pointerEvents="none"
-                testID="dashboard-gauge-hover-label"
-              >
-                <Text style={styles.donutCenterCategory}>{hoveredSegment.category}</Text>
-                <Text style={styles.donutCenterAmount}>
-                  {`${formatCLP(hoveredSegment.spent)} / ${formatCLP(hoveredSegment.limit)}`}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.legend}>
-            {visibleGaugeRows.map((seg) => (
-              <View key={seg.category} testID={`dashboard-gauge-row-${seg.category}`}>
-                <View style={styles.legendRowInner}>
-                  <View style={styles.legendMain}>
-                    <View style={[styles.legendDot, { backgroundColor: seg.color }]} />
-                    <Text style={styles.legendLabel}>{seg.category}</Text>
-                  </View>
-                  <Text style={[styles.legendLabel, seg.over && { color: colors.chart[1] }]}>
-                    {`${formatCLP(seg.spent)} / ${formatCLP(seg.limit)}`}
-                  </Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${seg.fillRatio * 100}%`,
-                        backgroundColor: seg.over ? colors.chart[1] : seg.color,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-            {gauge.unbudgeted > 0 && (
-              <View style={styles.legendRowInner} testID="dashboard-gauge-unbudgeted">
-                <Text style={styles.legendLabel}>Unbudgeted</Text>
-                <Text style={styles.legendLabel}>{formatCLP(gauge.unbudgeted)}</Text>
-              </View>
-            )}
-            {gaugeRows.length > GAUGE_ROWS_COLLAPSED && (
-              <Pressable testID="dashboard-gauge-more" onPress={() => setGaugeExpanded((v) => !v)}>
-                <Text style={styles.backLink}>{gaugeExpanded ? 'Show less' : 'Show more'}</Text>
-              </Pressable>
-            )}
-          </View>
-        </>
-      )}
-    </View>
-  );
+  // Spec 009 2026-10-15 amendment (#36), option C: placeholder until the
+  // budget bar is implemented (tests first).
+  const gaugeCard = <View style={styles.card} testID="dashboard-budgetbar-placeholder" />;
 
   const chartCard = (
     <View>
