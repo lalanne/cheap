@@ -705,5 +705,16 @@ view needs no SVG: block widths are percentages of a flex row, so it is
 plain `View`s like the other bars. The gauge shipped in #65 is removed, not
 kept as an option.
 
-**Status of this amendment:** approved by the owner's choice (2026-10-15);
-implementing test-first.
+**Status of this amendment:** approved by the owner's choice (2026-10-15)
+and implemented the same day.
+
+**Results (2026-10-15):** ✅ criteria 24–32 for option C, test-first (new
+tests committed failing in d8929c7, before the implementation). Pure
+`computeBudgetBar` / `rankBudgetRows` in `src/dashboard/budgetBar.ts`
+(`budgetBar.test.ts`: block shares and order, ancestor rule, fill and
+over-cap with `overBy`, unbudgeted spend, no budgets, ranking).
+`DashboardScreen.test.tsx` — the budget-bar describe block, one test per
+criterion 24–32 (web hover via `hoverIn`/`hoverOut`; none on native).
+`gaugeSegments.ts` and its tests are removed. 560 tests pass, `tsc
+--noEmit`, eslint and prettier clean, web export builds. Not yet checked in
+the running app.

@@ -23,6 +23,7 @@ import {
   rollUpCategoryTotals,
   subcategoryTotalsFor,
 } from '../dashboard/categoryRollup';
+import { computeBudgetBar, rankBudgetRows } from '../dashboard/budgetBar';
 import { computeDonutSegments } from '../dashboard/donutSegments';
 import { computeSuggestions, type Suggestion } from '../dashboard/suggestions';
 import { useTransactionsStore } from '../transactions/store';
@@ -32,6 +33,7 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 const DONUT_RADIUS = 60;
 const DONUT_STROKE = 16;
 const DONUT_SIZE = (DONUT_RADIUS + DONUT_STROKE) * 2;
+const BUDGET_ROWS_COLLAPSED = 5;
 
 // react-native-svg's web renderer forwards unrecognized props straight to
 // the underlying DOM node (its prepare() spreads unknown props through
@@ -98,6 +100,8 @@ export function DashboardScreen() {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [drilledCategory, setDrilledCategory] = useState<string | null>(null);
   const [chartView, setChartView] = useState<'budget' | 'share'>('budget');
+  const [hoveredBlock, setHoveredBlock] = useState<string | null>(null);
+  const [barExpanded, setBarExpanded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const transactions = useTransactionsStore((s) => s.transactions);
   const categories = useTransactionsStore((s) => s.categories);
@@ -445,9 +449,113 @@ export function DashboardScreen() {
     </View>
   );
 
-  // Spec 009 2026-10-15 amendment (#36), option C: placeholder until the
-  // budget bar is implemented (tests first).
-  const gaugeCard = <View style={styles.card} testID="dashboard-budgetbar-placeholder" />;
+  // Spec 009 2026-10-15 amendment (#36), option C: the budget bar is the
+  // default view of the chart slot; the donut stays one tap away.
+  const bar = computeBudgetBar({ budgets, categories, totals: donutCategorySpend });
+  const barRows = rankBudgetRows(bar.blocks);
+  const visibleBarRows = barExpanded ? barRows : barRows.slice(0, BUDGET_ROWS_COLLAPSED);
+  const overBlocks = barRows.filter((b) => b.over);
+  const hoveredBlockData = bar.blocks.find((b) => b.category === hoveredBlock) ?? null;
+
+  const budgetBarCard = (
+    <View style={styles.card} testID="dashboard-budgetbar">
+      <Text style={styles.cardTitle}>
+        {selectedMonth === null ? 'Budget used' : `Budget used${monthSuffix}`}
+      </Text>
+      {bar.blocks.length === 0 ? (
+        <Text style={styles.emptyText} testID="dashboard-budgetbar-empty">
+          No budgets set yet.
+        </Text>
+      ) : (
+        <>
+          <View testID="dashboard-budgetbar-summary">
+            <Text style={styles.donutCenterAmount}>
+              {`Spent ${formatCLP(bar.totalSpent)} of ${formatCLP(bar.totalBudgeted)} budget`}
+            </Text>
+          </View>
+          {hoveredBlockData && (
+            <View testID="dashboard-budgetbar-hover-label">
+              <Text style={styles.donutCenterCategory}>{hoveredBlockData.category}</Text>
+              <Text style={styles.donutCenterAmount}>
+                {`${formatCLP(hoveredBlockData.spent)} / ${formatCLP(hoveredBlockData.limit)}`}
+              </Text>
+            </View>
+          )}
+          <View style={styles.budgetBar}>
+            {bar.blocks.map((b) => {
+              const color = b.over ? colors.chart[1] : b.color;
+              return (
+                <Pressable
+                  key={b.category}
+                  testID={`dashboard-budgetbar-block-${b.category}`}
+                  style={[styles.budgetBlock, { width: `${b.share * 100}%` }]}
+                  {...(Platform.OS === 'web'
+                    ? {
+                        onHoverIn: () => setHoveredBlock(b.category),
+                        onHoverOut: () => setHoveredBlock(null),
+                      }
+                    : {})}
+                >
+                  <View style={[styles.budgetBlockTrack, { backgroundColor: color }]} />
+                  <View
+                    testID={`dashboard-budgetbar-fill-${b.category}`}
+                    style={[
+                      styles.budgetBlockFill,
+                      { width: `${b.fillRatio * 100}%`, backgroundColor: color },
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+          {overBlocks.length > 0 && (
+            <View style={styles.attention} testID="dashboard-budgetbar-attention">
+              <Text style={styles.legendLabel}>Needs attention</Text>
+              {overBlocks.map((b) => (
+                <Text key={b.category} style={[styles.legendLabel, { color: colors.chart[1] }]}>
+                  {`${b.category} +${formatCLP(b.overBy)}`}
+                </Text>
+              ))}
+            </View>
+          )}
+          <View style={styles.legend}>
+            {visibleBarRows.map((b) => (
+              <View key={b.category} testID={`dashboard-budgetbar-row-${b.category}`}>
+                <View style={styles.legendRowInner}>
+                  <View style={styles.legendMain}>
+                    <View
+                      style={[
+                        styles.legendDot,
+                        { backgroundColor: b.over ? colors.chart[1] : b.color },
+                      ]}
+                    />
+                    <Text style={styles.legendLabel}>{b.category}</Text>
+                  </View>
+                  <Text style={[styles.legendLabel, b.over && { color: colors.chart[1] }]}>
+                    {`${formatCLP(b.spent)} / ${formatCLP(b.limit)}`}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {bar.unbudgeted > 0 && (
+              <View style={styles.legendRowInner} testID="dashboard-budgetbar-unbudgeted">
+                <Text style={styles.legendLabel}>Unbudgeted</Text>
+                <Text style={styles.legendLabel}>{formatCLP(bar.unbudgeted)}</Text>
+              </View>
+            )}
+            {barRows.length > BUDGET_ROWS_COLLAPSED && (
+              <Pressable
+                testID="dashboard-budgetbar-more"
+                onPress={() => setBarExpanded((v) => !v)}
+              >
+                <Text style={styles.backLink}>{barExpanded ? 'Show less' : 'Show more'}</Text>
+              </Pressable>
+            )}
+          </View>
+        </>
+      )}
+    </View>
+  );
 
   const chartCard = (
     <View>
@@ -465,7 +573,7 @@ export function DashboardScreen() {
           </Pressable>
         ))}
       </View>
-      {chartView === 'budget' ? gaugeCard : donutCard}
+      {chartView === 'budget' ? budgetBarCard : donutCard}
     </View>
   );
 
@@ -742,19 +850,29 @@ const styles = StyleSheet.create({
   wideThird: {
     flex: 1,
   },
-  gaugeCenter: {
+  budgetBar: {
+    flexDirection: 'row',
+    gap: 2,
+    marginVertical: spacing.sm,
+  },
+  budgetBlock: {
+    height: 16,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  budgetBlockTrack: {
     position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    alignItems: 'center',
+    opacity: 0.25,
   },
-  gaugeHover: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 22,
-    alignItems: 'center',
+  budgetBlockFill: {
+    height: '100%',
+  },
+  attention: {
+    marginBottom: spacing.sm,
   },
   viewToggle: {
     flexDirection: 'row',
