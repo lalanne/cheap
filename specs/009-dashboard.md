@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17; amended 2026-10-11: criteria 18–23, budgeted vs. income, issue #15; 2026-10-15 draft: criteria 24–31, budget gauge, issue #36)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amended 2026-10-11: criteria 18–23, budgeted vs. income, issue #15; 2026-10-15 draft: criteria 24–32, budget gauge, issue #36)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -244,7 +244,8 @@ dividing by zero.
 24. **Given** at least one budget, **then** the budget-gauge card renders a
     semicircle with one segment per budgeted category (after the criterion-23
     ancestor rule), each segment's angular width proportional to its
-    `monthlyLimit` share of the total budgeted, in spec 003's chart color order.
+    `monthlyLimit` share of the total budgeted, in spec 003's chart color order. Segments are ordered by limit descending,
+    ties alphabetical (as the donut's amendment of 2026-10-05).
 25. **Given** the viewed month's spend, **then** each segment is filled in
     proportion to `min(spent / limit, 1)`, and the center reads
     "Spent {X} of {Y} budget", where X counts only budgeted categories (rolled
@@ -315,6 +316,7 @@ dividing by zero.
 | 29 — no budgets | Component | Empty copy present, no arc testID. |
 | 30 — month selection | Component | Select a past bar; spend differs from current month; title carries suffix. |
 | 31 — hover (web) | Component | Same pattern as criterion 11. |
+| 32 — view toggle | Component | Default shows the gauge; pressing `dashboard-view-share` shows the donut and legend; existing donut tests (7, 11, 12, spec 011) first press the toggle. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
@@ -668,7 +670,7 @@ criterion-18 budgeted-vs-income row) shows the same spent/limit as the
 gauge's list. Proposal: keep the Budgets card as is for now and revisit
 merging them after the gauge is seen in use; merging is a separate decision.
 
-**Status of this amendment:** draft. Criteria 24–31 and their verification
-rows are proposed, and the spec stays `implemented` for 1–23 until this is
-approved. Prerequisite from the issue, #34 and #35 (budget lines not showing
+**Status of this amendment:** approved 2026-10-15 (decisions above accepted
+as proposed; Budgets card kept as is). Criteria 24–32 are being implemented
+test-first; the spec stays `implemented` for 1–23 until they are verified. Prerequisite from the issue, #34 and #35 (budget lines not showing
 paid amounts), is closed.
