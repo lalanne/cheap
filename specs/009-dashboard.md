@@ -1,6 +1,6 @@
 # 009 — Dashboard
 
-**Status:** implemented (amended 2026-10-10: criteria 13–17; amended 2026-10-11: criteria 18–23, budgeted vs. income, issue #15)
+**Status:** implemented (amended 2026-10-10: criteria 13–17; amended 2026-10-11: criteria 18–23, budgeted vs. income, issue #15; 2026-10-15 draft: criteria 24–32, budget gauge, issue #36)
 **Depends on:** 002 (transactions), 003 (design system), 006 (wide-web
 layout pattern this reuses), 007 (budgets), 008 (debt tracking)
 
@@ -241,6 +241,32 @@ dividing by zero.
     subcategories, **then** the total counts only the parent's limit for
     that subtree (its rolled-up spend already includes the subcategory),
     so a commitment is never counted twice.
+24. **Given** at least one budget, **then** the budget-gauge card renders a
+    semicircle with one segment per budgeted category (after the criterion-23
+    ancestor rule), each segment's angular width proportional to its
+    `monthlyLimit` share of the total budgeted, in spec 003's chart color order. Segments are ordered by limit descending,
+    ties alphabetical (as the donut's amendment of 2026-10-05).
+25. **Given** the viewed month's spend, **then** each segment is filled in
+    proportion to `min(spent / limit, 1)`, and the center reads
+    "Spent {X} of {Y} budget", where X counts only budgeted categories (rolled
+    up per spec 011) and Y is the total budgeted.
+26. **Given** a category over its limit, **then** its segment is full and
+    marked in the over color, its list row shows the real `spent / limit`
+    (e.g. `$205 / $200`) in the over color, and the center figure is not
+    capped.
+27. **Given** spend in a category with no budget, **then** it takes no arc
+    and is excluded from the center figure, and the list ends with an
+    "Unbudgeted" row showing the total of that spend.
+28. **Given** more than 5 budgeted categories, **then** the list shows the 5
+    with the highest `spent / limit` first (over-budget always visible) with
+    a "Show more" control that expands to all and "Show less" that collapses.
+29. **Given** no budgets, **then** the gauge card shows the existing "No
+    budgets set yet." empty state and no arc.
+30. **Given** a selected month (criteria 13–16), **then** the gauge uses that
+    month's spend against today's limits, and its title names the month.
+31. **Given** web, **when** the mouse hovers a segment, **then** the center
+    shows that category's name and `spent / limit`; it clears on leave.
+    Native attaches no handler (as criterion 11).
 
 ## Out of scope
 
@@ -282,6 +308,15 @@ dividing by zero.
 | 22 — follows the selected month | Component | Select a past bar whose income differs from the current month's; assert the row's income/percent change and the label carries the month suffix. |
 | 23 — no parent/child double-count | Unit | Pure test: budgets on "Food" and "Food > Restaurants" count only Food's limit; an unrelated category still adds. |
 | 12 — tap a trend bar to retarget the donut | Component | `DashboardScreen.test.tsx`: tap a non-current `dashboard-trend-bar-*`, assert the donut legend shows that month's rolled-up amounts (not the current month's); assert budgets/KPIs unchanged; assert an active drill-down clears; tap a different bar, assert it re-targets again. |
+| 24 — segment sizing | Unit | Pure `gaugeSegments(budgets, spend, radius)`: widths sum to the half circumference, proportional to limit; skips child under budgeted ancestor. |
+| 25 — fill + center | Unit + Component | Pure fill ratio test; `DashboardScreen.test.tsx` asserts the rendered dash props and the center copy. |
+| 26 — over budget | Unit + Component | Ratio clamps at 1; component asserts over color and unclamped `spent / limit` text. |
+| 27 — unbudgeted spend | Unit + Component | Spend of an unbudgeted category is in "Unbudgeted" total only, not the arc or center. |
+| 28 — Show more | Component | 7 budgets: 5 rows ordered by usage, expand/collapse. |
+| 29 — no budgets | Component | Empty copy present, no arc testID. |
+| 30 — month selection | Component | Select a past bar; spend differs from current month; title carries suffix. |
+| 31 — hover (web) | Component | Same pattern as criterion 11. |
+| 32 — view toggle | Component | Default shows the gauge; pressing `dashboard-view-share` shows the donut and legend; existing donut tests (7, 11, 12, spec 011) first press the toggle. |
 
 Manual, in a browser (after automated tests pass): resize across 900px
 and confirm the layout at the deployed URL, same process as specs
@@ -609,3 +644,43 @@ criterion 18–23. The criterion 13 test's month-label assertion was narrowed
 to the exact card title (`Budgets — {Mon}`), since the new row legitimately
 names the month too. 504 tests pass, `tsc --noEmit` clean. Not yet checked
 in the running app.
+
+### Amendment (2026-10-15, draft): budget gauge replaces the "Where it went" donut as the main chart (issue #36)
+
+The donut answers "what share of my spend is each category" with no notion
+of a budget. The reference (a budgeting app) answers "how much of my budget
+have I used, and where" at a glance. Mockups A/B/C are in the issue.
+
+**Proposed decisions** (recommendations, to be confirmed or changed in
+review of this diff; nothing is implemented):
+
+| # | Question | Proposal |
+|---|----------|----------|
+| 1 | Direction | **A. Segmented semicircle gauge** + list. Closest to the reference; reuses the donut's `strokeDasharray` math on a half circle (a new pure `gaugeSegments`, next to `donutSegments.ts`). C is the fallback if A reads poorly on narrow screens. |
+| 2 | Replace or sit beside | The gauge takes the donut's slot and becomes the default. The donut stays as a second view in the same card ("Budget" / "Share of spend" toggle), so the share view and the spec 011 drill-down are not lost. |
+| 3 | Segment sizing | By **budget share**, as in the reference. Spend share is what the donut already shows. |
+| 4 | Spend without a budget | No arc and out of the center figure; one "Unbudgeted" row at the end of the list (criterion 27), so the total is never hidden. |
+| 5 | Over budget | Fill capped at the segment, segment and row in the over color (`colors.chart[1]`), real numbers in the text (criterion 26). Overflow would distort the other segments' widths. |
+| 6 | Trend-bar selection | Still applies unchanged: the gauge is month-scoped like the rest (criteria 13–16, 30). Limits are today's, as in the budgets card. Criterion 12's donut retargeting remains true for the donut view. |
+| 7 | Hover / tap / icons / Show more | Web hover as criterion 11; no native handler. **No category icons in v1**: the app has no icon data on categories, so adding them needs a data-model change, which is its own spec. Show more as criterion 28. |
+| 8 | Rendering | `react-native-svg`, already a dependency; no new library. |
+
+**Overlap to settle:** the existing Budgets card (per-category bars, plus the
+criterion-18 budgeted-vs-income row) shows the same spent/limit as the
+gauge's list. Proposal: keep the Budgets card as is for now and revisit
+merging them after the gauge is seen in use; merging is a separate decision.
+
+**Status of this amendment:** approved 2026-10-15 (decisions above accepted
+as proposed; Budgets card kept as is) and implemented the same day. Prerequisite from the issue, #34 and #35 (budget lines not showing
+paid amounts), is closed.
+
+**Results (2026-10-15):** ✅ criteria 24–32, test-first (the new tests were
+committed failing before any implementation). Pure functions
+`computeGaugeSegments` / `rankGaugeRows` in `src/dashboard/gaugeSegments.ts`
+(`gaugeSegments.test.ts`: arc sizing and order, ancestor rule, fill and
+over-cap, unbudgeted spend, no budgets, ranking). `DashboardScreen.test.tsx`
+— new describe block, one test per criterion 24–32 (hover is checked on web
+and absent on native). The existing donut tests (criteria 7, 11, 12, spec
+011) now press `dashboard-view-share` first, as criterion 32 specifies.
+559 tests pass, `tsc --noEmit`, eslint and prettier clean, web export
+builds. Not yet checked in the running app.

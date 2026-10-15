@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, processColor, StyleSheet } from 'react-native';
 
 import { useBudgetsStore } from '../../budgets/store';
 import { useDebtsStore } from '../../debts/store';
@@ -143,6 +143,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
   it('stacks sections in a single column (no wide-row wrappers) when useWideWeb is false', async () => {
     mockStores({});
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.queryByTestId('dashboard-wide-row-1')).toBeNull();
     expect(screen.queryByTestId('dashboard-wide-row-2')).toBeNull();
@@ -161,6 +162,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const DONUT_RADIUS = 60;
     const circumference = 2 * Math.PI * DONUT_RADIUS;
@@ -189,6 +191,7 @@ describe('DashboardScreen (narrow/native — useWideWeb false by default under t
       transactions: [tx({ id: 't1', category: 'Food', amount: 300, date: now })],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent(screen.getByTestId('dashboard-donut-arc-Food'), 'mouseEnter');
 
@@ -209,6 +212,7 @@ describe('DashboardScreen (web) — donut hover-to-reveal (spec 009 criterion 11
         ],
       });
       await render(<DashboardScreen />);
+      await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
       expect(screen.queryByTestId('dashboard-donut-hover-label')).toBeNull();
 
@@ -243,6 +247,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const foodRow = screen.getByTestId('dashboard-donut-legend-Food');
     expect(within(foodRow).getByText(/\$450\.000/)).toBeTruthy();
@@ -260,6 +265,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.queryByTestId('dashboard-donut-back')).toBeNull();
 
@@ -286,6 +292,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent.press(screen.getByTestId('dashboard-donut-legend-Housing'));
 
@@ -299,6 +306,7 @@ describe('DashboardScreen — subcategory drill-down (spec 011)', () => {
       transactions: [tx({ id: 't1', category: 'Old Sub', amount: 75000, date: now })],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(screen.getByTestId('dashboard-donut-legend-Old Sub')).toBeTruthy();
   });
@@ -375,6 +383,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     expect(
       within(screen.getByTestId('dashboard-donut-legend-Food')).getByText(/\$20\.000/),
@@ -403,6 +412,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     const currentLabel = screen.getByTestId('dashboard-trend-bar-5-label');
     const pastLabel = screen.getByTestId('dashboard-trend-bar-3-label');
@@ -435,6 +445,7 @@ describe('DashboardScreen — tap a trend bar to retarget the donut (spec 009 20
       ],
     });
     await render(<DashboardScreen />);
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
 
     await fireEvent.press(screen.getByTestId('dashboard-donut-legend-Food'));
     expect(screen.getByTestId('dashboard-donut-back')).toBeTruthy();
@@ -915,5 +926,150 @@ describe('DashboardScreen — total budgeted vs. income (spec 009 2026-10-11 ame
     const row = screen.getByTestId('dashboard-budgeted-vs-income');
     expect(within(row).getByText(/\$400\.000 budgeted/)).toBeTruthy();
     expect(within(row).getByText(/40% of income/)).toBeTruthy();
+  });
+});
+
+describe('DashboardScreen — budget gauge (spec 009 2026-10-15 amendment, #36)', () => {
+  const now = new Date();
+  const lastMonthMid = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+  function budget(category: string, monthlyLimit: number): Budget {
+    return { id: `b-${category}`, category, monthlyLimit, createdAt: now, updatedAt: now };
+  }
+
+  it('renders one arc per budget, sized by limit share, filled by usage (criteria 24, 25)', async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', category: 'Rent', amount: 150, date: now })],
+      budgets: [budget('Rent', 300), budget('Fun', 100)],
+    });
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('dashboard-gauge-arc-Rent')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-gauge-arc-Fun')).toBeTruthy();
+    const center = screen.getByTestId('dashboard-gauge-center');
+    expect(within(center).getByText(/Spent \$150 of \$400 budget/)).toBeTruthy();
+    const fill = screen.getByTestId('dashboard-gauge-fill-Rent');
+    // half of Rent's 0.75-of-semicircle arc is filled
+    const [dash] = fill.props.strokeDasharray as string[];
+    expect(Number(dash)).toBeCloseTo(0.5 * 0.75 * Math.PI * 80, 0);
+  });
+
+  it('shows real spent / limit and the over color for an over-budget row, center uncapped (criterion 26)', async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', category: 'Fun', amount: 205, date: now })],
+      budgets: [budget('Fun', 200)],
+    });
+    await render(<DashboardScreen />);
+
+    const row = screen.getByTestId('dashboard-gauge-row-Fun');
+    const text = within(row).getByText('$205 / $200');
+    expect(flatten(text.props.style).color).toBe(colors.chart[1]);
+    expect(screen.getByTestId('dashboard-gauge-fill-Fun').props.stroke.payload).toBe(
+      processColor(colors.chart[1]),
+    );
+    expect(
+      within(screen.getByTestId('dashboard-gauge-center')).getByText(/Spent \$205 of \$200/),
+    ).toBeTruthy();
+  });
+
+  it('keeps unbudgeted spend out of the arcs and center, listing it in an Unbudgeted row (criterion 27)', async () => {
+    mockStores({
+      transactions: [
+        tx({ id: 't1', category: 'Rent', amount: 100, date: now }),
+        tx({ id: 't2', category: 'Misc', amount: 40, date: now }),
+      ],
+      budgets: [budget('Rent', 300)],
+    });
+    await render(<DashboardScreen />);
+
+    expect(screen.queryByTestId('dashboard-gauge-arc-Misc')).toBeNull();
+    expect(
+      within(screen.getByTestId('dashboard-gauge-center')).getByText(/Spent \$100 of \$300/),
+    ).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-gauge-unbudgeted')).getByText('$40')).toBeTruthy();
+  });
+
+  it('lists the 5 most-used rows with Show more / Show less (criterion 28)', async () => {
+    const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    mockStores({
+      transactions: names.map((n, i) =>
+        tx({ id: `t${i}`, category: n, amount: (i + 1) * 10, date: now }),
+      ),
+      budgets: names.map((n) => budget(n, 100)),
+    });
+    await render(<DashboardScreen />);
+
+    // usage rises A -> G, so G..C are shown first
+    expect(screen.getByTestId('dashboard-gauge-row-G')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-gauge-row-C')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-gauge-row-B')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('dashboard-gauge-more'));
+    expect(screen.getByTestId('dashboard-gauge-row-A')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('dashboard-gauge-more'));
+    expect(screen.queryByTestId('dashboard-gauge-row-A')).toBeNull();
+  });
+
+  it('shows the empty state and no arc without budgets (criterion 29)', async () => {
+    mockStores({});
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('dashboard-budgets-empty')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-gauge-center')).toBeNull();
+  });
+
+  it("follows the selected month against today's limits and names it in the title (criterion 30)", async () => {
+    mockStores({
+      transactions: [
+        tx({ id: 't1', category: 'Rent', amount: 100, date: now }),
+        tx({ id: 't2', category: 'Rent', amount: 250, date: lastMonthMid }),
+      ],
+      budgets: [budget('Rent', 300)],
+    });
+    await render(<DashboardScreen />);
+
+    await fireEvent.press(screen.getByTestId(`dashboard-trend-bar-4`));
+    expect(
+      within(screen.getByTestId('dashboard-gauge-center')).getByText(/Spent \$250 of \$300/),
+    ).toBeTruthy();
+    expect(within(screen.getByTestId('dashboard-gauge')).getByText(/—/)).toBeTruthy();
+  });
+
+  it('web hover shows the category and spent / limit in the center; none on native (criterion 31)', async () => {
+    const originalOS = Platform.OS;
+    mockStores({
+      transactions: [tx({ id: 't1', category: 'Rent', amount: 100, date: now })],
+      budgets: [budget('Rent', 300)],
+    });
+    Platform.OS = 'web';
+    try {
+      await render(<DashboardScreen />);
+      await fireEvent(screen.getByTestId('dashboard-gauge-arc-Rent'), 'mouseEnter');
+      const label = screen.getByTestId('dashboard-gauge-hover-label');
+      expect(within(label).getByText('Rent')).toBeTruthy();
+      expect(within(label).getByText('$100 / $300')).toBeTruthy();
+      await fireEvent(screen.getByTestId('dashboard-gauge-arc-Rent'), 'mouseLeave');
+      expect(screen.queryByTestId('dashboard-gauge-hover-label')).toBeNull();
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it('defaults to the gauge and toggles to the donut and back (criterion 32)', async () => {
+    mockStores({
+      transactions: [tx({ id: 't1', category: 'Rent', amount: 100, date: now })],
+      budgets: [budget('Rent', 300)],
+    });
+    await render(<DashboardScreen />);
+
+    expect(screen.getByTestId('dashboard-gauge')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-donut-arc-Rent')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('dashboard-view-share'));
+    expect(screen.getByTestId('dashboard-donut-arc-Rent')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-gauge')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('dashboard-view-budget'));
+    expect(screen.getByTestId('dashboard-gauge')).toBeTruthy();
   });
 });
