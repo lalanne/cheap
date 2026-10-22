@@ -4,7 +4,7 @@
       "source": {
         "source": "git",
         "url": "git@github-lalanne:lalanne/eng-standards.git",
-        "ref": "core-practices--v0.3.0"
+        "ref": "core-practices--v0.4.0"
       }
     }
   },

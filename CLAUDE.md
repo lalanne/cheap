@@ -25,6 +25,9 @@ discipline; the specifics below are cheap's own, not covered by the skill:
 3. **Discuss on the spec, not in chat and not in code.** When scope or
    behavior is being decided, edit the relevant spec doc and talk through
    the diff there.
+4. Once a spec is approved, delegate the implementation and PR to the
+   `core-practices:coder` agent (same plugin) instead of implementing it in
+   the main session.
 
 Read `specs/000-overview.md` first — it holds the product vision, v1
 scope/out-of-scope table, and cross-cutting constraints.
