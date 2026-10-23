@@ -3,9 +3,9 @@
     "eng-standards": {
       "source": {
         "source": "git",
-        "url": "git@github-lalanne:lalanne/eng-standards.git",
-        "ref": "core-practices--v0.4.0"
-      }
+        "url": "git@github-lalanne:lalanne/eng-standards.git"
+      },
+      "autoUpdate": true
     }
   },
   "enabledPlugins": {
