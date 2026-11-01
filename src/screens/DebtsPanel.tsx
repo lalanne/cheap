@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
@@ -37,6 +37,13 @@ export function DebtsPanel() {
 
   const [amountText, setAmountText] = useState('');
   const [amountError, setAmountError] = useState<string | null>(null);
+
+  // Issue #70 — a second tap on Confirm while the first logPayment was
+  // still in flight (slow native Firestore transaction on iOS) logged the
+  // payment twice. The ref blocks re-entry synchronously, before React has
+  // re-rendered; the state drives the button's disabled look.
+  const paymentInFlight = useRef(false);
+  const [paymentPending, setPaymentPending] = useState(false);
 
   function openAddForm() {
     setName('');
@@ -107,7 +114,20 @@ export function DebtsPanel() {
       setAmountError(result.error);
       return;
     }
-    await logPayment(activeDebtId, result.value);
+    if (paymentInFlight.current) {
+      return;
+    }
+    paymentInFlight.current = true;
+    setPaymentPending(true);
+    try {
+      await logPayment(activeDebtId, result.value);
+    } catch {
+      setAmountError('Could not log the payment. Try again.');
+      return;
+    } finally {
+      paymentInFlight.current = false;
+      setPaymentPending(false);
+    }
     closeForms();
   }
 
@@ -183,6 +203,7 @@ export function DebtsPanel() {
             title="Confirm payment"
             onPress={handleConfirmPayment}
             testID="confirm-payment-button"
+            disabled={paymentPending}
           />
           <View style={styles.spacer} />
           <Button title="Cancel" onPress={closeForms} testID="cancel-payment-button" />

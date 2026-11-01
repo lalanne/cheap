@@ -26,4 +26,14 @@ describe('Button', () => {
 
     expect(a.props.style).toEqual(b.props.style);
   });
+
+  it('ignores presses and reports disabled when disabled (#70)', async () => {
+    const onPress = jest.fn();
+    await render(<Button title="Confirm" onPress={onPress} disabled testID="button" />);
+
+    await fireEvent.press(screen.getByTestId('button'));
+
+    expect(onPress).not.toHaveBeenCalled();
+    expect(screen.getByTestId('button')).toBeDisabled();
+  });
 });
