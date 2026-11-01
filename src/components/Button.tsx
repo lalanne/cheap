@@ -6,11 +6,18 @@ type ButtonProps = {
   title: string;
   onPress?: () => void;
   testID?: string;
+  disabled?: boolean;
 };
 
-export function Button({ title, onPress, testID }: ButtonProps) {
+export function Button({ title, onPress, testID, disabled = false }: ButtonProps) {
   return (
-    <Pressable testID={testID} onPress={onPress} style={styles.container}>
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
+      style={[styles.container, disabled && styles.disabled]}
+    >
       <Text style={styles.label}>{title}</Text>
     </Pressable>
   );
@@ -24,6 +31,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   label: {
     color: colors.onAccent,

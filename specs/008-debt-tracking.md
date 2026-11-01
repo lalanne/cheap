@@ -102,6 +102,12 @@ users/{uid}/debts/{debtId}
    the sum of this debt's logged payments dated after the end of X, or
    `null` when the debt's `createdAt` is after the end of X; for the
    current month it equals `currentBalance`.
+9. **Given** a payment being logged (2026-11-01 amendment, issue #70),
+   **when** the user presses *Confirm payment* again before the first
+   save finishes, **then** no second payment is logged — exactly one
+   transaction is written — and the button shows as disabled while the
+   save is pending. **If** the save fails, the form stays open with an
+   inline error and the user can retry.
 
 ## Out of scope
 
@@ -125,6 +131,7 @@ users/{uid}/debts/{debtId}
 | 5 — payment validation | Unit | Validation function tests: zero/negative/non-integer/over-balance amounts all rejected. |
 | 6 — paid-off debt stays visible | Unit | Store test: balance reaches 0, debt remains in state until explicit delete. |
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s debts, expect denial. |
+| 9 — one payment per confirm, even on repeated taps (#70) | Unit (component) | `DebtsPanel.test.tsx`: two presses while `logPayment` is pending → called once, button disabled; a rejected save shows an inline error and a retry calls `logPayment` again. `Button.test.tsx`: `disabled` blocks `onPress`. |
 | 8 — balance as of a month end | Unit | Pure `debtBalanceAsOf` tests: current month = `currentBalance`; payments after X added back, payments on/before X ignored; month-end boundary (last day, 23:59 local); `createdAt` after X → `null`; zero payments after X. |
 
 Unit/component tests against mocked Firebase (matching specs 002/007's
@@ -143,6 +150,7 @@ Implemented 2026-09-22.
 | 5 — payment validation | ✅ | `validatePaymentAmount.test.ts` — wraps `validateAmount`, adds the over-balance check. |
 | 6 — paid-off debt stays visible | ✅ | `debtsStore.test.ts` + `DebtsScreen.test.tsx`: balance reaching 0 keeps the debt in state/list (shown "Paid off"), removed only on explicit delete. |
 | 7 — cross-user isolation | ✅ | `firebase/tests/debts.rules.test.ts`, 16/16 rules tests passing against the local emulator (transactions + categories + budgets + debts). |
+| 9 — one payment per confirm, even on repeated taps (#70) | ✅ | `DebtsPanel.test.tsx` — two presses inside one `act()` while `logPayment` is pending → called once; button disabled while pending; a rejected save keeps the form open with an inline error and a retry succeeds. `Button.test.tsx` — `disabled` blocks `onPress`. Added 2026-11-01. |
 
 **What shipped:**
 - `src/debts/types.ts`, `payoffMath.ts`, `validatePaymentAmount.ts`,

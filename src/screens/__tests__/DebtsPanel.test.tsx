@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Debt } from '../../debts/types';
 import { useDebtsStore } from '../../debts/store';
@@ -7,6 +7,24 @@ import { DebtsPanel } from '../DebtsPanel';
 jest.mock('../../debts/store', () => ({
   useDebtsStore: jest.fn(),
 }));
+
+// Pass-through that records each Button's latest onPress, so a test can
+// fire two presses inside one act() — the #70 race, where the second tap
+// lands before React re-renders. Two overlapping fireEvent calls would be
+// overlapping act()s, which RNTL doesn't support.
+const mockButtonPresses: Record<string, () => Promise<void> | void> = {};
+jest.mock('../../components/Button', () => {
+  const React = jest.requireActual('react');
+  const { Button: RealButton } = jest.requireActual('../../components/Button');
+  return {
+    Button: (props: { testID?: string; onPress?: () => Promise<void> | void }) => {
+      if (props.testID && props.onPress) {
+        mockButtonPresses[props.testID] = props.onPress;
+      }
+      return React.createElement(RealButton, props);
+    },
+  };
+});
 
 function mockStore(overrides: Partial<Record<string, unknown>> = {}) {
   const state = {
@@ -73,6 +91,82 @@ describe('DebtsPanel (spec 009 amendment: Manage tab, not its own screen)', () =
 
     expect(store.logPayment).toHaveBeenCalledWith('d-1', 50000);
     expect(store.editBalance).not.toHaveBeenCalled();
+  });
+
+  // Issue #70 — on iOS a second tap on Confirm landed while the first
+  // logPayment was still in flight, writing two expense transactions for
+  // one payment. A pending submit must swallow further presses.
+  it('logs a payment only once when Confirm is pressed twice while the first is pending (#70)', async () => {
+    let resolvePayment: () => void = () => {};
+    const logPayment = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePayment = resolve;
+        }),
+    );
+    mockStore({ debts: [EXISTING], logPayment });
+    await render(<DebtsPanel />);
+
+    await fireEvent.press(screen.getByTestId('log-payment-button-d-1'));
+    await fireEvent.changeText(screen.getByTestId('payment-amount-input'), '100000');
+    const confirm = mockButtonPresses['confirm-payment-button'];
+    await act(async () => {
+      // Both taps land before the first save settles or React re-renders.
+      const first = confirm();
+      const second = confirm();
+      resolvePayment();
+      await Promise.all([first, second]);
+    });
+
+    expect(logPayment).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('payment-form')).toBeNull();
+  });
+
+  it('marks Confirm payment disabled while the payment is pending (#70)', async () => {
+    let resolvePayment: () => void = () => {};
+    const logPayment = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePayment = resolve;
+        }),
+    );
+    mockStore({ debts: [EXISTING], logPayment });
+    await render(<DebtsPanel />);
+
+    await fireEvent.press(screen.getByTestId('log-payment-button-d-1'));
+    await fireEvent.changeText(screen.getByTestId('payment-amount-input'), '100000');
+    let pending: Promise<void> | void = undefined;
+    await act(async () => {
+      pending = mockButtonPresses['confirm-payment-button']();
+    });
+
+    expect(screen.getByTestId('confirm-payment-button')).toBeDisabled();
+
+    await act(async () => {
+      resolvePayment();
+      await pending;
+    });
+  });
+
+  it('shows an inline error and allows a retry after a failed payment (#70)', async () => {
+    const logPayment = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce(undefined);
+    mockStore({ debts: [EXISTING], logPayment });
+    await render(<DebtsPanel />);
+
+    await fireEvent.press(screen.getByTestId('log-payment-button-d-1'));
+    await fireEvent.changeText(screen.getByTestId('payment-amount-input'), '100000');
+    await fireEvent.press(screen.getByTestId('confirm-payment-button'));
+
+    expect(screen.getByTestId('payment-form')).toBeTruthy();
+    expect(screen.getByText('Could not log the payment. Try again.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('confirm-payment-button'));
+
+    expect(logPayment).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('payment-form')).toBeNull();
   });
 
   it('rejects a payment greater than the current balance (criterion 5)', async () => {
