@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** implemented (amended 2026-10-10: criterion 8)
+**Status:** draft amendment 2026-11-02 (criteria 10–14, issue #74); rest implemented
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
@@ -109,8 +109,29 @@ users/{uid}/debts/{debtId}
    save is pending. **If** the save fails, the form stays open with an
    inline error and the user can retry.
 
+10. **Given** a new debt is created (2026-11-02 amendment, issue #74),
+    **then** a subcategory named after the debt, with
+    `parentCategory: "Debt"` and type `expense`, is created with it, and
+    "Debt" exists as a built-in top-level expense category (spec 002's
+    starter list). Payments keep `category: debt.name`.
+11. **Given** debt payments in several debts in one month, **when** the
+    dashboard's "Where it went" donut renders, **then** it shows a single
+    "Debt" slice equal to the sum of all debt payments (spec 011's
+    `rollUpCategoryTotals`), and drilling into it lists each debt.
+12. **Given** existing debts with no matching subcategory, **when** debts
+    sync, **then** the missing subcategories are created once
+    (idempotent backfill) — a debt whose name already belongs to another
+    category is skipped and stays its own slice.
+13. **Given** a debt name equal to an existing category's name, **when**
+    the user adds the debt, **then** the save is rejected with an inline
+    error.
+14. **Given** `debtBalanceAsOf` (criterion 8), **then** it is unchanged —
+    it still matches payments by `category === debt.name`.
+
 ## Out of scope
 
+- Editing a debt's name (so no rename cascade); deleting a debt keeps its
+  subcategory, so past payments stay grouped under "Debt" (issue #74).
 - True amortization / interest-compounding payoff math — see the payoff
   estimate rationale above.
 - Automatic interest accrual (balance growing on its own over time).
@@ -133,6 +154,12 @@ users/{uid}/debts/{debtId}
 | 7 — cross-user isolation | Integration (Firebase emulator) | `rules-unit-testing`: authed as `uidB`, attempt read/write on `uidA`'s debts, expect denial. |
 | 9 — one payment per confirm, even on repeated taps (#70) | Unit (component) | `DebtsPanel.test.tsx`: two presses while `logPayment` is pending → called once, button disabled; a rejected save shows an inline error and a retry calls `logPayment` again. `Button.test.tsx`: `disabled` blocks `onPress`. |
 | 8 — balance as of a month end | Unit | Pure `debtBalanceAsOf` tests: current month = `currentBalance`; payments after X added back, payments on/before X ignored; month-end boundary (last day, 23:59 local); `createdAt` after X → `null`; zero payments after X. |
+
+| 10 — debt creates its subcategory; "Debt" is a starter category | Unit | Store test: add debt → category repo `create(name, "expense", "Debt")` called; starter-list test includes "Debt". |
+| 11 — one Debt slice | Unit | `rollUpCategoryTotals` with two debt subcategories → single "Debt" entry; dashboard component test for the donut. |
+| 12 — backfill | Unit | Store test: debts without subcategories get one; second sync creates none; colliding name skipped. |
+| 13 — collision rejected | Unit | Validation test: debt name equal to an existing category → error. |
+| 14 — balance math unchanged | Unit | Existing `debtBalanceAsOf` tests still pass. |
 
 Unit/component tests against mocked Firebase (matching specs 002/007's
 pattern); rules tests against the local emulator, never a real project.
