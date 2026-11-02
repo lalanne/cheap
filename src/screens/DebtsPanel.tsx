@@ -94,13 +94,19 @@ export function DebtsPanel() {
       return;
     }
     setFormError(null);
-    await addDebt({
-      name: name.trim(),
-      originalAmount: original.value,
-      currentBalance: balance.value,
-      minimumPayment: minimumPayment.value,
-      interestRate: null,
-    });
+    try {
+      await addDebt({
+        name: name.trim(),
+        originalAmount: original.value,
+        currentBalance: balance.value,
+        minimumPayment: minimumPayment.value,
+        interestRate: null,
+      });
+    } catch (e) {
+      // Spec 008 criterion 13 — e.g. the name already belongs to a category.
+      setFormError(e instanceof Error ? e.message : 'Could not add the debt. Try again.');
+      return;
+    }
     closeForms();
   }
 

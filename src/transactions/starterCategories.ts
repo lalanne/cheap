@@ -8,6 +8,9 @@ export const STARTER_CATEGORIES: readonly string[] = [
   'Entertainment',
   'Health',
   'Shopping',
+  // Spec 008 (issue #74): parent of one subcategory per debt, so all debt
+  // payments roll up into a single slice on the dashboard donut.
+  'Debt',
   'Income',
   'Other',
 ];

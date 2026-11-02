@@ -81,6 +81,24 @@ describe('DebtsPanel (spec 009 amendment: Manage tab, not its own screen)', () =
     );
   });
 
+  it('shows an inline error and keeps the form open when the debt name collides with a category (criterion 13)', async () => {
+    const store = mockStore({
+      addDebt: jest.fn().mockRejectedValue(new Error('A category with this name already exists.')),
+    });
+    await render(<DebtsPanel />);
+
+    await fireEvent.press(screen.getByTestId('add-debt-button'));
+    await fireEvent.changeText(screen.getByTestId('debt-name-input'), 'Food');
+    await fireEvent.changeText(screen.getByTestId('debt-original-amount-input'), '2000000');
+    await fireEvent.changeText(screen.getByTestId('debt-balance-input'), '2000000');
+    await fireEvent.changeText(screen.getByTestId('debt-minimum-payment-input'), '100000');
+    await fireEvent.press(screen.getByTestId('save-debt-button'));
+
+    expect(store.addDebt).toHaveBeenCalled();
+    expect(await screen.findByText('A category with this name already exists.')).toBeTruthy();
+    expect(screen.getByTestId('save-debt-button')).toBeTruthy();
+  });
+
   it('logs a payment through the store, not a direct balance edit (criterion 2)', async () => {
     const store = mockStore({ debts: [EXISTING] });
     await render(<DebtsPanel />);
