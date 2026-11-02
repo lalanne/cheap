@@ -1,4 +1,5 @@
 import { createDebtsStore } from '../debtsStore';
+import type { Category, CategoryRepository } from '../../transactions/types';
 import type { Debt, DebtRepository, NewDebtInput } from '../types';
 
 function createMockRepo() {
@@ -145,5 +146,135 @@ describe('debtsStore', () => {
 
     await useStore.getState().deleteDebt(id);
     expect(useStore.getState().debts).toHaveLength(0);
+  });
+
+  // Spec 008 criteria 10, 12, 13 — issue #74: every debt gets a subcategory
+  // under the built-in "Debt" category.
+  describe('Debt category (issue #74)', () => {
+    function createMockCategoryRepo(initial: Category[] = []) {
+      let categories = initial;
+      let listener: ((c: Category[]) => void) | null = null;
+      const repo: CategoryRepository = {
+        subscribe: jest.fn((callback) => {
+          listener = callback;
+          callback(categories);
+          return () => {
+            listener = null;
+          };
+        }),
+        create: jest.fn(async (name, type, parentCategory) => {
+          const category: Category = {
+            id: `c-${categories.length + 1}`,
+            name,
+            type,
+            parentCategory,
+          };
+          categories = [...categories, category];
+          listener?.(categories);
+          return category;
+        }),
+        delete: jest.fn(),
+        update: jest.fn(),
+      };
+      return repo;
+    }
+
+    function startWithCategories(repo: DebtRepository, categoryRepo: CategoryRepository) {
+      const { useDebtsStore, startSync } = createDebtsStore(repo, categoryRepo);
+      startSync();
+      return useDebtsStore;
+    }
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    it('creates a "Debt" expense subcategory named after a new debt (criterion 10)', async () => {
+      const categoryRepo = createMockCategoryRepo();
+      const useStore = startWithCategories(createMockRepo(), categoryRepo);
+
+      await useStore.getState().addDebt(NEW_DEBT);
+
+      expect(categoryRepo.create).toHaveBeenCalledWith('Credit Card', 'expense', 'Debt');
+    });
+
+    it('rejects a debt whose name equals an existing category, creating nothing (criterion 13)', async () => {
+      const repo = createMockRepo();
+      const categoryRepo = createMockCategoryRepo([
+        { id: 'c-0', name: 'Credit Card', type: 'expense', parentCategory: null },
+      ]);
+      const useStore = startWithCategories(repo, categoryRepo);
+
+      await expect(useStore.getState().addDebt(NEW_DEBT)).rejects.toThrow(/already/i);
+      await expect(useStore.getState().addDebt({ ...NEW_DEBT, name: 'Food' })).rejects.toThrow(
+        /already/i,
+      );
+
+      expect(repo.create).not.toHaveBeenCalled();
+      expect(categoryRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('backfills missing subcategories once for existing debts (criterion 12)', async () => {
+      const repo = createMockRepo();
+      const categoryRepo = createMockCategoryRepo();
+      const useStore = createDebtsStore(repo); // seed debts without categories
+      useStore.startSync();
+      await useStore.useDebtsStore.getState().addDebt(NEW_DEBT);
+      await useStore.useDebtsStore.getState().addDebt({ ...NEW_DEBT, name: 'papa 1' });
+
+      startWithCategories(repo, categoryRepo);
+      await flush();
+      await flush();
+
+      expect(categoryRepo.create).toHaveBeenCalledTimes(2);
+      expect(categoryRepo.create).toHaveBeenCalledWith('papa 1', 'expense', 'Debt');
+
+      startWithCategories(repo, categoryRepo); // sync again — idempotent
+      await flush();
+      expect(categoryRepo.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('skips backfill for a debt whose name collides with another category (criterion 12)', async () => {
+      const repo = createMockRepo();
+      const seed = createDebtsStore(repo);
+      seed.startSync();
+      await seed.useDebtsStore.getState().addDebt(NEW_DEBT);
+      const categoryRepo = createMockCategoryRepo([
+        { id: 'c-0', name: 'Credit Card', type: 'expense', parentCategory: null },
+      ]);
+
+      startWithCategories(repo, categoryRepo);
+      await flush();
+
+      expect(categoryRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('does not create a second subcategory when two syncs race (criterion 12)', async () => {
+      const repo = createMockRepo();
+      const seed = createDebtsStore(repo);
+      seed.startSync();
+      await seed.useDebtsStore.getState().addDebt(NEW_DEBT);
+      const categoryRepo = createMockCategoryRepo();
+      // Slow create: the category list does not update until after both syncs fire.
+      (categoryRepo.create as jest.Mock).mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 5)),
+      );
+
+      const { startSync } = createDebtsStore(repo, categoryRepo);
+      startSync();
+      await flush();
+
+      expect(categoryRepo.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('still lets a deleted debt keep its subcategory (out of scope: no cascade)', async () => {
+      const repo = createMockRepo();
+      const categoryRepo = createMockCategoryRepo();
+      const useStore = startWithCategories(repo, categoryRepo);
+      await useStore.getState().addDebt(NEW_DEBT);
+      const id = useStore.getState().debts[0].id;
+
+      await useStore.getState().deleteDebt(id);
+
+      expect(categoryRepo.delete).not.toHaveBeenCalled();
+    });
   });
 });

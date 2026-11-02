@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** implemented; amendment 2026-11-02 approved (criteria 10–14, issue #74), not yet implemented
+**Status:** implemented (amended 2026-11-02: criteria 10–14, single "Debt" donut slice — #74)
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
@@ -225,3 +225,13 @@ transactions this spec's `logPayment` creates in the debt's category
   out of scope here (it would turn `Debt` into spec 012's ledger model).
 
 **Result (2026-10-10):** ✅ criterion 8 — `payoffMath.test.ts` (`debtBalanceAsOf`: payments added back, month-end boundary, other categories/income ignored, `createdAt` after the month → `null`).
+
+### Addendum (2026-11-02): single "Debt" donut slice (issue #74)
+
+| Criterion | Result | Evidence |
+|-----------|--------|----------|
+| 10 — debt creates its subcategory; "Debt" starter category | ✅ | `debtsStore.test.ts` (creates `("Credit Card", "expense", "Debt")`), `starterCategories.test.ts`. |
+| 11 — one Debt slice, drill-down lists each debt | ✅ | `categoryRollup.test.ts` — two debt subcategories roll into one `Debt` entry; `subcategoryTotalsFor(…, "Debt")` lists both. |
+| 12 — idempotent backfill, collisions skipped | ✅ | `debtsStore.test.ts` — backfill once, re-sync creates none, colliding name skipped, racing syncs create one. Backfill waits for the first category snapshot. |
+| 13 — name collision rejected | ✅ | `debtsStore.test.ts` (rejects, nothing created), `DebtsPanel.test.tsx` (inline error, form stays open). |
+| 14 — balance math unchanged | ✅ | `payoffMath.test.ts` unchanged and passing. |

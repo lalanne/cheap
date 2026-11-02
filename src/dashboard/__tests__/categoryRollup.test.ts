@@ -95,3 +95,30 @@ describe('budgetSpendTotals (spec 011 criterion 9)', () => {
     });
   });
 });
+
+describe('debt payments roll up into one "Debt" slice (spec 008 criterion 11, issue #74)', () => {
+  it('sums every debt subcategory into a single Debt entry', () => {
+    const categories: Category[] = [
+      { id: '1', name: 'papa 1', type: 'expense', parentCategory: 'Debt' },
+      { id: '2', name: 'Credit Card', type: 'expense', parentCategory: 'Debt' },
+    ];
+
+    expect(
+      rollUpCategoryTotals({ 'papa 1': 100000, 'Credit Card': 50000, Food: 30000 }, categories),
+    ).toEqual({ Debt: 150000, Food: 30000 });
+  });
+
+  it('lists each debt when drilling into Debt', () => {
+    const categories: Category[] = [
+      { id: '1', name: 'papa 1', type: 'expense', parentCategory: 'Debt' },
+      { id: '2', name: 'Credit Card', type: 'expense', parentCategory: 'Debt' },
+    ];
+
+    expect(
+      subcategoryTotalsFor({ 'papa 1': 100000, 'Credit Card': 50000 }, categories, 'Debt'),
+    ).toEqual({
+      'papa 1': 100000,
+      'Credit Card': 50000,
+    });
+  });
+});
