@@ -1,6 +1,6 @@
 # 008 — Debt Tracking
 
-**Status:** draft amendment 2026-11-02 (criteria 10–14, issue #74); rest implemented
+**Status:** implemented; amendment 2026-11-02 approved (criteria 10–14, issue #74), not yet implemented
 **Depends on:** 000 (v1 scope — debt tracking moved in-scope), 001, 002 (a
 logged payment creates a regular expense transaction)
 
